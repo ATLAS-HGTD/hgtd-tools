@@ -1,0 +1,32 @@
+# run: conda env create -f env-312.yml
+name: hgtd-tools
+
+channels:
+  - conda-forge
+  - nodefaults
+
+dependencies:
+  - python=3.12.*
+  - conda
+  - jupyterlab
+  - matplotlib
+  - numpy
+  - pandas
+  - pip
+  - pyyaml
+  - scikit-learn
+  - scipy
+  - spyder
+  - sympy
+
+  - pip:
+    - mkdocs
+    - mkdocs-awesome-pages-plugin
+    - mkdocs-git-revision-date-localized-plugin
+    - mkdocs-i18n
+    - mkdocs-markdownextradata-plugin
+    - mkdocs-material
+    - mkdocs-material-extensions
+    - mkdocs-minify-plugin
+    - pyqt6
+
