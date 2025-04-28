@@ -1,10 +1,8 @@
 # hgtd-tools
+![Static Badge](https://img.shields.io/badge/python-3.12-blue)
 
 ## Description
 These tools interact with the HGTD Production Database for the HGTD Phase-II Upgrade of the ATLAS Experiment at CERN.
-
-## Badges
-to do
 
 ## Visuals
 to do

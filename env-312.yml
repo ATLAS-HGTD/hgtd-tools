@@ -1,5 +1,5 @@
 # run: conda env create -f env-312.yml
-name: hgtd-tools
+name: hgtd
 
 channels:
   - conda-forge
@@ -28,5 +28,5 @@ dependencies:
     - mkdocs-material
     - mkdocs-material-extensions
     - mkdocs-minify-plugin
-    - pyqt6
+    - customtkinter
 
