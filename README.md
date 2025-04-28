@@ -17,5 +17,10 @@ This suite is written in python, and a conda environment is recommended.
 3. Install the environment using the given yaml file: `cd hgtd-tools; conda env create -f env-312.yml` (you can find it in the main directory).
 
 ## Usage
-to do
+
+To open the main window with GUI, execute the following:
+
+```shell
+python main.py
+```
 
