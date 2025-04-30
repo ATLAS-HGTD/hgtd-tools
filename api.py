@@ -11,10 +11,11 @@ def fetch_information(endpoint, debug = False):
         print('>> GET response:', request.status_code, request.reason)
     return json.loads(request.text)
 
-def patch_information(endpoint, payload, debug = False):
+def post_information(endpoint, payload, debug = False, dryrun = False):
     headers = {'content-type': 'application/json'}
     if debug:
         pprint(payload)
-    response = requests.patch(apiUrlPrefix + endpoint, data=json.dumps(payload), headers=headers)
-    if debug:
-        print('>> PATCH response:', response.status_code, response.reason)
+    if not dryrun:
+        response = requests.post(apiUrlPrefix + endpoint, data=json.dumps(payload), headers=headers)
+        if debug:
+            print('>> PATCH response:', response.status_code, response.reason)
