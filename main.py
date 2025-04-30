@@ -176,10 +176,10 @@ class App(customtkinter.CTk):
 
     
     def add_button_event(self):
-        c = self.combobox_child.get()
-        p = self.combobox_parent.get()
-        p = self.position_entry.get()
-        if c == '- Select -' or p == '- Select -' or p == '- automatic -' or p == 'VxLyQz':
+        chi = self.combobox_child.get()
+        par = self.combobox_parent.get()
+        pos = self.position_entry.get()
+        if chi == '- Select -' or par == '- Select -' or pos == '- automatic -' or pos == 'VxLyQz':
             # perhaps add a popup window in the future
             info_text = 'Warning: Select a child & parent from the respective lists and a position to proceed.'
             print(f'>>> {info_text}')
@@ -187,10 +187,10 @@ class App(customtkinter.CTk):
         else:
             self.info_label.configure(text=' ')
             part_tree = {
-                'position': self.position_entry.get(),
+                'position': pos,
                 'is_record_deleted': 'F',
-                'part': self.possible_children_partIDs[self.possible_children_SNs.index(self.combobox_child.get())],
-                'part_parent': self.possible_parents_partIDs[self.possible_parents_SNs.index(self.combobox_parent.get())],
+                'part': self.possible_children_partIDs[self.possible_children_SNs.index(chi)],
+                'part_parent': self.possible_parents_partIDs[self.possible_parents_SNs.index(par)],
             }
             
             api.post_information('/partstreelist', part_tree)
