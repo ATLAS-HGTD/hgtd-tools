@@ -1,9 +1,9 @@
-<p align="center">
+<div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./windowIcon.png">
     <img src="./windowIcon.png" width=240>
   </picture>
-</p>
+</div>
 
 <div align="center">
     

@@ -9,7 +9,7 @@ def fetch_information(endpoint, debug = False):
     request = requests.get(apiUrlPrefix + endpoint)
     # https://stackoverflow.com/a/47007419
     try:
-        request = requests.get(apiUrlPrefix + endpoint,timeout=15)
+        request = requests.get(apiUrlPrefix + endpoint,timeout=600)
         request.raise_for_status()
         if debug:
             print('>> GET response:', request.status_code, request.reason)
@@ -41,7 +41,7 @@ def post_information(endpoint, payload, debug = False, dryrun = False):
             response.raise_for_status()
             if debug:
                 print('>> PATCH response:', response.status_code, response.reason)
-            return f'{request.status_code}, {request.reason}'
+            return f'{response.status_code}, {response.reason}'
         except requests.exceptions.HTTPError as errh:
             if debug:
                 print("Http Error:",errh)
