@@ -2,6 +2,8 @@ import customtkinter
 import threading
 import time
 import tkinter
+import requests
+import textwrap
 # If we need to tackle a longer list of options, there is a custom dropdown frame to handle them
 #from ctk_scrollDropdown import CTkScrollableDropdownFrame
 # Similar for overflowing text labels etc.
@@ -15,9 +17,14 @@ customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "gre
 
 def load_relevant_parts(partKoP_shortname, onlyNonDeleted = True):
     KoP_ID = data.KoPID_from_partKoPName[partKoP_shortname]
-    these_parts = api.fetch_information(f'/partslistbykop/{KoP_ID}/')
-    these_parts = [tP for tP in these_parts if tP['is_record_deleted'] == 'F']
-    return these_parts
+    try:
+        these_parts, responseText = api.fetch_information(f'/partslistbykop/{KoP_ID}/', debug=True)
+        these_parts = [tP for tP in these_parts if tP['is_record_deleted'] == 'F']
+        return these_parts, responseText
+    except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+        raise e
+    except ValueError as e:
+        raise e
 
 def grab_relevant_SNs_and_partIDs(partsList):
     these_SNs_and_partIDs = util.getSortedListOfListsByNthColumn([[pL['serial_number'],pL['part_id']] for pL in partsList], 0)
@@ -35,17 +42,6 @@ def isInSlot(rect, x, y):
         and top <= y):
         isInSlot = True
     return isInSlot
-
-'''
-// https://stackoverflow.com/a/5023867/22745629
-function getCursorPosition(canvas, event) {
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    console.log("x: " + x + " y: " + y);
-    return [x, y];
-}
-'''
 
 class App(customtkinter.CTk):
     def __init__(self):
@@ -104,7 +100,7 @@ class App(customtkinter.CTk):
         self.combobox_frame.grid_columnconfigure((0,1), weight=1)
 
         self.combobox_parent_T_label = customtkinter.CTkLabel(self.combobox_frame, text="Parent Part Type: Detector Unit")
-        self.combobox_parent_T_label.grid(row=0, column=0, padx=20, pady=(10, 10), sticky="nsew") 
+        self.combobox_parent_T_label.grid(row=0, column=0, padx=20, pady=(10, 10), columnspan=2, sticky="nsew") 
 
         self.combobox_parent_label = customtkinter.CTkLabel(self.combobox_frame, text="Parent Part SN")
         self.combobox_parent_label.grid(row=1, column=0, padx=20, pady=(10, 10), sticky="nsew") 
@@ -117,7 +113,7 @@ class App(customtkinter.CTk):
         self.combobox_parent.set("- Select -")
 
         self.combobox_child_T_label = customtkinter.CTkLabel(self.combobox_frame, text="Child Part Type: Module")
-        self.combobox_child_T_label.grid(row=2, column=0, padx=20, pady=(10, 10), sticky="nsew") 
+        self.combobox_child_T_label.grid(row=2, column=0, padx=20, pady=(10, 10), columnspan=2, sticky="nsew") 
                 
         self.combobox_child_label = customtkinter.CTkLabel(self.combobox_frame, text="Child Part SN")
         self.combobox_child_label.grid(row=3, column=0, padx=20, pady=(10, 10), sticky="nsew") 
@@ -154,32 +150,69 @@ class App(customtkinter.CTk):
         self.info_label = customtkinter.CTkLabel(self.main_frame, text=" ", font=customtkinter.CTkFont(size=16, weight="bold"))
         self.info_label.grid(row=2, column=0, padx=20, pady=20, columnspan=2)
 
-        
+        self.api_status = 1
+        self.last_responseText = ''
         # First startup of program defaults to Module Loading
-        self.possible_parents = load_relevant_parts('Detector Unit')
-        self.possible_children = load_relevant_parts('Module')
-        
-        self.possible_parents_SNs_and_partIDs = grab_relevant_SNs_and_partIDs(self.possible_parents)
-        self.possible_children_SNs_and_partIDs = grab_relevant_SNs_and_partIDs(self.possible_children)
-        self.possible_parents_SNs = [entry[0] for entry in self.possible_parents_SNs_and_partIDs]
-        self.possible_children_SNs = [entry[0] for entry in self.possible_children_SNs_and_partIDs]
-        self.possible_parents_partIDs = [entry[1] for entry in self.possible_parents_SNs_and_partIDs]
-        self.possible_children_partIDs = [entry[1] for entry in self.possible_children_SNs_and_partIDs]
-        self.combobox_parent.configure(values=self.possible_parents_SNs)
-        self.combobox_child.configure(values=self.possible_children_SNs)
+        try:
+            self.possible_parents, self.last_responseText = load_relevant_parts('Detector Unit')
+            self.possible_children, self.last_responseText = load_relevant_parts('Module')
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+            self.possible_parents = []
+            self.possible_children = []
+            self.last_responseText = str(e)
+        except ValueError as e:
+            self.possible_parents = []
+            self.possible_children = []
+            self.last_responseText = str(e)
+
+        if self.last_responseText[:3] != '200':
+            self.api_status = 0
+            self.progressbar.configure(progress_color="#ff0000")
+            info_text = textwrap.fill(f'Error: Parents / Children could not be loaded from ProdDB API.\n {self.last_responseText}',80)
+            print(f'>>> {info_text}')
+            self.info_label.configure(text=info_text)
+        else:
+            self.api_status = 1
+            self.progressbar.configure(progress_color="#007711")
+            self.possible_parents_SNs_and_partIDs = grab_relevant_SNs_and_partIDs(self.possible_parents)
+            self.possible_children_SNs_and_partIDs = grab_relevant_SNs_and_partIDs(self.possible_children)
+            self.possible_parents_SNs = [entry[0] for entry in self.possible_parents_SNs_and_partIDs]
+            self.possible_children_SNs = [entry[0] for entry in self.possible_children_SNs_and_partIDs]
+            self.possible_parents_partIDs = [entry[1] for entry in self.possible_parents_SNs_and_partIDs]
+            self.possible_children_partIDs = [entry[1] for entry in self.possible_children_SNs_and_partIDs]
+            self.combobox_parent.configure(values=self.possible_parents_SNs)
+            self.combobox_child.configure(values=self.possible_children_SNs)
         
     def load_p_c(self, p, c):
-        self.possible_parents = load_relevant_parts(p)
-        self.possible_children = load_relevant_parts(c)
+        try:
+            self.possible_parents, self.last_responseText = load_relevant_parts(p)
+            self.possible_children, self.last_responseText = load_relevant_parts(c)
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+            self.possible_parents = []
+            self.possible_children = []
+            self.last_responseText = str(e)
+        except ValueError as e:
+            self.possible_parents = []
+            self.possible_children = []
+            self.last_responseText = str(e)
 
-        self.possible_parents_SNs_and_partIDs = grab_relevant_SNs_and_partIDs(self.possible_parents)
-        self.possible_parents_SNs = [entry[0] for entry in self.possible_parents_SNs_and_partIDs]
-        self.possible_parents_partIDs = [entry[1] for entry in self.possible_parents_SNs_and_partIDs]
-        self.possible_children_SNs_and_partIDs = grab_relevant_SNs_and_partIDs(self.possible_children)
-        self.possible_children_SNs = [entry[0] for entry in self.possible_children_SNs_and_partIDs]
-        self.possible_children_partIDs = [entry[1] for entry in self.possible_children_SNs_and_partIDs]
-        self.combobox_parent.configure(values=self.possible_parents_SNs)
-        self.combobox_child.configure(values=self.possible_children_SNs)
+        if self.last_responseText[:3] != '200':
+            self.api_status = 0
+            self.progressbar.configure(progress_color="#ff0000")
+            info_text = textwrap.fill(f'Error: Parents / Children could not be loaded from ProdDB API.\n {self.last_responseText}',80)
+            print(f'>>> {info_text}')
+            self.info_label.configure(text=info_text)
+        else:
+            self.api_status = 1
+            self.progressbar.configure(progress_color="#007711")
+            self.possible_parents_SNs_and_partIDs = grab_relevant_SNs_and_partIDs(self.possible_parents)
+            self.possible_children_SNs_and_partIDs = grab_relevant_SNs_and_partIDs(self.possible_children)
+            self.possible_parents_SNs = [entry[0] for entry in self.possible_parents_SNs_and_partIDs]
+            self.possible_children_SNs = [entry[0] for entry in self.possible_children_SNs_and_partIDs]
+            self.possible_parents_partIDs = [entry[1] for entry in self.possible_parents_SNs_and_partIDs]
+            self.possible_children_partIDs = [entry[1] for entry in self.possible_children_SNs_and_partIDs]
+            self.combobox_parent.configure(values=self.possible_parents_SNs)
+            self.combobox_child.configure(values=self.possible_children_SNs)
 
     def update_progressbar(self, thread):
         if thread.is_alive():
@@ -192,6 +225,7 @@ class App(customtkinter.CTk):
     # https://stackoverflow.com/a/23944658
     def segmented_button_callback(self, value):
         self.progressbar.set(0)
+        
         self.info_label.configure(text=' ')
         self.canvas.delete("all")
         if value == "Module Loading":
@@ -315,7 +349,22 @@ class App(customtkinter.CTk):
                 'part': self.possible_children_partIDs[self.possible_children_SNs.index(chi)],
                 'part_parent': self.possible_parents_partIDs[self.possible_parents_SNs.index(par)],
             }
-            api.post_information('/partstreelist', part_tree)
+            try:
+                self.last_responseText = api.post_information('/partstreelist', part_tree)
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                self.last_responseText = str(e)
+            except ValueError as e:
+                self.last_responseText = str(e)
+    
+            if self.last_responseText[:3] != '200':
+                self.api_status = 0
+                self.progressbar.configure(progress_color="#ff0000")
+                info_text = textwrap.fill(f'Error: Parent / Child relation could not be patched to ProdDB API.\n {self.last_responseText}', 80)
+                print(f'>>> {info_text}')
+                self.info_label.configure(text=info_text)
+            else:
+                self.api_status = 1
+                self.progressbar.configure(progress_color="#007711")
         
 if __name__ == "__main__":
     app = App()
