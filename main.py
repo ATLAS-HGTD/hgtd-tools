@@ -12,13 +12,13 @@ import api
 import data
 import util
 
-customtkinter.set_appearance_mode("Light")  # Modes: "System" (standard), "Dark", "Light"
+customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
 def load_relevant_parts(partKoP_shortname, onlyNonDeleted = True):
     KoP_ID = data.KoPID_from_partKoPName[partKoP_shortname]
     try:
-        these_parts, responseText = api.fetch_information(f'/partslistbykop/{KoP_ID}/', debug=True)
+        these_parts, responseText = api.fetch_information(f'/partslistbykop/{KoP_ID}/')
         these_parts = [tP for tP in these_parts if tP['is_record_deleted'] == 'F']
         return these_parts, responseText
     except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
@@ -66,13 +66,16 @@ class App(customtkinter.CTk):
         # fill sidebar
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="HGTD Tools", font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+        self.credits_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="v0.0.1 - May 2025\n Annika Stein (JGU Mainz)")
+        self.credits_label.grid(row=1, column=0, padx=20, pady=10)
 
         self.progress_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="API Request Status")
-        self.progress_label.grid(row=1, column=0, padx=20, pady=10)
+        self.progress_label.grid(row=2, column=0, padx=20, pady=10)
         self.progressbar = customtkinter.CTkProgressBar(self.sidebar_frame_left, orientation="horizontal", progress_color="#007711")
-        self.progressbar.grid(row=2, column=0, padx=20, pady=10)
+        self.progressbar.grid(row=3, column=0, padx=20, pady=10)
         self.progressbar.set(1)
 
+        
         # work in main widget (column w.r.t. root >= 1)
         self.explain_frame = customtkinter.CTkFrame(self)#CTkXYFrame(self)
         self.explain_frame.grid(row=0, column=1, padx=20, pady=(20, 0), sticky="nsew", columnspan=2)

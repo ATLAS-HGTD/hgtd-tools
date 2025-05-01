@@ -1,11 +1,21 @@
-# hgtd-tools
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./windowIcon.png">
+    <img src="./windowIcon.png" width=240>
+  </picture>
+</p>
+
+<div align="center">
+    
 ![Static Badge](https://img.shields.io/badge/python-3.12-blue)
+
+</div>
 
 ## Description
 These tools interact with the HGTD Production Database for the HGTD Phase-II Upgrade of the ATLAS Experiment at CERN.
 
 ## Visuals
-to do
+A video showing the main features included with v0.0.1 is available under this [cernbox link](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/public/for_HGTD/screencast_hgtd-tools_v0p0p1.mov) (protected / atlas-hgtd group access only).
 
 ## Installation
 This suite is written in python, and a conda environment is recommended.
