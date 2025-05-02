@@ -19,12 +19,20 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 - Search through partstree and slots to perform multiple POST requests in one go: Detector Assembly (CERN) puts DU on Detector, loaded Modules get Slots
 - Uses standard coordinate system for global attributes: Vessel, Layer, Quadrant, DU type / SU type, Row (global), Module (global) and can map to local attributes: Row (on DU), Module (on DU)
 - Support for all 48 DU types, including those that have "horizontal" and "vertical" modules on the same unit
+- Loaded modules are shown as green slots when doing Detector Assembly (CERN)
+- If DU is already placed in detector, show where it is (Vessel / Layer / Quadrant)
+- Delete request for all existing slots for loaded modules (propagate new VLQ) when new Detector Assembly (CERN) operation is initiated with another VLQ, i.e. effectively replace with new ones
 
 ### Open points requiring implementation
 - (~!!! Replace local files with API-requested files (only few more parts missing, most are already dynamically retrieved)~ first implementation done, being tested (probably a bit slow), second implementation does not need to get full partstree only the children for the specific DU)
-- !!! Checks for existing slot / mod relations: if they exist, delete them and create the new ones from VLQ or user decides against that, corrects their entered values
-- !! Checks for fully loaded DU (or not yet fully loaded)
-- !! Display loaded modules in canvas when doing Detector Assembly (CERN)
+- !!! ~Checks for existing slot / mod relations: if they exist, delete them and create the new ones from VLQ~
+    - !!! or user decides against that, corrects their entered values (and when doing loading as well to catch the case where the same module was previously loaded to a different DU or on that DU in a different location)
+- (~!! Checks for fully loaded DU (or not yet fully loaded)~)
+- (~!! Display loaded modules in canvas when doing Detector Assembly (CERN)~)
+- !! Catch when Layer is not suitable for front/back side DU type: allowed: Layer 0,3 for Front, Layer 1,2 for Back
+- ! Button to open /viewparts page to get further info
+- ! Button to close application the nice way
+- ! Create standalone application (e.g. use pyinstaller?)
 - ! Port the hybrid / sensor matching stuff over here and let user decide what kind of tool they want to use at the moment
 
 ## Visuals
