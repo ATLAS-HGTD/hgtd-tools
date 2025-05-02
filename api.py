@@ -60,9 +60,6 @@ def post_information(endpoint, payload, debug = False, dryrun = False):
             raise requests.exceptions.RequestException("OOps: Something Else",err)
 
 def delete_information(endpoint, debug = False, dryrun = False):
-    #headers = {'content-type': 'application/json'}
-    #if debug:
-    #    pprint(payload)
     if not dryrun:
         try:
             response = requests.delete(apiUrlPrefix + endpoint)
@@ -88,5 +85,3 @@ def delete_information(endpoint, debug = False, dryrun = False):
             raise requests.exceptions.RequestException("OOps: Something Else",err)
     else:
         print('>>> Dryrun delete operation with endpoint', endpoint)
-
-    #partstreedelete

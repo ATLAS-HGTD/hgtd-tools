@@ -33,6 +33,7 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 - ! Button to open /viewparts page to get further info
 - ! Button to close application the nice way
 - ! Create standalone application (e.g. use pyinstaller?)
+- ! Set Color of progressbar while it is loading to orange (showing that the process is not finished yet), let user know somehow that the process is still running
 - ! Port the hybrid / sensor matching stuff over here and let user decide what kind of tool they want to use at the moment
 
 ## Visuals
