@@ -21,10 +21,10 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 - Support for all 48 DU types, including those that have "horizontal" and "vertical" modules on the same unit
 
 ### Open points requiring implementation
-- !!! Replace local files with API-requested files (only few more parts missing, most are already dynamically retrieved)
+- (~!!! Replace local files with API-requested files (only few more parts missing, most are already dynamically retrieved)~ first implementation done, being tested (probably a bit slow), second implementation does not need to get full partstree only the children for the specific DU)
+- !!! Checks for existing slot / mod relations: if they exist, delete them and create the new ones from VLQ or user decides against that, corrects their entered values
 - !! Checks for fully loaded DU (or not yet fully loaded)
-- !! Checks for existing slot / mod relations: if they exist, delete them and create the new ones from VLQ or user decides against that, corrects their entered values
-- ! Display loaded modules in canvas when doing Detector Assembly (CERN)
+- !! Display loaded modules in canvas when doing Detector Assembly (CERN)
 - ! Port the hybrid / sensor matching stuff over here and let user decide what kind of tool they want to use at the moment
 
 ## Visuals

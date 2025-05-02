@@ -24,9 +24,18 @@ def load_relevant_parts(partKoP_shortname, onlyNonDeleted = True, getFullAttribu
     retrieve = 'partattributelistbykop' if getFullAttributes else 'partslistbykop'
     try:
         if not useLocal:
-            these_parts, responseText = api.fetch_information(f'/{retrieve}/{KoP_ID}/')
-            if retrieve != 'partattributelistbykop':
-                these_parts = [tP for tP in these_parts if tP['is_record_deleted'] == 'F']
+            if partKoP_shortname == 'Slot':
+                these_parts, responseText = api.fetch_information(f'/partattributelistbykop/{KoP_ID}/')
+                slots, responseText = api.fetch_information(f'/partslistbykop/{KoP_ID}/')
+                for alSl in these_parts:
+                    for s in slots:
+                        if alSl['part_serial_number'] == s['serial_number']:
+                            alSl['part_id'] = s['part_id']
+            else:
+                these_parts, responseText = api.fetch_information(f'/{retrieve}/{KoP_ID}/')
+                if retrieve != 'partattributelistbykop':
+                    these_parts = [tP for tP in these_parts if tP['is_record_deleted'] == 'F']
+            
         else:
             with open('/Users/annikastein/Documents/PostDoc/HGTD/DB/PartsTree/all_slots.json') as allSlotsJson:
                 these_parts, responseText = json.load(allSlotsJson), '200: Local File'
@@ -44,6 +53,21 @@ def load_relevant_parts(partKoP_shortname, onlyNonDeleted = True, getFullAttribu
     except ValueError as e:
         raise e
 
+# this is quicker (a bit) because it only reads the children of the given parent
+def load_partstree_for_parent(par_partID, onlyNonDeleted = True):
+    try:
+        partstree, responseText = api.fetch_information(f'/childslist/{par_partID}/')
+        interesting_partstree = []
+        for p in partstree:
+            if p['is_record_deleted'] == 'F':
+                interesting_partstree.append(p)
+        return interesting_partstree, responseText
+    except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+        raise e
+    except ValueError as e:
+        raise e
+
+# this loads the full partstree
 def load_partstree(onlyNonDeleted = True, useLocal = False):
     try:
         if not useLocal:
@@ -226,9 +250,9 @@ class App(customtkinter.CTk):
             self.combobox_parent.configure(values=self.possible_parents_SNs)
             self.combobox_child.configure(values=self.possible_children_SNs)
 
-    def load_children_for_parent_DU(self, parentDU_partID, attribute_Vessel, attribute_Layer, attribute_Quadrant, debug = False):
+    def load_and_assembly_children_for_parent_DU(self, parentDU_partID, attribute_Vessel, attribute_Layer, attribute_Quadrant, debug = False):
         try:
-            self.partstree, self.last_responseText = load_partstree(useLocal = True)
+            self.partstree, self.last_responseText = load_partstree_for_parent(parentDU_partID)
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
             self.partstree = []
             self.last_responseText = str(e)
@@ -263,7 +287,7 @@ class App(customtkinter.CTk):
             
     def load_slots(self):
         try:
-            self.slots, self.last_responseText = load_relevant_parts('Slot', getFullAttributes = True, useLocal = True)
+            self.slots, self.last_responseText = load_relevant_parts('Slot', getFullAttributes = True)
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
             self.slots = None
             self.last_responseText = str(e)
@@ -535,7 +559,7 @@ class App(customtkinter.CTk):
                     attribute_Quadrant = pos.split('Q').pop()
 
                     # find all existing relations between this DU and its Modules
-                    self.loading_wheel_A = threading.Thread(target=self.load_children_for_parent_DU, args=(chi_partID, attribute_Vessel, attribute_Layer, attribute_Quadrant))
+                    self.loading_wheel_A = threading.Thread(target=self.load_and_assembly_children_for_parent_DU, args=(chi_partID, attribute_Vessel, attribute_Layer, attribute_Quadrant))
                     self.loading_wheel_A.start()
                     self.update_progressbar(self.loading_wheel_A)                        
         
