@@ -14,17 +14,33 @@
 ## Description
 These tools interact with the HGTD Production Database for the HGTD Phase-II Upgrade of the ATLAS Experiment at CERN.
 
+### Already working
+- Selecting and writing parent / child relations with a GUI: canvas to select slots for modules for Module Loading, form data will be processed via "click" position
+- Search through partstree and slots to perform multiple POST requests in one go: Detector Assembly (CERN) puts DU on Detector, loaded Modules get Slots
+- Uses standard coordinate system for global attributes: Vessel, Layer, Quadrant, DU type / SU type, Row (global), Module (global) and can map to local attributes: Row (on DU), Module (on DU)
+- Support for all 48 DU types, including those that have "horizontal" and "vertical" modules on the same unit
+
+### Open points requiring implementation
+- !!! Replace local files with API-requested files (only few more parts missing, most are already dynamically retrieved)
+- !! Checks for fully loaded DU (or not yet fully loaded)
+- !! Checks for existing slot / mod relations: if they exist, delete them and create the new ones from VLQ or user decides against that, corrects their entered values
+- ! Display loaded modules in canvas when doing Detector Assembly (CERN)
+- ! Port the hybrid / sensor matching stuff over here and let user decide what kind of tool they want to use at the moment
+
 ## Visuals
 A video showing the main features included with v0.0.1 is available under this [cernbox link](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/public/for_HGTD/screencast_hgtd-tools_v0p0p1.mov) (protected / atlas-hgtd group access only).
 
 ## Installation
-This suite is written in python, and a conda environment is recommended.
+This suite is written in python, and a conda environment is recommended. The included yaml file also lists a couple of useful packages assisting with further analysing / interpreting the data and was tested to work in April 2025.
 
 ### First time usage / requirements:
 
-1. If not already installed, install miniconda, e.g. via `wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh` and then running the .sh script (latest release).
-2. Clone the repository, e.g. via `git clone ssh://git@gitlab.cern.ch:7999/anstein/hgtd-tools.git` (using ssh key).
-3. Install the environment using the given yaml file: `cd hgtd-tools; conda env create -f env-312.yml` (you can find it in the main directory).
+1. If not already installed, install miniconda, e.g. via `wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh` and then running the .sh script (latest release) with e.g. `bash`. On macOS, the installer is termed slightly differently (`...-MacOSX-x86_64.sh`).
+2. Clone the repository, e.g. via `git clone ssh://git@gitlab.cern.ch:7999/anstein/hgtd-tools.git` (here: using ssh key).
+3. Depending on how conda was installed, it might require opening a new shell and / or sourcing the `~/.bashrc`.
+5. Install the environment using the given yaml file: `cd hgtd-tools; conda env create -f env-312.yml` (you can find it in the main directory).
+
+If you don't like conda (☹️ how? 🤨) or you want to minimize the packages to be installed, make sure to run the tools with a recent python3 environment containing `customtkinter`, `requests`, which can be installed with `pip`.
 
 ## Usage
 
