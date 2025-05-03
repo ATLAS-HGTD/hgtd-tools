@@ -34,7 +34,8 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 ### Open points requiring implementation
 - (~!!! Replace local files with API-requested files (only few more parts missing, most are already dynamically retrieved)~ first implementation done, being tested (probably a bit slow), second implementation does not need to get full partstree only the children for the specific DU)
 - !!! ~Checks for existing slot / mod relations: if they exist, delete them and create the new ones from VLQ~
-    - !!! or user decides against that, corrects their entered values (and when doing loading as well to catch the case where the same module was previously loaded to a different DU or on that DU in a different location)
+    - !!! or user decides against that, corrects their entered values - kinda implemented already because user sees where the DU is already placed in VLQ
+    - !!! (and when doing loading as well to catch the case where the same module was previously loaded to a different DU or on that DU in a different location)
     - !!! or other case when module shall be loaded into a position that is already occupied by another module
 - (~!! Checks for fully loaded DU (or not yet fully loaded)~)
 - (~!! Display loaded modules in canvas when doing Detector Assembly (CERN)~)

@@ -1,11 +1,8 @@
 import customtkinter
-import json
-from pprint import pprint
 import requests
 import threading
 import time
 import tkinter
-import webbrowser
 # If we need to tackle a longer list of options, there is a custom dropdown frame to handle them
 #from ctk_scrollDropdown import CTkScrollableDropdownFrame
 # Similar for overflowing text labels etc.
@@ -245,7 +242,7 @@ class App(customtkinter.CTk):
                                 else:
                                     allowed_VLQ = True
                                     self.last_responseText = api.post_information('/partstreelist', part_tree)
-                                    self.canvas.itemconfig(self.duAlreadyPlacedText, text=f'DU is now placed at:\n{pos}')
+                                    self.canvas.itemconfig(self.duAlreadyPlacedText, text=f'Now placed at:\n{pos}')
                                     
             except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
                 self.last_responseText = str(e)
@@ -369,29 +366,14 @@ class App(customtkinter.CTk):
     def combobox_p_c_event_select(self, something):
         parentSNIn = self.combobox_parent.get()
         childSNIn = self.combobox_child.get()
-
         if self.segmented_button.get() == 'Module Loading':
             parentNameIn = 'Detector Unit'
             childNameIn = 'Module'
             self.canvas.delete("all")
-            for key in data.allDUs.keys():
-                if key in parentSNIn:
-                    self.displayedDUtype = key
-                    self.info_label.configure(text=' ')
-                    self.canvas.create_rectangle(40, 40, 360, 540, fill=data.fillColor_SU)
-                    for mod in data.allDUs[self.displayedDUtype]:
-                        self.canvas_place_rounded_rectangle(mod['x'], mod['y'], mod['w'], mod['h'])
-                    self.canvas.create_text(140, 475, text=self.displayedDUtype, anchor='nw', font=('Arial',50), fill=data.fillColor_SU_Text)
-                    self.canvas.create_text(145, 20, text='Connector side', anchor='nw', fill=data.fillColor_SU_Text)
-                    self.canvas.create_text(145, 545, text='Capacitor side', anchor='nw', fill=data.fillColor_SU_Text)
-                    if 'FI10' in parentSNIn:
-                        self.canvas.create_text(360, 290, text='Connector side', anchor='nw', fill=data.fillColor_SU_Text, angle=90)
-                        self.canvas.create_text(20, 290, text='Capacitor side', anchor='nw', fill=data.fillColor_SU_Text, angle=90)
-                    break
-            else:
-                info_text = 'Warning: Detector Unit type could not be retrieved from Parent SN.'
-                print(f'>>> {info_text}')
-                self.info_label.configure(text=info_text)
+            if parentSNIn != '- Select -':
+                self.loading_wheel = threading.Thread(target=self.fetch_loaded_DU_and_display, args=(childSNIn, parentSNIn))
+                self.loading_wheel.start()
+                self.update_progressbar(self.loading_wheel)
         else:
             parentNameIn = 'Detector'
             childNameIn = 'Detector Unit'
@@ -486,11 +468,17 @@ class App(customtkinter.CTk):
             self.delete_old_and_post_new_slots_for_loaded_modules(attribute_Vessel, attribute_Layer, attribute_Quadrant)
 
     def fetch_loaded_DU_and_display(self, childSNIn, parentSNIn):
-        parentDU_partID = self.possible_children_partIDs[self.possible_children_SNs.index(childSNIn)]
+        if self.segmented_button.get() == 'Module Loading':
+            DU_SN = parentSNIn
+            parentDU_partID = self.possible_parents_partIDs[self.possible_parents_SNs.index(DU_SN)]
+        else:
+            DU_SN = childSNIn
+            parentDU_partID = self.possible_children_partIDs[self.possible_children_SNs.index(DU_SN)]
+            
         self.duAlreadyPlacedText = self.canvas.create_text(380, 525, text=f'', anchor='nw', fill=data.fillColor_SU_Text)
 
         for key in data.allDUs.keys():
-            if key in childSNIn:
+            if key in DU_SN:
                 self.displayedDUtype = key
                 self.info_label.configure(text=' ')
                 self.canvas.create_rectangle(40, 40, 360, 540, fill=data.fillColor_SU)
@@ -499,7 +487,7 @@ class App(customtkinter.CTk):
                 self.canvas.create_text(140, 475, text=self.displayedDUtype, anchor='nw', font=('Arial',50), fill=data.fillColor_SU_Text)
                 self.canvas.create_text(145, 20, text='Connector side', anchor='nw', fill=data.fillColor_SU_Text)
                 self.canvas.create_text(145, 545, text='Capacitor side', anchor='nw', fill=data.fillColor_SU_Text)
-                if 'FI10' in parentSNIn:
+                if 'FI10' in DU_SN:
                     self.canvas.create_text(360, 290, text='Connector side', anchor='nw', fill=data.fillColor_SU_Text, angle=90)
                     self.canvas.create_text(20, 290, text='Capacitor side', anchor='nw', fill=data.fillColor_SU_Text, angle=90)
                 # get the children of that DU, interested in Modules only here
@@ -534,16 +522,16 @@ class App(customtkinter.CTk):
                                 # make the corresponding slot green
                                 for mod in data.allDUs[self.displayedDUtype]:
                                     if mod['slot'] == str(r['position']):
-                                        self.canvas_place_rounded_rectangle(mod['x'], mod['y'], mod['w'], mod['h'], fill=data.fillColor_ActiveSlot)
+                                        self.canvas_place_rounded_rectangle(mod['x'], mod['y'], mod['w'], mod['h'], fill=data.fillColor_AlreadyLoadedSlot)
                     if len(self.this_DU_relations_MODULE) == len(data.allDUs[self.displayedDUtype]):
                         self.canvas.create_text(380, 475, text='Fully loaded DU', anchor='nw', fill=data.fillColor_SU_Text)
                     if detector != []:
                         # this DU was already placed somewhere in the detector!!
                         for r in detector:
-                            self.duAlreadyPlacedText = self.canvas.create_text(380, 525, text=f'DU was already placed at:\n{r['position']}', anchor='nw', fill=data.fillColor_SU_Text)
+                            self.duAlreadyPlacedText = self.canvas.create_text(380, 525, text=f'Already placed at:\n{r['position']}', anchor='nw', fill=data.fillColor_SU_Text)
                     break
         else:
-            info_text = 'Warning: Detector Unit type could not be retrieved from Child SN.'
+            info_text = 'Warning: Detector Unit type could not be retrieved from DU SN.'
             print(f'>>> {info_text}')
             self.info_label.configure(text=info_text)
 

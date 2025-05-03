@@ -176,4 +176,5 @@ for key in allDUs.keys():
 fillColor_SU = '#f4f4bb'
 fillColor_Slot = '#ffffff'
 fillColor_SU_Text = '#aaaaaa'
+fillColor_AlreadyLoadedSlot = '#00ddff'
 fillColor_ActiveSlot = '#33ff33'
