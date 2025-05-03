@@ -14,6 +14,12 @@
 ## Description
 These tools interact with the HGTD Production Database for the HGTD Phase-II Upgrade of the ATLAS Experiment at CERN.
 
+### Features
+- API
+- GUI
+- Module Loading
+- Detector Assembly (CERN)
+
 ### Already working
 - Selecting and writing parent / child relations with a GUI: canvas to select slots for modules for Module Loading, form data will be processed via "click" position
 - Search through partstree and slots to perform multiple POST requests in one go: Detector Assembly (CERN) puts DU on Detector, loaded Modules get Slots
@@ -21,19 +27,23 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 - Support for all 48 DU types, including those that have "horizontal" and "vertical" modules on the same unit
 - Loaded modules are shown as green slots when doing Detector Assembly (CERN)
 - If DU is already placed in detector, show where it is (Vessel / Layer / Quadrant)
+- Catch wrong VLQ entries knowing which combinations are allowed
 - Delete request for all existing slots for loaded modules (propagate new VLQ) when new Detector Assembly (CERN) operation is initiated with another VLQ, i.e. effectively replace with new ones
+- API request status is updating while thread is running, progressbar fill wiht different colors
 
 ### Open points requiring implementation
 - (~!!! Replace local files with API-requested files (only few more parts missing, most are already dynamically retrieved)~ first implementation done, being tested (probably a bit slow), second implementation does not need to get full partstree only the children for the specific DU)
 - !!! ~Checks for existing slot / mod relations: if they exist, delete them and create the new ones from VLQ~
     - !!! or user decides against that, corrects their entered values (and when doing loading as well to catch the case where the same module was previously loaded to a different DU or on that DU in a different location)
+    - !!! or other case when module shall be loaded into a position that is already occupied by another module
 - (~!! Checks for fully loaded DU (or not yet fully loaded)~)
 - (~!! Display loaded modules in canvas when doing Detector Assembly (CERN)~)
-- !! Catch when Layer is not suitable for front/back side DU type: allowed: Layer 0,3 for Front, Layer 1,2 for Back
-- ! Button to open /viewparts page to get further info
+- (~!! Catch when Layer is not suitable for front/back side DU type: allowed: Layer 0,3 for Front, Layer 1,2 for Back, also check for allowed vessel, allowed quadrant, nicer textwrap for info message~)
+- (~! Button to open /viewparts page to get further info~)
 - ! Button to close application the nice way
+- (~! Appearance mode selection~)
 - ! Create standalone application (e.g. use pyinstaller?)
-- ! Set Color of progressbar while it is loading to orange (showing that the process is not finished yet), let user know somehow that the process is still running
+- (~! Set Color of progressbar while it is loading to orange (showing that the process is not finished yet), let user know somehow that the process is still running~)
 - ! Port the hybrid / sensor matching stuff over here and let user decide what kind of tool they want to use at the moment
 
 ## Visuals
@@ -49,7 +59,7 @@ This suite is written in python, and a conda environment is recommended. The inc
 3. Depending on how conda was installed, it might require opening a new shell and / or sourcing the `~/.bashrc`.
 5. Install the environment using the given yaml file: `cd hgtd-tools; conda env create -f env-312.yml` (you can find it in the main directory).
 
-If you don't like conda (☹️ how? 🤨) or you want to minimize the packages to be installed, make sure to run the tools with a recent python3 environment containing `customtkinter`, `requests`, which can be installed with `pip`.
+If you don't like conda (☹️ how? 🤨) or you want to minimize the packages to be installed, make sure to run the tools with a recent python3 environment containing `customtkinter`, `requests`, which can be installed with `pip`. Other used packages of hgtd-tools are already part of the regular python3 lib.
 
 ## Usage
 

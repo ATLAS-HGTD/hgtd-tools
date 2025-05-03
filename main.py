@@ -6,6 +6,7 @@ import threading
 import time
 import tkinter
 import textwrap
+import webbrowser
 # If we need to tackle a longer list of options, there is a custom dropdown frame to handle them
 #from ctk_scrollDropdown import CTkScrollableDropdownFrame
 # Similar for overflowing text labels etc.
@@ -16,6 +17,11 @@ import util
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+
+def open_webbrowser_with_url(url, debug = False):
+    if debug:
+        print(f'>>> Opening {api.frontendUrlPrefix + url} in webbrowser...')
+    webbrowser.open_new_tab(api.frontendUrlPrefix + url)
 
 def load_relevant_parts(partKoP_shortname, onlyNonDeleted = True, getFullAttributes = False, useLocal = False):
     KoP_ID = data.KoPID_from_partKoPName[partKoP_shortname]
@@ -111,6 +117,15 @@ def isInSlot(rect, x, y):
         isInSlot = True
     return isInSlot
 
+# https://stackoverflow.com/a/45287550
+class CustomTextWrapper(textwrap.TextWrapper):
+    def wrap(self, text):
+        split_text = text.split('\n')
+        lines = [line for para in split_text for line in textwrap.TextWrapper.wrap(self, para)]
+        return lines
+
+wrapped_text = CustomTextWrapper(width=90)
+
 class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
@@ -133,15 +148,22 @@ class App(customtkinter.CTk):
 
         # fill sidebar
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="HGTD Tools", font=customtkinter.CTkFont(size=20, weight="bold"))
-        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
-        self.credits_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="v0.1.0 - May 2025\n Annika Stein (JGU Mainz)")
-        self.credits_label.grid(row=1, column=0, padx=20, pady=10)
+        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10), columnspan=2)
+        self.credits_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="v0.1.1dev - May 2025\nAnnika Stein (JGU Mainz)")
+        self.credits_label.grid(row=1, column=0, padx=20, pady=10, columnspan=2)
 
         self.progress_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="API Request Status")
-        self.progress_label.grid(row=2, column=0, padx=20, pady=10)
+        self.progress_label.grid(row=2, column=0, padx=20, pady=10, columnspan=2)
         self.progressbar = customtkinter.CTkProgressBar(self.sidebar_frame_left, orientation="horizontal", progress_color="#007711")
-        self.progressbar.grid(row=3, column=0, padx=20, pady=10)
+        self.progressbar.grid(row=3, column=0, padx=20, pady=10, columnspan=2)
         self.progressbar.set(1)
+
+        self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="Appearance Mode:", anchor="w")
+        self.appearance_mode_label.grid(row=5, column=0, padx=10, pady=10)
+        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame_left, values=["Light", "Dark", "System"],
+                                                                       command=self.change_appearance_mode_event)
+        self.appearance_mode_optionemenu.grid(row=5, column=1, padx=10, pady=10)
+        self.appearance_mode_optionemenu.set("System")
 
 
         # work in main widget (column w.r.t. root >= 1)
@@ -183,29 +205,35 @@ class App(customtkinter.CTk):
                                                         )
         self.combobox_parent.grid(row=1, column=1, padx=20, pady=(10, 10), sticky="nsew")
         self.combobox_parent.set("- Select -")
+        self.inspect_parent_button = customtkinter.CTkButton(self.combobox_frame, text="INSPECT PARENT",
+                                                   command=self.inspect_parent)
+        self.inspect_parent_button.grid(row=2, column=1, padx=20, pady=(10, 10))
 
         self.combobox_child_T_label = customtkinter.CTkLabel(self.combobox_frame, text="Child Part Type: Module")
-        self.combobox_child_T_label.grid(row=2, column=0, padx=20, pady=(10, 10), columnspan=2, sticky="nsew")
+        self.combobox_child_T_label.grid(row=3, column=0, padx=20, pady=(10, 10), columnspan=2, sticky="nsew")
 
         self.combobox_child_label = customtkinter.CTkLabel(self.combobox_frame, text="Child Part SN")
-        self.combobox_child_label.grid(row=3, column=0, padx=20, pady=(10, 10), sticky="nsew")
+        self.combobox_child_label.grid(row=4, column=0, padx=20, pady=(10, 10), sticky="nsew")
 
         self.combobox_child = customtkinter.CTkComboBox(self.combobox_frame,
                                                     values=["Module", "Detector Unit"],
                                                     command=self.show_clickable)
-        self.combobox_child.grid(row=3, column=1, padx=20, pady=(10, 10), sticky="nsew")
+        self.combobox_child.grid(row=4, column=1, padx=20, pady=(10, 10), sticky="nsew")
         self.combobox_child.set("- Select -")
+        self.inspect_child_button = customtkinter.CTkButton(self.combobox_frame, text="INSPECT CHILD",
+                                                   command=self.inspect_child)
+        self.inspect_child_button.grid(row=5, column=1, padx=20, pady=(10, 10))
 
         self.position_label = customtkinter.CTkLabel(self.combobox_frame, text="Position (derived from canvas interaction)")
-        self.position_label.grid(row=4, column=0, padx=20, pady=(10, 10), sticky="nsew")
+        self.position_label.grid(row=6, column=0, padx=20, pady=(20, 10), sticky="nsew")
 
         self.position_variable = customtkinter.StringVar(value="- automatic -")
         self.position_entry = customtkinter.CTkEntry(self.combobox_frame, textvariable=self.position_variable, state='disabled')
-        self.position_entry.grid(row=4, column=1, padx=20, pady=(10, 10), sticky="nsew")
+        self.position_entry.grid(row=6, column=1, padx=20, pady=(20, 10), sticky="nsew")
 
         self.add_button = customtkinter.CTkButton(self.combobox_frame, text="ADD PARTS TREE",
                                                    command=self.add_button_event)
-        self.add_button.grid(row=5, column=1, padx=20, pady=(10, 10))
+        self.add_button.grid(row=7, column=1, padx=20, pady=(20, 10))
 
         # If we need to tackle a longer list of options, there is a custom dropdown frame to handle them
         #self.longcombobox = customtkinter.CTkComboBox(self.combobox_frame)
@@ -214,6 +242,9 @@ class App(customtkinter.CTk):
 
 
         # right sub widget: canvas containing DUs to click on
+        self.canvas_label = customtkinter.CTkLabel(self.main_frame, text="Interactive canvas: accepting user click")
+        self.canvas_label.grid(row=0, column=1, padx=20, pady=(20, 10), sticky="nsew")
+
         self.canvas = customtkinter.CTkCanvas(self.main_frame, width = 500, height = 700, background='white')
         self.canvas.grid(row=1, column=1, padx=20, pady=20, sticky="nsew")
         self.canvas.bind('<Button-1>', self.click_canvas_event)
@@ -249,7 +280,7 @@ class App(customtkinter.CTk):
         if self.last_responseText[:3] != '200':
             self.api_status = 0
             self.progressbar.configure(progress_color="#ff0000")
-            info_text = textwrap.fill(f'Error: Parents / Children could not be loaded from ProdDB API.\n {self.last_responseText}',80)
+            info_text = wrapped_text.fill(f'Error: Parents / Children could not be loaded from ProdDB API.\n{self.last_responseText}')
             print(f'>>> {info_text}')
             self.info_label.configure(text=info_text)
         else:
@@ -264,12 +295,26 @@ class App(customtkinter.CTk):
             self.combobox_parent.configure(values=self.possible_parents_SNs)
             self.combobox_child.configure(values=self.possible_children_SNs)
 
+    def change_appearance_mode_event(self, new_appearance_mode: str):
+        customtkinter.set_appearance_mode(new_appearance_mode)
+
+    def inspect_parent(self):
+        parentSNIn = self.combobox_parent.get()
+        if parentSNIn != '- Select -':
+            par_partID = self.possible_parents_partIDs[self.possible_parents_SNs.index(parentSNIn)]
+            open_webbrowser_with_url(f'/viewparts/{par_partID}')
+        
+    def inspect_child(self):
+        childSNIn = self.combobox_child.get()
+        if childSNIn != '- Select -':
+            chi_partID = self.possible_children_partIDs[self.possible_children_SNs.index(childSNIn)]
+            open_webbrowser_with_url(f'/viewparts/{chi_partID}')
+    
     def load_slots_and_assembly_children_for_parent_DU(self, attribute_Vessel, attribute_Layer, attribute_Quadrant, debug = False):
         if self.api_status == 1:
             if debug:
                 if len(self.this_DU_relations_MODULE) == 0:
-                    print('There is no relation to a module for this DU.')
-                    info_text = textwrap.fill(f'Warning: There is no relation to a module for this DU.',80)
+                    info_text = wrapped_text.fill(f'Warning: There is no relation to a module for this DU.')
                     print(f'>>> {info_text}')
                     self.info_label.configure(text=info_text)
             self.load_slots()
@@ -288,7 +333,7 @@ class App(customtkinter.CTk):
         if self.last_responseText[:3] != '200':
             self.api_status = 0
             self.progressbar.configure(progress_color="#ff0000")
-            info_text = textwrap.fill(f'Error: Slots could not be loaded from ProdDB API.\n {self.last_responseText}',80)
+            info_text = wrapped_text.fill(f'Error: Slots could not be loaded from ProdDB API.\n{self.last_responseText}')
             print(f'>>> {info_text}')
             self.info_label.configure(text=info_text)
         else:
@@ -307,7 +352,7 @@ class App(customtkinter.CTk):
             if self.last_responseText[:2] != '20':
                 self.api_status = 0
                 self.progressbar.configure(progress_color="#ff0000")
-                info_text = textwrap.fill(f'Error: Parents could not be loaded from ProdDB API.\n {self.last_responseText}',80)
+                info_text = wrapped_text.fill(f'Error: Parents could not be loaded from ProdDB API.\n{self.last_responseText}')
                 print(f'>>> {info_text}')
                 self.info_label.configure(text=info_text)
             else:
@@ -326,7 +371,7 @@ class App(customtkinter.CTk):
                         if self.last_responseText[:2] != '20':
                             self.api_status = 0
                             self.progressbar.configure(progress_color="#ff0000")
-                            info_text = textwrap.fill(f'Error: Record could not be deleted from ProdDB API.\n {self.last_responseText}', 80)
+                            info_text = wrapped_text.fill(f'Error: Record could not be deleted from ProdDB API.\n{self.last_responseText}')
                             print(f'>>> {info_text}')
                             self.info_label.configure(text=info_text)
                         else:
@@ -362,7 +407,7 @@ class App(customtkinter.CTk):
                             if self.last_responseText[:2] != '20':
                                 self.api_status = 0
                                 self.progressbar.configure(progress_color="#ff0000")
-                                info_text = textwrap.fill(f'Error: Parent / Child relation could not be patched to ProdDB API.\n {self.last_responseText}', 80)
+                                info_text = wrapped_text.fill(f'Error: Parent / Child relation could not be patched to ProdDB API.\n{self.last_responseText}')
                                 print(f'>>> {info_text}')
                                 self.info_label.configure(text=info_text)
                             else:
@@ -385,7 +430,7 @@ class App(customtkinter.CTk):
         if self.last_responseText[:3] != '200':
             self.api_status = 0
             self.progressbar.configure(progress_color="#ff0000")
-            info_text = textwrap.fill(f'Error: Parents / Children could not be loaded from ProdDB API.\n {self.last_responseText}',80)
+            info_text = wrapped_text.fill(f'Error: Parents / Children could not be loaded from ProdDB API.\n{self.last_responseText}')
             print(f'>>> {info_text}')
             self.info_label.configure(text=info_text)
         else:
@@ -405,16 +450,21 @@ class App(customtkinter.CTk):
             # update progressbar
             self.progressbar.step()
             self.after(250, self.update_progressbar, thread)
+            self.progressbar.configure(progress_color="#BBAA00")
         else:
             self.progressbar.set(1)
+            if self.api_status == 0:
+                self.progressbar.configure(progress_color="#ff0000")
+            else:
+                self.progressbar.configure(progress_color="#007711")
 
     # https://stackoverflow.com/a/23944658
     def segmented_button_callback(self, value):
         self.progressbar.set(0)
-
         self.info_label.configure(text=' ')
         self.canvas.delete("all")
         if value == "Module Loading":
+            self.canvas_label.configure(text='Interactive canvas: accepting user click')
             self.combobox_parent.set("- Select -")
             self.combobox_child.set("- Select -")
             self.combobox_parent_T_label.configure(text="Parent Part Type: Detector Unit")
@@ -427,6 +477,7 @@ class App(customtkinter.CTk):
             self.update_progressbar(self.loading_wheel)
 
         else:
+            self.canvas_label.configure(text='Static canvas: served from database')
             self.combobox_parent.set("- Select -")
             self.combobox_child.set("- Select -")
             self.combobox_parent_T_label.configure(text="Parent Part Type: Detector")
@@ -503,6 +554,7 @@ class App(customtkinter.CTk):
 
     def fetch_loaded_DU_and_display(self, childSNIn, parentSNIn):
         parentDU_partID = self.possible_children_partIDs[self.possible_children_SNs.index(childSNIn)]
+        self.duAlreadyPlacedText = self.canvas.create_text(380, 525, text=f'', anchor='nw', fill=data.fillColor_SU_Text)
 
         for key in data.allDUs.keys():
             if key in childSNIn:
@@ -533,7 +585,7 @@ class App(customtkinter.CTk):
                 if self.last_responseText[:3] != '200':
                     self.api_status = 0
                     self.progressbar.configure(progress_color="#ff0000")
-                    info_text = textwrap.fill(f'Error: DU relations could not be loaded from ProdDB API.\n {self.last_responseText}',80)
+                    info_text = wrapped_text.fill(f'Error: DU relations could not be loaded from ProdDB API.\n{self.last_responseText}')
                     print(f'>>> {info_text}')
                     self.info_label.configure(text=info_text)
                     self.this_DU_relations_MODULE = []
@@ -555,7 +607,7 @@ class App(customtkinter.CTk):
                     if detector != []:
                         # this DU was already placed somewhere in the detector!!
                         for r in detector:
-                            self.canvas.create_text(380, 525, text=f'DU is already placed: {r['position']}', anchor='nw', fill=data.fillColor_SU_Text)
+                            self.duAlreadyPlacedText = self.canvas.create_text(380, 525, text=f'DU was already placed at:\n{r['position']}', anchor='nw', fill=data.fillColor_SU_Text)
                     break
         else:
             info_text = 'Warning: Detector Unit type could not be retrieved from Child SN.'
@@ -609,8 +661,44 @@ class App(customtkinter.CTk):
                 # get existing relations
                 # module child of DU
                 # module child of slot
+            allowed_VLQ = False
             try:
-                self.last_responseText = api.post_information('/partstreelist', part_tree)
+                if self.segmented_button.get() == 'Module Loading':
+                    self.last_responseText = api.post_information('/partstreelist', part_tree)
+                elif self.segmented_button.get() == 'Detector Assembly (CERN)':
+                    attribute_Vessel = pos.split('V').pop().split('L')[0]
+                    if attribute_Vessel not in ['1', '2', 'M', 'D']:
+                        info_text = wrapped_text.fill(f'Error: You can not load to this vessel.\nVessel attribute only accepts 1, 2, M, or D, but you selected {attribute_Vessel}!')
+                        print(f'>>> {info_text}')
+                        self.info_label.configure(text=info_text)
+                    else:
+                        attribute_Layer = pos.split('L').pop().split('Q')[0]
+                        if attribute_Layer not in ['0', '1', '2', '3']:
+                            info_text = wrapped_text.fill(f'Error: You can not load to this layer.\nLayer attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Layer}!')
+                            print(f'>>> {info_text}')
+                            self.info_label.configure(text=info_text)
+                        else:
+                            if attribute_Layer == '0' or attribute_Layer == '3':
+                                allowed_type = 'F'
+                                not_allowed_type = 'B'
+                            else:#elif attribute_Layer == '1' or attribute_Layer == '2':
+                                allowed_type = 'B'
+                                not_allowed_type = 'F'
+                            if self.displayedDUtype[0] == not_allowed_type:
+                                info_text = wrapped_text.fill(f'Error: You can not load this DU to this layer.\nLayer {attribute_Layer} only accepts {allowed_type} DUs, but you selected a {self.displayedDUtype[0]} DU!')
+                                print(f'>>> {info_text}')
+                                self.info_label.configure(text=info_text)
+                            else:
+                                attribute_Quadrant = pos.split('Q').pop()
+                                if attribute_Quadrant not in ['0', '1', '2', '3']:
+                                    info_text = wrapped_text.fill(f'Error: You can not load to this quadrant.\nQuadrant attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Quadrant}!')
+                                    print(f'>>> {info_text}')
+                                    self.info_label.configure(text=info_text)
+                                else:
+                                    allowed_VLQ = True
+                                    self.last_responseText = api.post_information('/partstreelist', part_tree)
+                                    self.canvas.itemconfig(self.duAlreadyPlacedText, text=f'DU is now placed at:\n{pos}')
+                                    
             except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
                 self.last_responseText = str(e)
             except ValueError as e:
@@ -619,18 +707,14 @@ class App(customtkinter.CTk):
             if self.last_responseText[:2] != '20':
                 self.api_status = 0
                 self.progressbar.configure(progress_color="#ff0000")
-                info_text = textwrap.fill(f'Error: Parent / Child relation could not be patched to ProdDB API.\n {self.last_responseText}', 80)
+                info_text = wrapped_text.fill(f'Error: Parent / Child relation could not be patched to ProdDB API.\n{self.last_responseText}')
                 print(f'>>> {info_text}')
                 self.info_label.configure(text=info_text)
             else:
                 self.api_status = 1
                 self.progressbar.configure(progress_color="#007711")
 
-                if self.segmented_button.get() == 'Detector Assembly (CERN)':
-                    attribute_Vessel = pos.split('V').pop().split('L')[0]
-                    attribute_Layer = pos.split('L').pop().split('Q')[0]
-                    attribute_Quadrant = pos.split('Q').pop()
-
+                if self.segmented_button.get() == 'Detector Assembly (CERN)' and allowed_VLQ:
                     # find all existing relations between this DU and its Modules, those are propagated to create new Slot -> Module relations
                     self.loading_wheel_A = threading.Thread(target=self.load_slots_and_assembly_children_for_parent_DU, args=(attribute_Vessel, attribute_Layer, attribute_Quadrant))
                     self.loading_wheel_A.start()

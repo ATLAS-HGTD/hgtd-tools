@@ -4,6 +4,7 @@ from pprint import pprint
 # Interaction with hgtd-proddb REST API
 # The requests are all made against the "old" backend
 apiUrlPrefix = 'https://backend-hgtddb.app.cern.ch/hgtddb'
+frontendUrlPrefix = 'https://nginx-hgtddb.app.cern.ch'
 
 def fetch_information(endpoint, debug = False):
     request = requests.get(apiUrlPrefix + endpoint)
