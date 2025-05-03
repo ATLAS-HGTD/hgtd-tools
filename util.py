@@ -1,4 +1,119 @@
-def getSortedListOfListsByNthColumn(unsorted_list, column):
+import textwrap
+import webbrowser
+
+import api
+import data
+
+# === Operations with standard objects (lists, dicts, strings etc.)
+def get_sorted_list_of_lists_by_Nth_column(unsorted_list, column):
     sortList = unsorted_list.copy()
     sortList.sort(key=lambda x: x[column])
     return sortList
+
+def get_relevant_SNs_and_partIDs(partsList):
+    these_SNs_and_partIDs = get_sorted_list_of_lists_by_Nth_column([[pL['serial_number'],pL['part_id']] for pL in partsList], 0)
+    return these_SNs_and_partIDs
+
+# https://stackoverflow.com/a/45287550
+class CustomTextWrapper(textwrap.TextWrapper):
+    def wrap(self, text):
+        split_text = text.split('\n')
+        lines = [line for para in split_text for line in textwrap.TextWrapper.wrap(self, para)]
+        return lines
+
+# === Operations with canvas objects
+def isInSlot(rect, x, y):
+    isInSlot = False
+    left = rect['x']
+    right = rect['x']+rect['w']
+    top = rect['y']
+    bottom = rect['y']+rect['h']
+    if (right >= x
+        and left <= x
+        and bottom >= y
+        and top <= y):
+        isInSlot = True
+    return isInSlot
+
+# === Operations with API or Browser
+def open_webbrowser_with_url(url, debug = False):
+    if debug:
+        print(f'>>> Opening {api.frontendUrlPrefix + url} in webbrowser...')
+    webbrowser.open_new_tab(api.frontendUrlPrefix + url)
+
+def get_relevant_parts(partKoP_shortname, onlyNonDeleted = True, getFullAttributes = False, useLocal = False):
+    KoP_ID = data.KoPID_from_partKoPName[partKoP_shortname]
+    retrieve = 'partattributelistbykop' if getFullAttributes else 'partslistbykop'
+    try:
+        if not useLocal:
+            if partKoP_shortname == 'Slot':
+                these_parts, responseText = api.fetch_information(f'/partattributelistbykop/{KoP_ID}/')
+                slots, responseText = api.fetch_information(f'/partslistbykop/{KoP_ID}/')
+                for alSl in these_parts:
+                    for s in slots:
+                        if alSl['part_serial_number'] == s['serial_number']:
+                            alSl['part_id'] = s['part_id']
+            else:
+                these_parts, responseText = api.fetch_information(f'/{retrieve}/{KoP_ID}/')
+                if retrieve != 'partattributelistbykop':
+                    these_parts = [tP for tP in these_parts if tP['is_record_deleted'] == 'F']
+        else:
+            with open('/Users/annikastein/Documents/PostDoc/HGTD/DB/PartsTree/all_slots.json') as allSlotsJson:
+                these_parts, responseText = json.load(allSlotsJson), '200: Local File'
+            with open('/Users/annikastein/Documents/PostDoc/HGTD/DB/PartsTree/slots.json') as slotsJson:
+                slots, responseText = json.load(slotsJson), '200: Local File'
+            for alSl in these_parts:
+                for s in slots:
+                    if alSl['part_serial_number'] == s['serial_number']:
+                        alSl['part_id'] = s['part_id']
+        return these_parts, responseText
+    except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+        raise e
+    except ValueError as e:
+        raise e
+
+def get_parents(chi_partID, onlyNonDeleted = True):
+    try:
+        partstree, responseText = api.fetch_information(f'/parentslist/{chi_partID}/')
+        interesting_partstree = []
+        for p in partstree:
+            if p['is_record_deleted'] == 'F':
+                interesting_partstree.append(p)
+        return interesting_partstree, responseText
+    except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+        raise e
+    except ValueError as e:
+        raise e
+
+# this is quicker (a bit) because it only reads the children of the given parent
+def get_children(par_partID, onlyNonDeleted = True):
+    try:
+        partstree, responseText = api.fetch_information(f'/childslist/{par_partID}/')
+        interesting_partstree = []
+        for p in partstree:
+            if p['is_record_deleted'] == 'F':
+                interesting_partstree.append(p)
+        return interesting_partstree, responseText
+    except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+        raise e
+    except ValueError as e:
+        raise e
+
+# this loads the full partstree
+def load_partstree(onlyNonDeleted = True, useLocal = False):
+    try:
+        if not useLocal:
+            partstree, responseText = api.fetch_information(f'/partstreelist')
+        else:
+            with open('/Users/annikastein/Documents/PostDoc/HGTD/DB/PartsTree/partstreelist.json') as partstreeJson:
+                partstree, responseText = json.load(partstreeJson), '200: Local File'
+        interesting_partstree = []
+        for p in partstree:
+            if p['is_record_deleted'] == 'F':
+                if p['part']['kind_of_part']['kind_of_part_id'] == 1005 and p['part_parent']['kind_of_part']['kind_of_part_id'] == 2407:
+                    interesting_partstree.append(p)
+        return interesting_partstree, responseText
+    except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+        raise e
+    except ValueError as e:
+        raise e

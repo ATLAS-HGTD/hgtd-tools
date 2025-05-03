@@ -5,7 +5,6 @@ import requests
 import threading
 import time
 import tkinter
-import textwrap
 import webbrowser
 # If we need to tackle a longer list of options, there is a custom dropdown frame to handle them
 #from ctk_scrollDropdown import CTkScrollableDropdownFrame
@@ -18,113 +17,7 @@ import util
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
-def open_webbrowser_with_url(url, debug = False):
-    if debug:
-        print(f'>>> Opening {api.frontendUrlPrefix + url} in webbrowser...')
-    webbrowser.open_new_tab(api.frontendUrlPrefix + url)
-
-def load_relevant_parts(partKoP_shortname, onlyNonDeleted = True, getFullAttributes = False, useLocal = False):
-    KoP_ID = data.KoPID_from_partKoPName[partKoP_shortname]
-    retrieve = 'partattributelistbykop' if getFullAttributes else 'partslistbykop'
-    try:
-        if not useLocal:
-            if partKoP_shortname == 'Slot':
-                these_parts, responseText = api.fetch_information(f'/partattributelistbykop/{KoP_ID}/')
-                slots, responseText = api.fetch_information(f'/partslistbykop/{KoP_ID}/')
-                for alSl in these_parts:
-                    for s in slots:
-                        if alSl['part_serial_number'] == s['serial_number']:
-                            alSl['part_id'] = s['part_id']
-            else:
-                these_parts, responseText = api.fetch_information(f'/{retrieve}/{KoP_ID}/')
-                if retrieve != 'partattributelistbykop':
-                    these_parts = [tP for tP in these_parts if tP['is_record_deleted'] == 'F']
-        else:
-            with open('/Users/annikastein/Documents/PostDoc/HGTD/DB/PartsTree/all_slots.json') as allSlotsJson:
-                these_parts, responseText = json.load(allSlotsJson), '200: Local File'
-            with open('/Users/annikastein/Documents/PostDoc/HGTD/DB/PartsTree/slots.json') as slotsJson:
-                slots, responseText = json.load(slotsJson), '200: Local File'
-            for alSl in these_parts:
-                for s in slots:
-                    if alSl['part_serial_number'] == s['serial_number']:
-                        alSl['part_id'] = s['part_id']
-        return these_parts, responseText
-    except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-        raise e
-    except ValueError as e:
-        raise e
-
-def get_parents(chi_partID, onlyNonDeleted = True):
-    try:
-        partstree, responseText = api.fetch_information(f'/parentslist/{chi_partID}/')
-        interesting_partstree = []
-        for p in partstree:
-            if p['is_record_deleted'] == 'F':
-                interesting_partstree.append(p)
-        return interesting_partstree, responseText
-    except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-        raise e
-    except ValueError as e:
-        raise e
-
-# this is quicker (a bit) because it only reads the children of the given parent
-def get_children(par_partID, onlyNonDeleted = True):
-    try:
-        partstree, responseText = api.fetch_information(f'/childslist/{par_partID}/')
-        interesting_partstree = []
-        for p in partstree:
-            if p['is_record_deleted'] == 'F':
-                interesting_partstree.append(p)
-        return interesting_partstree, responseText
-    except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-        raise e
-    except ValueError as e:
-        raise e
-
-# this loads the full partstree
-def load_partstree(onlyNonDeleted = True, useLocal = False):
-    try:
-        if not useLocal:
-            partstree, responseText = api.fetch_information(f'/partstreelist')
-        else:
-            with open('/Users/annikastein/Documents/PostDoc/HGTD/DB/PartsTree/partstreelist.json') as partstreeJson:
-                partstree, responseText = json.load(partstreeJson), '200: Local File'
-        interesting_partstree = []
-        for p in partstree:
-            if p['is_record_deleted'] == 'F':
-                if p['part']['kind_of_part']['kind_of_part_id'] == 1005 and p['part_parent']['kind_of_part']['kind_of_part_id'] == 2407:
-                    interesting_partstree.append(p)
-        return interesting_partstree, responseText
-    except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-        raise e
-    except ValueError as e:
-        raise e
-
-def grab_relevant_SNs_and_partIDs(partsList):
-    these_SNs_and_partIDs = util.getSortedListOfListsByNthColumn([[pL['serial_number'],pL['part_id']] for pL in partsList], 0)
-    return these_SNs_and_partIDs
-
-def isInSlot(rect, x, y):
-    isInSlot = False
-    left = rect['x']
-    right = rect['x']+rect['w']
-    top = rect['y']
-    bottom = rect['y']+rect['h']
-    if (right >= x
-        and left <= x
-        and bottom >= y
-        and top <= y):
-        isInSlot = True
-    return isInSlot
-
-# https://stackoverflow.com/a/45287550
-class CustomTextWrapper(textwrap.TextWrapper):
-    def wrap(self, text):
-        split_text = text.split('\n')
-        lines = [line for para in split_text for line in textwrap.TextWrapper.wrap(self, para)]
-        return lines
-
-wrapped_text = CustomTextWrapper(width=90)
+wrapped_text = util.CustomTextWrapper(width=90)
 
 class App(customtkinter.CTk):
     def __init__(self):
@@ -184,7 +77,7 @@ class App(customtkinter.CTk):
         # button to select use case of the tool
         self.segmented_button = customtkinter.CTkSegmentedButton(self.main_frame,
                                                                  values=["Module Loading", "Detector Assembly (CERN)"],
-                                                                 command=self.segmented_button_callback)
+                                                                 command=self.button_mode_event_click)
         self.segmented_button.set("Module Loading")
         self.segmented_button.grid(row=0, column=0, padx=20, pady=(20, 0), sticky="nsew")
 
@@ -201,12 +94,12 @@ class App(customtkinter.CTk):
 
         self.combobox_parent = customtkinter.CTkComboBox(self.combobox_frame,
                                                     values=["Detector Unit", "Detector"],
-                                                    command=self.show_clickable
+                                                    command=self.combobox_p_c_event_select
                                                         )
         self.combobox_parent.grid(row=1, column=1, padx=20, pady=(10, 10), sticky="nsew")
         self.combobox_parent.set("- Select -")
         self.inspect_parent_button = customtkinter.CTkButton(self.combobox_frame, text="INSPECT PARENT",
-                                                   command=self.inspect_parent)
+                                                   command=self.button_inspect_parent_event_click)
         self.inspect_parent_button.grid(row=2, column=1, padx=20, pady=(10, 10))
 
         self.combobox_child_T_label = customtkinter.CTkLabel(self.combobox_frame, text="Child Part Type: Module")
@@ -217,11 +110,11 @@ class App(customtkinter.CTk):
 
         self.combobox_child = customtkinter.CTkComboBox(self.combobox_frame,
                                                     values=["Module", "Detector Unit"],
-                                                    command=self.show_clickable)
+                                                    command=self.combobox_p_c_event_select)
         self.combobox_child.grid(row=4, column=1, padx=20, pady=(10, 10), sticky="nsew")
         self.combobox_child.set("- Select -")
         self.inspect_child_button = customtkinter.CTkButton(self.combobox_frame, text="INSPECT CHILD",
-                                                   command=self.inspect_child)
+                                                   command=self.button_inspect_child_event_click)
         self.inspect_child_button.grid(row=5, column=1, padx=20, pady=(10, 10))
 
         self.position_label = customtkinter.CTkLabel(self.combobox_frame, text="Position (derived from canvas interaction)")
@@ -232,7 +125,7 @@ class App(customtkinter.CTk):
         self.position_entry.grid(row=6, column=1, padx=20, pady=(20, 10), sticky="nsew")
 
         self.add_button = customtkinter.CTkButton(self.combobox_frame, text="ADD PARTS TREE",
-                                                   command=self.add_button_event)
+                                                   command=self.button_add_event_click)
         self.add_button.grid(row=7, column=1, padx=20, pady=(20, 10))
 
         # If we need to tackle a longer list of options, there is a custom dropdown frame to handle them
@@ -247,7 +140,7 @@ class App(customtkinter.CTk):
 
         self.canvas = customtkinter.CTkCanvas(self.main_frame, width = 500, height = 700, background='white')
         self.canvas.grid(row=1, column=1, padx=20, pady=20, sticky="nsew")
-        self.canvas.bind('<Button-1>', self.click_canvas_event)
+        self.canvas.bind('<Button-1>', self.canvas_event_click)
         self.displayedDUtype = "None"
         self.this_DU_relations_MODULE = []
 
@@ -257,17 +150,16 @@ class App(customtkinter.CTk):
         self.info_label.grid(row=2, column=0, padx=20, pady=20, columnspan=2)
 
 
-        # First startup of program
+        # First startup of program: default values
         self.api_status = 1
         self.last_responseText = ''
-
         self.slots = None
         self.partstree = None
 
-        # defaults to Module Loading
+        # Get first parents and children (Module Loading)
         try:
-            self.possible_parents, self.last_responseText = load_relevant_parts('Detector Unit')
-            self.possible_children, self.last_responseText = load_relevant_parts('Module')
+            self.possible_parents, self.last_responseText = util.get_relevant_parts('Detector Unit')
+            self.possible_children, self.last_responseText = util.get_relevant_parts('Module')
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
             self.possible_parents = []
             self.possible_children = []
@@ -286,8 +178,8 @@ class App(customtkinter.CTk):
         else:
             self.api_status = 1
             self.progressbar.configure(progress_color="#007711")
-            self.possible_parents_SNs_and_partIDs = grab_relevant_SNs_and_partIDs(self.possible_parents)
-            self.possible_children_SNs_and_partIDs = grab_relevant_SNs_and_partIDs(self.possible_children)
+            self.possible_parents_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_parents)
+            self.possible_children_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_children)
             self.possible_parents_SNs = [entry[0] for entry in self.possible_parents_SNs_and_partIDs]
             self.possible_children_SNs = [entry[0] for entry in self.possible_children_SNs_and_partIDs]
             self.possible_parents_partIDs = [entry[1] for entry in self.possible_parents_SNs_and_partIDs]
@@ -295,351 +187,7 @@ class App(customtkinter.CTk):
             self.combobox_parent.configure(values=self.possible_parents_SNs)
             self.combobox_child.configure(values=self.possible_children_SNs)
 
-    def change_appearance_mode_event(self, new_appearance_mode: str):
-        customtkinter.set_appearance_mode(new_appearance_mode)
-
-    def inspect_parent(self):
-        parentSNIn = self.combobox_parent.get()
-        if parentSNIn != '- Select -':
-            par_partID = self.possible_parents_partIDs[self.possible_parents_SNs.index(parentSNIn)]
-            open_webbrowser_with_url(f'/viewparts/{par_partID}')
-        
-    def inspect_child(self):
-        childSNIn = self.combobox_child.get()
-        if childSNIn != '- Select -':
-            chi_partID = self.possible_children_partIDs[self.possible_children_SNs.index(childSNIn)]
-            open_webbrowser_with_url(f'/viewparts/{chi_partID}')
-    
-    def load_slots_and_assembly_children_for_parent_DU(self, attribute_Vessel, attribute_Layer, attribute_Quadrant, debug = False):
-        if self.api_status == 1:
-            if debug:
-                if len(self.this_DU_relations_MODULE) == 0:
-                    info_text = wrapped_text.fill(f'Warning: There is no relation to a module for this DU.')
-                    print(f'>>> {info_text}')
-                    self.info_label.configure(text=info_text)
-            self.load_slots()
-            self.fill_slot_to_module(attribute_Vessel, attribute_Layer, attribute_Quadrant)
-
-    def load_slots(self):
-        try:
-            self.slots, self.last_responseText = load_relevant_parts('Slot', getFullAttributes = True)
-        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-            self.slots = None
-            self.last_responseText = str(e)
-        except ValueError as e:
-            self.slots = None
-            self.last_responseText = str(e)
-
-        if self.last_responseText[:3] != '200':
-            self.api_status = 0
-            self.progressbar.configure(progress_color="#ff0000")
-            info_text = wrapped_text.fill(f'Error: Slots could not be loaded from ProdDB API.\n{self.last_responseText}')
-            print(f'>>> {info_text}')
-            self.info_label.configure(text=info_text)
-        else:
-            self.api_status = 1
-            self.progressbar.configure(progress_color="#007711")
-
-    def fill_slot_to_module(self, V, L, Q):
-        for entry in self.this_DU_relations_MODULE:
-            try:
-                parents_of_child_module, self.responseText = get_parents(entry['part']['part_id'])
-            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                self.last_responseText = str(e)
-            except ValueError as e:
-                self.last_responseText = str(e)
-
-            if self.last_responseText[:2] != '20':
-                self.api_status = 0
-                self.progressbar.configure(progress_color="#ff0000")
-                info_text = wrapped_text.fill(f'Error: Parents could not be loaded from ProdDB API.\n{self.last_responseText}')
-                print(f'>>> {info_text}')
-                self.info_label.configure(text=info_text)
-            else:
-                self.api_status = 1
-                self.progressbar.configure(progress_color="#007711")
-
-                for r in parents_of_child_module:
-                    if str(r['part_parent']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['Slot']):
-                        try:
-                            self.last_responseText = api.delete_information(f'/partstreedelete/{r['record_id']}/')
-                        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                            self.last_responseText = str(e)
-                        except ValueError as e:
-                            self.last_responseText = str(e)
-
-                        if self.last_responseText[:2] != '20':
-                            self.api_status = 0
-                            self.progressbar.configure(progress_color="#ff0000")
-                            info_text = wrapped_text.fill(f'Error: Record could not be deleted from ProdDB API.\n{self.last_responseText}')
-                            print(f'>>> {info_text}')
-                            self.info_label.configure(text=info_text)
-                        else:
-                            self.api_status = 1
-                            self.progressbar.configure(progress_color="#007711")
-                if self.api_status == 1:
-                    attribute_SU_r = entry['position'].split('R').pop().split('M')[0]
-                    attribute_SU_m = entry['position'].split('M').pop()
-                    for sl in self.slots:
-                        # ToDo: replace the ['part_serial_number'][1] with ['Vessel'] in the (a bit far?) future
-                        # (requires re-upload of good slot table, only comes after fixing flex tail lengths
-                        # -> this should include replacement of Vessel C/A to 1/2 for attributes!!!
-                        if (sl['part_serial_number'][1] == V \
-                            and sl['Layer'] == L \
-                            and sl['Quadrant'] == Q \
-                            and sl['SU_type'] == self.displayedDUtype \
-                            and sl['SU_Row'] == attribute_SU_r \
-                            and sl['SU_Module'] == attribute_SU_m):
-                            # found a slot :-)
-                            part_tree = {
-                                'position': '',
-                                'is_record_deleted': 'F',
-                                'part': entry['part']['part_id'],
-                                'part_parent': sl['part_id'],
-                            }
-                            try:
-                                self.last_responseText = api.post_information('/partstreelist', part_tree)
-                            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                                self.last_responseText = str(e)
-                            except ValueError as e:
-                                self.last_responseText = str(e)
-
-                            if self.last_responseText[:2] != '20':
-                                self.api_status = 0
-                                self.progressbar.configure(progress_color="#ff0000")
-                                info_text = wrapped_text.fill(f'Error: Parent / Child relation could not be patched to ProdDB API.\n{self.last_responseText}')
-                                print(f'>>> {info_text}')
-                                self.info_label.configure(text=info_text)
-                            else:
-                                self.api_status = 1
-                                self.progressbar.configure(progress_color="#007711")
-
-    def load_p_c(self, p, c):
-        try:
-            self.possible_parents, self.last_responseText = load_relevant_parts(p)
-            self.possible_children, self.last_responseText = load_relevant_parts(c)
-        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-            self.possible_parents = []
-            self.possible_children = []
-            self.last_responseText = str(e)
-        except ValueError as e:
-            self.possible_parents = []
-            self.possible_children = []
-            self.last_responseText = str(e)
-
-        if self.last_responseText[:3] != '200':
-            self.api_status = 0
-            self.progressbar.configure(progress_color="#ff0000")
-            info_text = wrapped_text.fill(f'Error: Parents / Children could not be loaded from ProdDB API.\n{self.last_responseText}')
-            print(f'>>> {info_text}')
-            self.info_label.configure(text=info_text)
-        else:
-            self.api_status = 1
-            self.progressbar.configure(progress_color="#007711")
-            self.possible_parents_SNs_and_partIDs = grab_relevant_SNs_and_partIDs(self.possible_parents)
-            self.possible_children_SNs_and_partIDs = grab_relevant_SNs_and_partIDs(self.possible_children)
-            self.possible_parents_SNs = [entry[0] for entry in self.possible_parents_SNs_and_partIDs]
-            self.possible_children_SNs = [entry[0] for entry in self.possible_children_SNs_and_partIDs]
-            self.possible_parents_partIDs = [entry[1] for entry in self.possible_parents_SNs_and_partIDs]
-            self.possible_children_partIDs = [entry[1] for entry in self.possible_children_SNs_and_partIDs]
-            self.combobox_parent.configure(values=self.possible_parents_SNs)
-            self.combobox_child.configure(values=self.possible_children_SNs)
-
-    def update_progressbar(self, thread):
-        if thread.is_alive():
-            # update progressbar
-            self.progressbar.step()
-            self.after(250, self.update_progressbar, thread)
-            self.progressbar.configure(progress_color="#BBAA00")
-        else:
-            self.progressbar.set(1)
-            if self.api_status == 0:
-                self.progressbar.configure(progress_color="#ff0000")
-            else:
-                self.progressbar.configure(progress_color="#007711")
-
-    # https://stackoverflow.com/a/23944658
-    def segmented_button_callback(self, value):
-        self.progressbar.set(0)
-        self.info_label.configure(text=' ')
-        self.canvas.delete("all")
-        if value == "Module Loading":
-            self.canvas_label.configure(text='Interactive canvas: accepting user click')
-            self.combobox_parent.set("- Select -")
-            self.combobox_child.set("- Select -")
-            self.combobox_parent_T_label.configure(text="Parent Part Type: Detector Unit")
-            self.combobox_child_T_label.configure(text="Child Part Type: Module")
-            self.position_label.configure(text="Position (derived from canvas interaction)")
-            self.position_variable.set("- automatic -")
-            self.position_entry.configure(state="disabled")
-            self.loading_wheel = threading.Thread(target=self.load_p_c, args=('Detector Unit','Module'))
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-
-        else:
-            self.canvas_label.configure(text='Static canvas: served from database')
-            self.combobox_parent.set("- Select -")
-            self.combobox_child.set("- Select -")
-            self.combobox_parent_T_label.configure(text="Parent Part Type: Detector")
-            self.combobox_child_T_label.configure(text="Child Part Type: Detector Unit")
-            self.position_label.configure(text="Position (type by hand)")
-            self.position_variable.set("VxLyQz")
-            self.position_entry.configure(state="normal")
-            self.loading_wheel = threading.Thread(target=self.load_p_c, args=('Detector','Detector Unit'))
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-
-    # https://stackoverflow.com/a/44100075
-    def roundedRect(self, x1, y1, width, height, radius=25, **kwargs):
-        x2 = x1 + width
-        y2 = y1 + height
-
-        points = [x1+radius, y1,
-                  x1+radius, y1,
-                  x2-radius, y1,
-                  x2-radius, y1,
-                  x2, y1,
-                  x2, y1+radius,
-                  x2, y1+radius,
-                  x2, y2-radius,
-                  x2, y2-radius,
-                  x2, y2,
-                  x2-radius, y2,
-                  x2-radius, y2,
-                  x1+radius, y2,
-                  x1+radius, y2,
-                  x1, y2,
-                  x1, y2-radius,
-                  x1, y2-radius,
-                  x1, y1+radius,
-                  x1, y1+radius,
-                  x1, y1]
-
-        self.canvas.create_polygon(points, **kwargs, smooth=True)
-
-    def show_clickable(self, something):
-        parentSNIn = self.combobox_parent.get()
-        childSNIn = self.combobox_child.get()
-
-        if self.segmented_button.get() == 'Module Loading':
-            parentNameIn = 'Detector Unit'
-            childNameIn = 'Module'
-            self.canvas.delete("all")
-            for key in data.allDUs.keys():
-                if key in parentSNIn:
-                    self.displayedDUtype = key
-                    self.info_label.configure(text=' ')
-                    self.canvas.create_rectangle(40, 40, 360, 540, fill=data.fillColor_SU)
-                    for mod in data.allDUs[self.displayedDUtype]:
-                        self.roundedRect(mod['x'], mod['y'], mod['w'], mod['h'])
-                    self.canvas.create_text(140, 475, text=self.displayedDUtype, anchor='nw', font=('Arial',50), fill=data.fillColor_SU_Text)
-                    self.canvas.create_text(145, 20, text='Connector side', anchor='nw', fill=data.fillColor_SU_Text)
-                    self.canvas.create_text(145, 545, text='Capacitor side', anchor='nw', fill=data.fillColor_SU_Text)
-                    if 'FI10' in parentSNIn:
-                        self.canvas.create_text(360, 290, text='Connector side', anchor='nw', fill=data.fillColor_SU_Text, angle=90)
-                        self.canvas.create_text(20, 290, text='Capacitor side', anchor='nw', fill=data.fillColor_SU_Text, angle=90)
-                    break
-            else:
-                info_text = 'Warning: Detector Unit type could not be retrieved from Parent SN.'
-                print(f'>>> {info_text}')
-                self.info_label.configure(text=info_text)
-        else:
-            parentNameIn = 'Detector'
-            childNameIn = 'Detector Unit'
-            self.canvas.delete("all")
-            if childSNIn != '- Select -':
-                self.loading_wheel = threading.Thread(target=self.fetch_loaded_DU_and_display, args=(childSNIn, parentSNIn))
-                self.loading_wheel.start()
-                self.update_progressbar(self.loading_wheel)
-
-    def fetch_loaded_DU_and_display(self, childSNIn, parentSNIn):
-        parentDU_partID = self.possible_children_partIDs[self.possible_children_SNs.index(childSNIn)]
-        self.duAlreadyPlacedText = self.canvas.create_text(380, 525, text=f'', anchor='nw', fill=data.fillColor_SU_Text)
-
-        for key in data.allDUs.keys():
-            if key in childSNIn:
-                self.displayedDUtype = key
-                self.info_label.configure(text=' ')
-                self.canvas.create_rectangle(40, 40, 360, 540, fill=data.fillColor_SU)
-                for mod in data.allDUs[self.displayedDUtype]:
-                    self.roundedRect(mod['x'], mod['y'], mod['w'], mod['h'])
-                self.canvas.create_text(140, 475, text=self.displayedDUtype, anchor='nw', font=('Arial',50), fill=data.fillColor_SU_Text)
-                self.canvas.create_text(145, 20, text='Connector side', anchor='nw', fill=data.fillColor_SU_Text)
-                self.canvas.create_text(145, 545, text='Capacitor side', anchor='nw', fill=data.fillColor_SU_Text)
-                if 'FI10' in parentSNIn:
-                    self.canvas.create_text(360, 290, text='Connector side', anchor='nw', fill=data.fillColor_SU_Text, angle=90)
-                    self.canvas.create_text(20, 290, text='Capacitor side', anchor='nw', fill=data.fillColor_SU_Text, angle=90)
-                # get the children of that DU, interested in Modules only here
-                try:
-                    self.partstree, self.last_responseText = get_children(parentDU_partID)
-                    detector, self.last_responseText = get_parents(parentDU_partID)
-                except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                    self.partstree = []
-                    detector = []
-                    self.last_responseText = str(e)
-                except ValueError as e:
-                    self.partstree = []
-                    detector = []
-                    self.last_responseText = str(e)
-
-                if self.last_responseText[:3] != '200':
-                    self.api_status = 0
-                    self.progressbar.configure(progress_color="#ff0000")
-                    info_text = wrapped_text.fill(f'Error: DU relations could not be loaded from ProdDB API.\n{self.last_responseText}')
-                    print(f'>>> {info_text}')
-                    self.info_label.configure(text=info_text)
-                    self.this_DU_relations_MODULE = []
-                    break
-                else:
-                    self.api_status = 1
-                    self.progressbar.configure(progress_color="#007711")
-                    self.this_DU_fully_loaded = False
-                    for r in self.partstree:
-                        if str(r['part_parent']['part_id']) == str(parentDU_partID):
-                            if str(r['part']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['Module']):
-                                self.this_DU_relations_MODULE.append(r)
-                                # make the corresponding slot green
-                                for mod in data.allDUs[self.displayedDUtype]:
-                                    if mod['slot'] == str(r['position']):
-                                        self.roundedRect(mod['x'], mod['y'], mod['w'], mod['h'], fill=data.fillColor_ActiveSlot)
-                    if len(self.this_DU_relations_MODULE) == len(data.allDUs[self.displayedDUtype]):
-                        self.canvas.create_text(380, 475, text='Fully loaded DU', anchor='nw', fill=data.fillColor_SU_Text)
-                    if detector != []:
-                        # this DU was already placed somewhere in the detector!!
-                        for r in detector:
-                            self.duAlreadyPlacedText = self.canvas.create_text(380, 525, text=f'DU was already placed at:\n{r['position']}', anchor='nw', fill=data.fillColor_SU_Text)
-                    break
-        else:
-            info_text = 'Warning: Detector Unit type could not be retrieved from Child SN.'
-            print(f'>>> {info_text}')
-            self.info_label.configure(text=info_text)
-
-    def click_canvas_event(self, event):
-        if self.segmented_button.get() == 'Module Loading':
-            if self.displayedDUtype != 'None':
-                arrayOfModulesInDU = data.allDUs[self.displayedDUtype]
-                mouseInSomeMod = False
-                mouseX = self.canvas.canvasx(event.x)
-                mouseY = self.canvas.canvasy(event.y)
-                #mouseX, mouseX = getCursorPosition(...)
-                for slot in arrayOfModulesInDU:
-                    if isInSlot(slot, mouseX, mouseY) == True:
-                        mouseInSomeMod = True
-                        self.position_variable.set(slot['slot'])
-                        self.roundedRect(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_ActiveSlot)
-                    else:
-                        self.roundedRect(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_Slot)
-                if not mouseInSomeMod:
-                    self.position_variable.set("- automatic -")
-                    info_text = 'Warning: Place mouse in some module slot.'
-                    print(f'>>> {info_text}')
-                    self.info_label.configure(text=info_text)
-                else:
-                    self.info_label.configure(text=' ')
-        else:
-            pass
-
-    def add_button_event(self):
+    def button_add_event_click(self):
         chi = self.combobox_child.get()
         par = self.combobox_parent.get()
         pos = self.position_entry.get()
@@ -716,9 +264,352 @@ class App(customtkinter.CTk):
 
                 if self.segmented_button.get() == 'Detector Assembly (CERN)' and allowed_VLQ:
                     # find all existing relations between this DU and its Modules, those are propagated to create new Slot -> Module relations
-                    self.loading_wheel_A = threading.Thread(target=self.load_slots_and_assembly_children_for_parent_DU, args=(attribute_Vessel, attribute_Layer, attribute_Quadrant))
+                    self.loading_wheel_A = threading.Thread(target=self.fetch_and_write_module_slots, args=(attribute_Vessel, attribute_Layer, attribute_Quadrant))
                     self.loading_wheel_A.start()
                     self.update_progressbar(self.loading_wheel_A)
+        
+    def button_inspect_child_event_click(self):
+        childSNIn = self.combobox_child.get()
+        if childSNIn != '- Select -':
+            chi_partID = self.possible_children_partIDs[self.possible_children_SNs.index(childSNIn)]
+            util.open_webbrowser_with_url(f'/viewparts/{chi_partID}')
+
+    def button_inspect_parent_event_click(self):
+        parentSNIn = self.combobox_parent.get()
+        if parentSNIn != '- Select -':
+            par_partID = self.possible_parents_partIDs[self.possible_parents_SNs.index(parentSNIn)]
+            util.open_webbrowser_with_url(f'/viewparts/{par_partID}')
+
+    # https://stackoverflow.com/a/23944658
+    def button_mode_event_click(self, value):
+        self.progressbar.set(0)
+        self.info_label.configure(text=' ')
+        self.canvas.delete("all")
+        if value == "Module Loading":
+            self.canvas_label.configure(text='Interactive canvas: accepting user click')
+            self.combobox_parent.set("- Select -")
+            self.combobox_child.set("- Select -")
+            self.combobox_parent_T_label.configure(text="Parent Part Type: Detector Unit")
+            self.combobox_child_T_label.configure(text="Child Part Type: Module")
+            self.position_label.configure(text="Position (derived from canvas interaction)")
+            self.position_variable.set("- automatic -")
+            self.position_entry.configure(state="disabled")
+            self.loading_wheel = threading.Thread(target=self.fetch_p_c, args=('Detector Unit','Module'))
+            self.loading_wheel.start()
+            self.update_progressbar(self.loading_wheel)
+
+        else:
+            self.canvas_label.configure(text='Static canvas: served from database')
+            self.combobox_parent.set("- Select -")
+            self.combobox_child.set("- Select -")
+            self.combobox_parent_T_label.configure(text="Parent Part Type: Detector")
+            self.combobox_child_T_label.configure(text="Child Part Type: Detector Unit")
+            self.position_label.configure(text="Position (type by hand)")
+            self.position_variable.set("VxLyQz")
+            self.position_entry.configure(state="normal")
+            self.loading_wheel = threading.Thread(target=self.fetch_p_c, args=('Detector','Detector Unit'))
+            self.loading_wheel.start()
+            self.update_progressbar(self.loading_wheel)
+
+    def canvas_event_click(self, event):
+        if self.segmented_button.get() == 'Module Loading':
+            if self.displayedDUtype != 'None':
+                arrayOfModulesInDU = data.allDUs[self.displayedDUtype]
+                mouseInSomeMod = False
+                mouseX = self.canvas.canvasx(event.x)
+                mouseY = self.canvas.canvasy(event.y)
+                for slot in arrayOfModulesInDU:
+                    if util.isInSlot(slot, mouseX, mouseY):
+                        mouseInSomeMod = True
+                        self.position_variable.set(slot['slot'])
+                        self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_ActiveSlot)
+                    else:
+                        self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_Slot)
+                if not mouseInSomeMod:
+                    self.position_variable.set("- automatic -")
+                    info_text = 'Warning: Place mouse in some module slot.'
+                    print(f'>>> {info_text}')
+                    self.info_label.configure(text=info_text)
+                else:
+                    self.info_label.configure(text=' ')
+        else:
+            pass
+
+    # https://stackoverflow.com/a/44100075
+    def canvas_place_rounded_rectangle(self, x1, y1, width, height, radius=25, **kwargs):
+        x2 = x1 + width
+        y2 = y1 + height
+
+        points = [x1+radius, y1,
+                  x1+radius, y1,
+                  x2-radius, y1,
+                  x2-radius, y1,
+                  x2, y1,
+                  x2, y1+radius,
+                  x2, y1+radius,
+                  x2, y2-radius,
+                  x2, y2-radius,
+                  x2, y2,
+                  x2-radius, y2,
+                  x2-radius, y2,
+                  x1+radius, y2,
+                  x1+radius, y2,
+                  x1, y2,
+                  x1, y2-radius,
+                  x1, y2-radius,
+                  x1, y1+radius,
+                  x1, y1+radius,
+                  x1, y1]
+
+        self.canvas.create_polygon(points, **kwargs, smooth=True)
+
+    def change_appearance_mode_event(self, new_appearance_mode: str):
+        customtkinter.set_appearance_mode(new_appearance_mode)
+
+    def combobox_p_c_event_select(self, something):
+        parentSNIn = self.combobox_parent.get()
+        childSNIn = self.combobox_child.get()
+
+        if self.segmented_button.get() == 'Module Loading':
+            parentNameIn = 'Detector Unit'
+            childNameIn = 'Module'
+            self.canvas.delete("all")
+            for key in data.allDUs.keys():
+                if key in parentSNIn:
+                    self.displayedDUtype = key
+                    self.info_label.configure(text=' ')
+                    self.canvas.create_rectangle(40, 40, 360, 540, fill=data.fillColor_SU)
+                    for mod in data.allDUs[self.displayedDUtype]:
+                        self.canvas_place_rounded_rectangle(mod['x'], mod['y'], mod['w'], mod['h'])
+                    self.canvas.create_text(140, 475, text=self.displayedDUtype, anchor='nw', font=('Arial',50), fill=data.fillColor_SU_Text)
+                    self.canvas.create_text(145, 20, text='Connector side', anchor='nw', fill=data.fillColor_SU_Text)
+                    self.canvas.create_text(145, 545, text='Capacitor side', anchor='nw', fill=data.fillColor_SU_Text)
+                    if 'FI10' in parentSNIn:
+                        self.canvas.create_text(360, 290, text='Connector side', anchor='nw', fill=data.fillColor_SU_Text, angle=90)
+                        self.canvas.create_text(20, 290, text='Capacitor side', anchor='nw', fill=data.fillColor_SU_Text, angle=90)
+                    break
+            else:
+                info_text = 'Warning: Detector Unit type could not be retrieved from Parent SN.'
+                print(f'>>> {info_text}')
+                self.info_label.configure(text=info_text)
+        else:
+            parentNameIn = 'Detector'
+            childNameIn = 'Detector Unit'
+            self.canvas.delete("all")
+            if childSNIn != '- Select -':
+                self.loading_wheel = threading.Thread(target=self.fetch_loaded_DU_and_display, args=(childSNIn, parentSNIn))
+                self.loading_wheel.start()
+                self.update_progressbar(self.loading_wheel)
+
+    def delete_old_and_post_new_slots_for_loaded_modules(self, V, L, Q):
+        for entry in self.this_DU_relations_MODULE:
+            try:
+                parents_of_child_module, self.responseText = util.get_parents(entry['part']['part_id'])
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                self.last_responseText = str(e)
+            except ValueError as e:
+                self.last_responseText = str(e)
+
+            if self.last_responseText[:2] != '20':
+                self.api_status = 0
+                self.progressbar.configure(progress_color="#ff0000")
+                info_text = wrapped_text.fill(f'Error: Parents could not be loaded from ProdDB API.\n{self.last_responseText}')
+                print(f'>>> {info_text}')
+                self.info_label.configure(text=info_text)
+            else:
+                self.api_status = 1
+                self.progressbar.configure(progress_color="#007711")
+
+                for r in parents_of_child_module:
+                    if str(r['part_parent']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['Slot']):
+                        try:
+                            self.last_responseText = api.delete_information(f'/partstreedelete/{r['record_id']}/')
+                        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                            self.last_responseText = str(e)
+                        except ValueError as e:
+                            self.last_responseText = str(e)
+
+                        if self.last_responseText[:2] != '20':
+                            self.api_status = 0
+                            self.progressbar.configure(progress_color="#ff0000")
+                            info_text = wrapped_text.fill(f'Error: Record could not be deleted from ProdDB API.\n{self.last_responseText}')
+                            print(f'>>> {info_text}')
+                            self.info_label.configure(text=info_text)
+                        else:
+                            self.api_status = 1
+                            self.progressbar.configure(progress_color="#007711")
+                if self.api_status == 1:
+                    attribute_SU_r = entry['position'].split('R').pop().split('M')[0]
+                    attribute_SU_m = entry['position'].split('M').pop()
+                    for sl in self.slots:
+                        # ToDo: replace the ['part_serial_number'][1] with ['Vessel'] in the (a bit far?) future
+                        # (requires re-upload of good slot table, only comes after fixing flex tail lengths
+                        # -> this should include replacement of Vessel C/A to 1/2 for attributes!!!
+                        if (sl['part_serial_number'][1] == V \
+                            and sl['Layer'] == L \
+                            and sl['Quadrant'] == Q \
+                            and sl['SU_type'] == self.displayedDUtype \
+                            and sl['SU_Row'] == attribute_SU_r \
+                            and sl['SU_Module'] == attribute_SU_m):
+                            # found a slot :-)
+                            part_tree = {
+                                'position': '',
+                                'is_record_deleted': 'F',
+                                'part': entry['part']['part_id'],
+                                'part_parent': sl['part_id'],
+                            }
+                            try:
+                                self.last_responseText = api.post_information('/partstreelist', part_tree)
+                            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                                self.last_responseText = str(e)
+                            except ValueError as e:
+                                self.last_responseText = str(e)
+
+                            if self.last_responseText[:2] != '20':
+                                self.api_status = 0
+                                self.progressbar.configure(progress_color="#ff0000")
+                                info_text = wrapped_text.fill(f'Error: Parent / Child relation could not be patched to ProdDB API.\n{self.last_responseText}')
+                                print(f'>>> {info_text}')
+                                self.info_label.configure(text=info_text)
+                            else:
+                                self.api_status = 1
+                                self.progressbar.configure(progress_color="#007711")
+    
+    def fetch_and_write_module_slots(self, attribute_Vessel, attribute_Layer, attribute_Quadrant, debug = False):
+        if self.api_status == 1:
+            if debug:
+                if len(self.this_DU_relations_MODULE) == 0:
+                    info_text = wrapped_text.fill(f'Warning: There is no relation to a module for this DU.')
+                    print(f'>>> {info_text}')
+                    self.info_label.configure(text=info_text)
+            self.fetch_slots()
+            self.delete_old_and_post_new_slots_for_loaded_modules(attribute_Vessel, attribute_Layer, attribute_Quadrant)
+
+    def fetch_loaded_DU_and_display(self, childSNIn, parentSNIn):
+        parentDU_partID = self.possible_children_partIDs[self.possible_children_SNs.index(childSNIn)]
+        self.duAlreadyPlacedText = self.canvas.create_text(380, 525, text=f'', anchor='nw', fill=data.fillColor_SU_Text)
+
+        for key in data.allDUs.keys():
+            if key in childSNIn:
+                self.displayedDUtype = key
+                self.info_label.configure(text=' ')
+                self.canvas.create_rectangle(40, 40, 360, 540, fill=data.fillColor_SU)
+                for mod in data.allDUs[self.displayedDUtype]:
+                    self.canvas_place_rounded_rectangle(mod['x'], mod['y'], mod['w'], mod['h'])
+                self.canvas.create_text(140, 475, text=self.displayedDUtype, anchor='nw', font=('Arial',50), fill=data.fillColor_SU_Text)
+                self.canvas.create_text(145, 20, text='Connector side', anchor='nw', fill=data.fillColor_SU_Text)
+                self.canvas.create_text(145, 545, text='Capacitor side', anchor='nw', fill=data.fillColor_SU_Text)
+                if 'FI10' in parentSNIn:
+                    self.canvas.create_text(360, 290, text='Connector side', anchor='nw', fill=data.fillColor_SU_Text, angle=90)
+                    self.canvas.create_text(20, 290, text='Capacitor side', anchor='nw', fill=data.fillColor_SU_Text, angle=90)
+                # get the children of that DU, interested in Modules only here
+                try:
+                    self.partstree, self.last_responseText = util.get_children(parentDU_partID)
+                    detector, self.last_responseText = util.get_parents(parentDU_partID)
+                except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                    self.partstree = []
+                    detector = []
+                    self.last_responseText = str(e)
+                except ValueError as e:
+                    self.partstree = []
+                    detector = []
+                    self.last_responseText = str(e)
+
+                if self.last_responseText[:3] != '200':
+                    self.api_status = 0
+                    self.progressbar.configure(progress_color="#ff0000")
+                    info_text = wrapped_text.fill(f'Error: DU relations could not be loaded from ProdDB API.\n{self.last_responseText}')
+                    print(f'>>> {info_text}')
+                    self.info_label.configure(text=info_text)
+                    self.this_DU_relations_MODULE = []
+                    break
+                else:
+                    self.api_status = 1
+                    self.progressbar.configure(progress_color="#007711")
+                    self.this_DU_fully_loaded = False
+                    for r in self.partstree:
+                        if str(r['part_parent']['part_id']) == str(parentDU_partID):
+                            if str(r['part']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['Module']):
+                                self.this_DU_relations_MODULE.append(r)
+                                # make the corresponding slot green
+                                for mod in data.allDUs[self.displayedDUtype]:
+                                    if mod['slot'] == str(r['position']):
+                                        self.canvas_place_rounded_rectangle(mod['x'], mod['y'], mod['w'], mod['h'], fill=data.fillColor_ActiveSlot)
+                    if len(self.this_DU_relations_MODULE) == len(data.allDUs[self.displayedDUtype]):
+                        self.canvas.create_text(380, 475, text='Fully loaded DU', anchor='nw', fill=data.fillColor_SU_Text)
+                    if detector != []:
+                        # this DU was already placed somewhere in the detector!!
+                        for r in detector:
+                            self.duAlreadyPlacedText = self.canvas.create_text(380, 525, text=f'DU was already placed at:\n{r['position']}', anchor='nw', fill=data.fillColor_SU_Text)
+                    break
+        else:
+            info_text = 'Warning: Detector Unit type could not be retrieved from Child SN.'
+            print(f'>>> {info_text}')
+            self.info_label.configure(text=info_text)
+
+    def fetch_p_c(self, p, c):
+        try:
+            self.possible_parents, self.last_responseText = util.get_relevant_parts(p)
+            self.possible_children, self.last_responseText = util.get_relevant_parts(c)
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+            self.possible_parents = []
+            self.possible_children = []
+            self.last_responseText = str(e)
+        except ValueError as e:
+            self.possible_parents = []
+            self.possible_children = []
+            self.last_responseText = str(e)
+
+        if self.last_responseText[:3] != '200':
+            self.api_status = 0
+            self.progressbar.configure(progress_color="#ff0000")
+            info_text = wrapped_text.fill(f'Error: Parents / Children could not be loaded from ProdDB API.\n{self.last_responseText}')
+            print(f'>>> {info_text}')
+            self.info_label.configure(text=info_text)
+        else:
+            self.api_status = 1
+            self.progressbar.configure(progress_color="#007711")
+            self.possible_parents_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_parents)
+            self.possible_children_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_children)
+            self.possible_parents_SNs = [entry[0] for entry in self.possible_parents_SNs_and_partIDs]
+            self.possible_children_SNs = [entry[0] for entry in self.possible_children_SNs_and_partIDs]
+            self.possible_parents_partIDs = [entry[1] for entry in self.possible_parents_SNs_and_partIDs]
+            self.possible_children_partIDs = [entry[1] for entry in self.possible_children_SNs_and_partIDs]
+            self.combobox_parent.configure(values=self.possible_parents_SNs)
+            self.combobox_child.configure(values=self.possible_children_SNs)
+
+    def fetch_slots(self):
+        try:
+            self.slots, self.last_responseText = util.get_relevant_parts('Slot', getFullAttributes = True)
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+            self.slots = None
+            self.last_responseText = str(e)
+        except ValueError as e:
+            self.slots = None
+            self.last_responseText = str(e)
+
+        if self.last_responseText[:3] != '200':
+            self.api_status = 0
+            self.progressbar.configure(progress_color="#ff0000")
+            info_text = wrapped_text.fill(f'Error: Slots could not be loaded from ProdDB API.\n{self.last_responseText}')
+            print(f'>>> {info_text}')
+            self.info_label.configure(text=info_text)
+        else:
+            self.api_status = 1
+            self.progressbar.configure(progress_color="#007711")
+
+    def update_progressbar(self, thread):
+        if thread.is_alive():
+            # update progressbar
+            self.progressbar.step()
+            self.after(250, self.update_progressbar, thread)
+            self.progressbar.configure(progress_color="#BBAA00")
+        else:
+            self.progressbar.set(1)
+            if self.api_status == 0:
+                self.progressbar.configure(progress_color="#ff0000")
+            else:
+                self.progressbar.configure(progress_color="#007711")
 
 if __name__ == "__main__":
     app = App()
