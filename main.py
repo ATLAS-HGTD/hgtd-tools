@@ -140,6 +140,8 @@ class App(customtkinter.CTk):
         self.canvas.bind('<Button-1>', self.canvas_event_click)
         self.displayedDUtype = "None"
         self.this_DU_relations_MODULE = []
+        self.this_MODULE_relations_DU = []
+        self.this_MODULE_relations_SLOT = []
 
 
         # footer: info for user (e.g. Warning, Error)
@@ -308,27 +310,56 @@ class App(customtkinter.CTk):
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
 
-    def canvas_event_click(self, event):
+    def canvas_event_click(self, event, debug = False):
         if self.segmented_button.get() == 'Module Loading':
             if self.displayedDUtype != 'None':
                 arrayOfModulesInDU = data.allDUs[self.displayedDUtype]
-                mouseInSomeMod = False
-                mouseX = self.canvas.canvasx(event.x)
-                mouseY = self.canvas.canvasy(event.y)
-                for slot in arrayOfModulesInDU:
-                    if util.isInSlot(slot, mouseX, mouseY):
-                        mouseInSomeMod = True
-                        self.position_variable.set(slot['slot'])
-                        self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_ActiveSlot)
-                    else:
-                        self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_Slot)
-                if not mouseInSomeMod:
+                alreadyConnectedModules = self.this_DU_relations_MODULE # list of relations, as in partstree
+                alreadyUsedSlots = [entry['position'] for entry in alreadyConnectedModules]
+                
+                alreadyConnectedDUsForModule = self.this_MODULE_relations_DU
+                alreadyConnectedSLOTsForModule = self.this_MODULE_relations_SLOT
+
+                if len(alreadyConnectedDUsForModule) + len(alreadyConnectedSLOTsForModule) > 0:
                     self.position_variable.set("- automatic -")
-                    info_text = 'Warning: Place mouse in some module slot.'
+                    info_text = 'Warning: This module is already connected to some parent.\nSelect a different one, or disconnect the parents of this module by inspecting the Module.\nThere you can delete existing relations with the red trash button.'
                     print(f'>>> {info_text}')
+                    if debug:
+                        print('Existing connections to the following DU(s):',[DU['part_parent']['serial_number'] for DU in alreadyConnectedDUsForModule])
+                        print('Existing connections to the following Slot(s):',[SLOT['part_parent']['serial_number'] for SLOT in alreadyConnectedSLOTsForModule])
                     self.info_label.configure(text=info_text)
                 else:
-                    self.info_label.configure(text=' ')
+                    mouseInSomeMod = False
+                    mouseX = self.canvas.canvasx(event.x)
+                    mouseY = self.canvas.canvasy(event.y)
+                    for slot in arrayOfModulesInDU:
+                        if util.isInSlot(slot, mouseX, mouseY):
+                            mouseInSomeMod = True
+                            self.position_variable.set(slot['slot'])
+                            notAllowedSlot = False
+                            if slot['slot'] in alreadyUsedSlots:
+                                notAllowedSlot = True
+                                self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_AlreadyLoadedSlot)
+                            else:
+                                self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_ActiveSlot)
+                        else:
+                            if slot['slot'] in alreadyUsedSlots:
+                                self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_AlreadyLoadedSlot)
+                            else:
+                                self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_Slot)
+                    if not mouseInSomeMod:
+                        self.position_variable.set("- automatic -")
+                        info_text = 'Warning: Place mouse in some module slot.'
+                        print(f'>>> {info_text}')
+                        self.info_label.configure(text=info_text)
+                    else:
+                        if notAllowedSlot:
+                            self.position_variable.set("- automatic -")
+                            info_text = 'Warning: This slot is already in use.\nSelect a different one, or disconnect the already loaded module by inspecting the DU.\nThere you can delete existing relations with the red trash button.'
+                            print(f'>>> {info_text}')
+                            self.info_label.configure(text=info_text)
+                        else:
+                            self.info_label.configure(text=' ')
         else:
             pass
 
@@ -471,6 +502,34 @@ class App(customtkinter.CTk):
         if self.segmented_button.get() == 'Module Loading':
             DU_SN = parentSNIn
             parentDU_partID = self.possible_parents_partIDs[self.possible_parents_SNs.index(DU_SN)]
+            if childSNIn != '- Select -':
+                childModule_partID = self.possible_children_partIDs[self.possible_children_SNs.index(childSNIn)]
+                # fetch possibly existing parents of module to make sure we don't load it again somewhere else
+                try:
+                    self.module_parents, self.last_responseText = util.get_parents(childModule_partID)
+                except(requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                    self.module_parents = []
+                    self.last_responseText = str(e)
+                except ValueError as e:
+                    self.module_parents = []
+                    self.last_responseText = str(e)
+    
+                if self.last_responseText[:3] != '200':
+                    self.api_status = 0
+                    self.progressbar.configure(progress_color="#ff0000")
+                    info_text = wrapped_text.fill(f'Error: Module relations could not be loaded from ProdDB API.\n{self.last_responseText}')
+                    print(f'>>> {info_text}')
+                    self.info_label.configure(text=info_text)
+                    self.this_MODULE_relations_DU = []
+                    self.this_MODULE_relations_SLOT = []
+                else:
+                    self.api_status = 1
+                    self.progressbar.configure(progress_color="#007711")
+                    for r in self.module_parents:
+                        if str(r['part_parent']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['Detector Unit']):
+                            self.this_MODULE_relations_DU.append(r)
+                        if str(r['part_parent']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['Slot']):
+                            self.this_MODULE_relations_SLOT.append(r)
         else:
             DU_SN = childSNIn
             parentDU_partID = self.possible_children_partIDs[self.possible_children_SNs.index(DU_SN)]

@@ -30,13 +30,16 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 - Catch wrong VLQ entries knowing which combinations are allowed
 - Delete request for all existing slots for loaded modules (propagate new VLQ) when new Detector Assembly (CERN) operation is initiated with another VLQ, i.e. effectively replace with new ones
 - API request status is updating while thread is running, progressbar fill wiht different colors
+- Any operation that would overwrite the module loading is caught, user first needs to disconnect the module from existing parent DUs or parent Slots
+- Overwriting existing DU assembly (together with module connections to slots) is possible on the other hand, and propagates the new slots, should automatically delete child relations of affected slots
 
 ### Open points requiring implementation
 - (~!!! Replace local files with API-requested files (only few more parts missing, most are already dynamically retrieved)~ first implementation done, being tested (probably a bit slow), second implementation does not need to get full partstree only the children for the specific DU)
 - !!! ~Checks for existing slot / mod relations: if they exist, delete them and create the new ones from VLQ~
-    - !!! or user decides against that, corrects their entered values - kinda implemented already because user sees where the DU is already placed in VLQ
-    - !!! (and when doing loading as well to catch the case where the same module was previously loaded to a different DU or on that DU in a different location)
-    - !!! or other case when module shall be loaded into a position that is already occupied by another module
+    - !!! ~or user decides against that, corrects their entered values~ - kinda implemented already because user sees where the DU is already placed in VLQ
+    - !!! ~(and when doing loading as well to catch the case where the same module was previously loaded to a different DU or on that DU in a different location)~ - this module can then not be filled to any slot on the shown DU
+    - !!! ~or other case when module shall be loaded into a position that is already occupied by another module~ - user can not add that one because we check for existing children of the DU, and to help visually we display the already used ones)
+    - !!! catch when VLQ is already occupied by another DU, force user to first disconnect the existing DU in that VLQ and possibly also later on also force user to disconnect any modules from the affected slots (or hope that the DB disonnects all modules from affected slots)
 - (~!! Checks for fully loaded DU (or not yet fully loaded)~)
 - (~!! Display loaded modules in canvas when doing Detector Assembly (CERN)~)
 - (~!! Catch when Layer is not suitable for front/back side DU type: allowed: Layer 0,3 for Front, Layer 1,2 for Back, also check for allowed vessel, allowed quadrant, nicer textwrap for info message~)
