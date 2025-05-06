@@ -25,13 +25,14 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 - Search through partstree and slots to perform multiple POST requests in one go: Detector Assembly (CERN) puts DU on Detector, loaded Modules get Slots
 - Uses standard coordinate system for global attributes: Vessel, Layer, Quadrant, DU type / SU type, Row (global), Module (global) and can map to local attributes: Row (on DU), Module (on DU)
 - Support for all 48 DU types, including those that have "horizontal" and "vertical" modules on the same unit
-- Loaded modules are shown as green slots when doing Detector Assembly (CERN)
+- Loaded modules are shown as blue slots when doing Module Loading or Detector Assembly (CERN), desired slots of the user doing Module Loading are highlighted in green
 - If DU is already placed in detector, show where it is (Vessel / Layer / Quadrant)
 - Catch wrong VLQ entries knowing which combinations are allowed
 - Delete request for all existing slots for loaded modules (propagate new VLQ) when new Detector Assembly (CERN) operation is initiated with another VLQ, i.e. effectively replace with new ones
-- API request status is updating while thread is running, progressbar fill wiht different colors
+- API request status is updating while thread is running, progressbar fill with different colors
 - Any operation that would overwrite the module loading is caught, user first needs to disconnect the module from existing parent DUs or parent Slots or confirm overwriting existing relation(s) in case of detector assembly
 - Overwriting existing DU assembly (together with module connections to slots) is possible on the other hand, and propagates the new slots, should automatically delete child relations of affected slots
+- Distinction between local lookup files and fetching dynamic tables where needed
 
 ### Open points requiring implementation
 - (~!!! Replace local files with API-requested files (only few more parts missing, most are already dynamically retrieved)~ first implementation done, being tested (probably a bit slow), second implementation does not need to get full partstree only the children for the specific DU)

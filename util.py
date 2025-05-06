@@ -50,7 +50,11 @@ def get_relevant_parts(partKoP_shortname, onlyNonDeleted = True, getFullAttribut
         if not useLocal:
             if partKoP_shortname == 'Slot':
                 these_parts, responseText = api.fetch_information(f'/partattributelistbykop/{KoP_ID}/')
+                with open('./local/all_slots.json', 'w') as f:
+                    json.dump(these_parts, f)
                 slots, responseText = api.fetch_information(f'/partslistbykop/{KoP_ID}/')
+                with open('./local/all_slots.json', 'w') as f:
+                    json.dump(slots, f)
                 for alSl in these_parts:
                     for s in slots:
                         if alSl['part_serial_number'] == s['serial_number']:
@@ -60,9 +64,14 @@ def get_relevant_parts(partKoP_shortname, onlyNonDeleted = True, getFullAttribut
                 if retrieve != 'partattributelistbykop':
                     these_parts = [tP for tP in these_parts if tP['is_record_deleted'] == 'F']
         else:
-            with open('/Users/annikastein/Documents/PostDoc/HGTD/DB/PartsTree/all_slots.json') as allSlotsJson:
+            # slot table is the one table that basically only acts as a static lookup;
+            # contains the various location definitions (local & global) but during
+            # the lifetime of the detector, the Slot table itself stays constant
+            # => can be stored as a local file, don't need to load it freshly each time
+            # (at least that's my understanding now during R&D of the database tools)
+            with open('./local/all_slots.json') as allSlotsJson:
                 these_parts, responseText = json.load(allSlotsJson), '200: Local File'
-            with open('/Users/annikastein/Documents/PostDoc/HGTD/DB/PartsTree/slots.json') as slotsJson:
+            with open('./local/slots.json') as slotsJson:
                 slots, responseText = json.load(slotsJson), '200: Local File'
             for alSl in these_parts:
                 for s in slots:
@@ -101,13 +110,18 @@ def get_children(par_partID, onlyNonDeleted = True):
     except ValueError as e:
         raise e
 
-# this loads the full partstree
+# this loads the full partstree, quite slow (and big!)
 def load_partstree(onlyNonDeleted = True, useLocal = False):
     try:
         if not useLocal:
             partstree, responseText = api.fetch_information(f'/partstreelist')
+            with open('./local/partstreelist.json', 'w') as f:
+                json.dump(partstree, f)
         else:
-            with open('/Users/annikastein/Documents/PostDoc/HGTD/DB/PartsTree/partstreelist.json') as partstreeJson:
+            # WARNING: relations OTOH are dynamic in nature and should not be accidentally
+            # picked up from possibly outdated local files!!!
+            # Please use for testing purposes only, you should now not need this anymore.
+            with open('./local/partstreelist.json') as partstreeJson:
                 partstree, responseText = json.load(partstreeJson), '200: Local File'
         interesting_partstree = []
         for p in partstree:

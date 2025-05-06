@@ -3,10 +3,7 @@ import requests
 import threading
 import time
 import tkinter
-# If we need to tackle a longer list of options, there is a custom dropdown frame to handle them
-#from ctk_scrollDropdown import CTkScrollableDropdownFrame
-# Similar for overflowing text labels etc.
-#from ctk_scrollFrame import CTkXYFrame
+
 import api
 import data
 import util
@@ -39,7 +36,7 @@ class App(customtkinter.CTk):
         # fill sidebar
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="HGTD Tools", font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10), columnspan=2)
-        self.credits_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="v0.1.1 - May 2025\nAnnika Stein (JGU Mainz)")
+        self.credits_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="v1.0.0dev - May 2025\nAnnika Stein (JGU Mainz)")
         self.credits_label.grid(row=1, column=0, padx=20, pady=10, columnspan=2)
 
         self.progress_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="API Request Status")
@@ -125,11 +122,6 @@ class App(customtkinter.CTk):
                                                    command=self.button_add_event_click)
         self.add_button.grid(row=7, column=1, padx=20, pady=(20, 10))
 
-        # If we need to tackle a longer list of options, there is a custom dropdown frame to handle them
-        #self.longcombobox = customtkinter.CTkComboBox(self.combobox_frame)
-        #self.longcombobox.grid(row=6, column=1, padx=20, pady=10, sticky="nsew")
-        #CTkScrollableDropdownFrame(self.longcombobox, values=['abc' for i in range(1000)], justify="left", button_color="transparent", x=100)
-
 
         # right sub widget: canvas containing DUs to click on
         self.canvas_label = customtkinter.CTkLabel(self.main_frame, text="Interactive canvas: accepting user click")
@@ -210,6 +202,9 @@ class App(customtkinter.CTk):
             try:
                 if self.segmented_button.get() == 'Module Loading':
                     self.last_responseText = api.post_information('/partstreelist', part_tree)
+                    self.loading_wheel = threading.Thread(target=self.fetch_loaded_DU_and_display, args=(chi, par))
+                    self.loading_wheel.start()
+                    self.update_progressbar(self.loading_wheel)
                 elif self.segmented_button.get() == 'Detector Assembly (CERN)':
                     attribute_Vessel = pos.split('V').pop().split('L')[0]
                     if attribute_Vessel not in ['1', '2', 'M', 'D']:
