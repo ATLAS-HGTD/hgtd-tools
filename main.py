@@ -186,7 +186,7 @@ class App(customtkinter.CTk):
             self.combobox_parent.configure(values=self.possible_parents_SNs)
             self.combobox_child.configure(values=self.possible_children_SNs)
 
-    def button_add_event_click(self):
+    def button_add_event_click(self, debug = False):
         chi = self.combobox_child.get()
         par = self.combobox_parent.get()
         pos = self.position_entry.get()
@@ -204,11 +204,9 @@ class App(customtkinter.CTk):
                 'part': chi_partID,
                 'part_parent': par_partID,
             }
-            # ToDo: if self.segmented_button.get() == 'Module Loading':
-                # get existing relations
-                # module child of DU
-                # module child of slot
             allowed_VLQ = False
+            occupied_VLQ = False
+            confirmed = pos
             try:
                 if self.segmented_button.get() == 'Module Loading':
                     self.last_responseText = api.post_information('/partstreelist', part_tree)
@@ -243,8 +241,53 @@ class App(customtkinter.CTk):
                                     self.info_label.configure(text=info_text)
                                 else:
                                     allowed_VLQ = True
-                                    self.last_responseText = api.post_information('/partstreelist', part_tree)
-                                    self.canvas.itemconfig(self.duAlreadyPlacedText, text=f'Now placed at:\n{pos}')
+                                    children_of_targetDetector, self.last_responseText = util.get_children(par_partID)
+                                    DU_already_occupying_target_position = ''
+                                    Det_DU_relation_to_delete = ''
+                                    matching_relation = []
+                                    for c in children_of_targetDetector:
+                                        # position of Det child is the same as the desired one, and DU type of desired DU is same as the one that already occupies the spot:
+                                        if str(c['position']) == pos and self.displayedDUtype in c['part']['serial_number']:
+                                            occupied_VLQ = True
+                                            DU_already_occupying_target_position = c['part']['serial_number']
+                                            Det_DU_relation_to_delete = c['record_id']
+                                            matching_relation = c
+                                            break
+                                    
+                                    if occupied_VLQ:
+                                        confirmed = ''
+                                        dialog = customtkinter.CTkInputDialog(text=f"This Vessel Layer Quadrant is already occupied by the DU {DU_already_occupying_target_position}.\n" +
+                                            "Confirm by typing the desired Vessel Layer Quadrant (VxLyQz) again to overwrite it with your selected DU:", title="Confirm dialog")
+                                        confirmed = dialog.get_input()
+                                        if debug:
+                                            print("Typed in slot from confirm dialog:", confirmed)
+                                        if confirmed == pos:
+                                            # DELETION OF PREVIOUS STUFF
+                                            
+                                            # delete Det -> DU relation for the DU that already occupies that VLQ
+                                            self.last_responseText = api.delete_information(f'/partstreedelete/{Det_DU_relation_to_delete}/')
+                                            # get children modules of the DU that previously occupied the VLQ
+                                            affected_previous_modules, self.last_responseText = util.get_children(matching_relation['part']['part_id'])
+                                            # the parent slots of modules of the DU that previously occupied the VLQ
+                                            for a in affected_previous_modules:
+                                                affected_parents_of_children, self.last_responseText = util.get_parents(a['part']['part_id'])
+                                                for p in affected_parents_of_children:
+                                                    if debug:
+                                                        print(str(p['part_parent']['kind_of_part']['kind_of_part_id']))
+                                                    if str(p['part_parent']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['Slot']):
+                                                        # delete those Slot -> Mod relations
+                                                        if debug:
+                                                            print('Delete Slot -> Module relation', p)
+                                                        self.last_responseText = api.delete_information(f'/partstreedelete/{p['record_id']}/')
+
+                                            # POSTING NEW STUFF
+                                            
+                                            # place new DU at this position by creating a new Det -> DU relation 
+                                            self.last_responseText = api.post_information('/partstreelist', part_tree)
+                                            self.canvas.itemconfig(self.duAlreadyPlacedText, text=f'Now placed at:\n{pos}')
+                                    else:
+                                        self.last_responseText = api.post_information('/partstreelist', part_tree)
+                                        self.canvas.itemconfig(self.duAlreadyPlacedText, text=f'Now placed at:\n{pos}')
                                     
             except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
                 self.last_responseText = str(e)
@@ -254,14 +297,14 @@ class App(customtkinter.CTk):
             if self.last_responseText[:2] != '20':
                 self.api_status = 0
                 self.progressbar.configure(progress_color="#ff0000")
-                info_text = wrapped_text.fill(f'Error: Parent / Child relation could not be patched to ProdDB API.\n{self.last_responseText}')
+                info_text = wrapped_text.fill(f'Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}')
                 print(f'>>> {info_text}')
                 self.info_label.configure(text=info_text)
             else:
                 self.api_status = 1
                 self.progressbar.configure(progress_color="#007711")
 
-                if self.segmented_button.get() == 'Detector Assembly (CERN)' and allowed_VLQ:
+                if self.segmented_button.get() == 'Detector Assembly (CERN)' and allowed_VLQ and ((occupied_VLQ and confirmed == pos) or not occupied_VLQ):
                     # find all existing relations between this DU and its Modules, those are propagated to create new Slot -> Module relations
                     self.loading_wheel_A = threading.Thread(target=self.fetch_and_write_module_slots, args=(attribute_Vessel, attribute_Layer, attribute_Quadrant))
                     self.loading_wheel_A.start()
@@ -627,7 +670,7 @@ class App(customtkinter.CTk):
 
     def fetch_slots(self):
         try:
-            self.slots, self.last_responseText = util.get_relevant_parts('Slot', getFullAttributes = True)
+            self.slots, self.last_responseText = util.get_relevant_parts('Slot', getFullAttributes = True, useLocal = True)
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
             self.slots = None
             self.last_responseText = str(e)
