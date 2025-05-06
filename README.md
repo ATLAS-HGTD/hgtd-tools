@@ -45,7 +45,7 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 - (~!! Display loaded modules in canvas when doing Detector Assembly (CERN)~)
 - (~!! Catch when Layer is not suitable for front/back side DU type: allowed: Layer 0,3 for Front, Layer 1,2 for Back, also check for allowed vessel, allowed quadrant, nicer textwrap for info message~)
 - (~! Button to open /viewparts page to get further info~)
-- ! Button to close application the nice way
+- (~! Button to close application the nice way~)
 - (~! Appearance mode selection~)
 - ! Create standalone application (e.g. use pyinstaller?)
 - (~! Set Color of progressbar while it is loading to orange (showing that the process is not finished yet), let user know somehow that the process is still running~)

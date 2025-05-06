@@ -1,4 +1,5 @@
 import customtkinter
+from PIL import Image
 import requests
 import threading
 import time
@@ -51,6 +52,10 @@ class App(customtkinter.CTk):
                                                                        command=self.change_appearance_mode_event)
         self.appearance_mode_optionemenu.grid(row=5, column=1, padx=10, pady=10)
         self.appearance_mode_optionemenu.set("System")
+
+        self.exit_image = customtkinter.CTkImage(Image.open("right-from-bracket-solid.png"), size=(20,20))
+        self.btnLogout = customtkinter.CTkButton(self.sidebar_frame_left, image=self.exit_image, text="Close", compound='left', fg_color="#cf352e", hover_color="#B02B25", command=self.exit, width=60)
+        self.btnLogout.grid(row=6, column=0, pady=10, padx=10, columnspan=2)
 
 
         # work in main widget (column w.r.t. root >= 1)
@@ -554,6 +559,9 @@ class App(customtkinter.CTk):
                             else:
                                 self.api_status = 1
                                 self.progressbar.configure(progress_color="#007711")
+
+    def exit(self):
+        self.destroy()
 
     def fetch_and_write_module_slots(self, attribute_Vessel, attribute_Layer, attribute_Quadrant, debug = False):
         if self.api_status == 1:
