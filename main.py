@@ -202,6 +202,16 @@ class App(customtkinter.CTk):
             try:
                 if self.segmented_button.get() == 'Module Loading':
                     self.last_responseText = api.post_information('/partstreelist', part_tree)
+                    
+                    self.displayedDUtype = "None"
+                    self.this_DU_relations_MODULE = []
+                    self.this_MODULE_relations_DU = []
+                    self.this_MODULE_relations_SLOT = []
+                    self.possible_parents = []
+                    self.possible_children = []
+                    self.slots = None
+                    self.partstree = None
+                    
                     self.loading_wheel = threading.Thread(target=self.fetch_loaded_DU_and_display, args=(chi, par))
                     self.loading_wheel.start()
                     self.update_progressbar(self.loading_wheel)
@@ -443,6 +453,15 @@ class App(customtkinter.CTk):
         customtkinter.set_appearance_mode(new_appearance_mode)
 
     def combobox_p_c_event_select(self, something):
+        self.displayedDUtype = "None"
+        self.this_DU_relations_MODULE = []
+        self.this_MODULE_relations_DU = []
+        self.this_MODULE_relations_SLOT = []
+        self.possible_parents = []
+        self.possible_children = []
+        self.slots = None
+        self.partstree = None
+        
         parentSNIn = self.combobox_parent.get()
         childSNIn = self.combobox_child.get()
         if self.segmented_button.get() == 'Module Loading':
