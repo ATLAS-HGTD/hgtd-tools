@@ -3,6 +3,7 @@ from pprint import pprint
 
 # Interaction with hgtd-proddb REST API
 # The requests are all made against the "old" backend
+# Without SSO
 apiUrlPrefix = 'https://backend-hgtddb.app.cern.ch/hgtddb'
 frontendUrlPrefix = 'https://nginx-hgtddb.app.cern.ch'
 
@@ -59,6 +60,9 @@ def post_information(endpoint, payload, debug = False, dryrun = False):
             if debug:
                 print("OOps: Something Else",err)
             raise requests.exceptions.RequestException("OOps: Something Else",err)
+    else:
+        print('>>> Dryrun post operation with endpoint', endpoint)
+        print('>>> and payload', payload)
 
 def delete_information(endpoint, debug = False, dryrun = False):
     if not dryrun:

@@ -39,7 +39,7 @@ class App(customtkinter.CTk):
         # fill sidebar
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="HGTD Tools", font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10), columnspan=2)
-        self.credits_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="v0.1.1dev - May 2025\nAnnika Stein (JGU Mainz)")
+        self.credits_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="v0.1.1 - May 2025\nAnnika Stein (JGU Mainz)")
         self.credits_label.grid(row=1, column=0, padx=20, pady=10, columnspan=2)
 
         self.progress_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="API Request Status")
@@ -253,7 +253,7 @@ class App(customtkinter.CTk):
                                             Det_DU_relation_to_delete = c['record_id']
                                             matching_relation = c
                                             break
-                                    
+
                                     if occupied_VLQ:
                                         confirmed = ''
                                         dialog = customtkinter.CTkInputDialog(text=f"This Vessel Layer Quadrant is already occupied by the DU {DU_already_occupying_target_position}.\n" +
@@ -263,7 +263,7 @@ class App(customtkinter.CTk):
                                             print("Typed in slot from confirm dialog:", confirmed)
                                         if confirmed == pos:
                                             # DELETION OF PREVIOUS STUFF
-                                            
+
                                             # delete Det -> DU relation for the DU that already occupies that VLQ
                                             self.last_responseText = api.delete_information(f'/partstreedelete/{Det_DU_relation_to_delete}/')
                                             # get children modules of the DU that previously occupied the VLQ
@@ -281,14 +281,14 @@ class App(customtkinter.CTk):
                                                         self.last_responseText = api.delete_information(f'/partstreedelete/{p['record_id']}/')
 
                                             # POSTING NEW STUFF
-                                            
-                                            # place new DU at this position by creating a new Det -> DU relation 
+
+                                            # place new DU at this position by creating a new Det -> DU relation
                                             self.last_responseText = api.post_information('/partstreelist', part_tree)
                                             self.canvas.itemconfig(self.duAlreadyPlacedText, text=f'Now placed at:\n{pos}')
                                     else:
                                         self.last_responseText = api.post_information('/partstreelist', part_tree)
                                         self.canvas.itemconfig(self.duAlreadyPlacedText, text=f'Now placed at:\n{pos}')
-                                    
+
             except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
                 self.last_responseText = str(e)
             except ValueError as e:
@@ -309,7 +309,7 @@ class App(customtkinter.CTk):
                     self.loading_wheel_A = threading.Thread(target=self.fetch_and_write_module_slots, args=(attribute_Vessel, attribute_Layer, attribute_Quadrant))
                     self.loading_wheel_A.start()
                     self.update_progressbar(self.loading_wheel_A)
-        
+
     def button_inspect_child_event_click(self):
         childSNIn = self.combobox_child.get()
         if childSNIn != '- Select -':
@@ -332,7 +332,7 @@ class App(customtkinter.CTk):
         self.possible_children = []
         self.slots = None
         self.partstree = None
-        
+
         self.progressbar.set(0)
         self.info_label.configure(text=' ')
         self.canvas.delete("all")
@@ -348,7 +348,6 @@ class App(customtkinter.CTk):
             self.loading_wheel = threading.Thread(target=self.fetch_p_c, args=('Detector Unit','Module'))
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
-
         else:
             self.canvas_label.configure(text='Static canvas: served from database')
             self.combobox_parent.set("- Select -")
@@ -370,7 +369,7 @@ class App(customtkinter.CTk):
                 if debug:
                     print(alreadyConnectedModules)
                 alreadyUsedSlots = [entry['position'] for entry in alreadyConnectedModules]
-                
+
                 alreadyConnectedDUsForModule = self.this_MODULE_relations_DU
                 alreadyConnectedSLOTsForModule = self.this_MODULE_relations_SLOT
 
@@ -541,7 +540,7 @@ class App(customtkinter.CTk):
                             else:
                                 self.api_status = 1
                                 self.progressbar.configure(progress_color="#007711")
-    
+
     def fetch_and_write_module_slots(self, attribute_Vessel, attribute_Layer, attribute_Quadrant, debug = False):
         if self.api_status == 1:
             if debug:
@@ -567,7 +566,7 @@ class App(customtkinter.CTk):
                 except ValueError as e:
                     self.module_parents = []
                     self.last_responseText = str(e)
-    
+
                 if self.last_responseText[:3] != '200':
                     self.api_status = 0
                     self.progressbar.configure(progress_color="#ff0000")
@@ -589,7 +588,7 @@ class App(customtkinter.CTk):
         else:
             DU_SN = childSNIn
             parentDU_partID = self.possible_children_partIDs[self.possible_children_SNs.index(DU_SN)]
-            
+
         self.duAlreadyPlacedText = self.canvas.create_text(380, 525, text=f'', anchor='nw', fill=data.fillColor_SU_Text)
 
         for key in data.allDUs.keys():
