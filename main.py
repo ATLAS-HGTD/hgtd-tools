@@ -324,6 +324,15 @@ class App(customtkinter.CTk):
 
     # https://stackoverflow.com/a/23944658
     def button_mode_event_click(self, value):
+        self.displayedDUtype = "None"
+        self.this_DU_relations_MODULE = []
+        self.this_MODULE_relations_DU = []
+        self.this_MODULE_relations_SLOT = []
+        self.possible_parents = []
+        self.possible_children = []
+        self.slots = None
+        self.partstree = None
+        
         self.progressbar.set(0)
         self.info_label.configure(text=' ')
         self.canvas.delete("all")
@@ -358,6 +367,8 @@ class App(customtkinter.CTk):
             if self.displayedDUtype != 'None':
                 arrayOfModulesInDU = data.allDUs[self.displayedDUtype]
                 alreadyConnectedModules = self.this_DU_relations_MODULE # list of relations, as in partstree
+                if debug:
+                    print(alreadyConnectedModules)
                 alreadyUsedSlots = [entry['position'] for entry in alreadyConnectedModules]
                 
                 alreadyConnectedDUsForModule = self.this_MODULE_relations_DU
@@ -541,7 +552,7 @@ class App(customtkinter.CTk):
             self.fetch_slots()
             self.delete_old_and_post_new_slots_for_loaded_modules(attribute_Vessel, attribute_Layer, attribute_Quadrant)
 
-    def fetch_loaded_DU_and_display(self, childSNIn, parentSNIn):
+    def fetch_loaded_DU_and_display(self, childSNIn, parentSNIn, debug = False):
         if self.segmented_button.get() == 'Module Loading':
             DU_SN = parentSNIn
             parentDU_partID = self.possible_parents_partIDs[self.possible_parents_SNs.index(DU_SN)]
@@ -569,6 +580,8 @@ class App(customtkinter.CTk):
                     self.api_status = 1
                     self.progressbar.configure(progress_color="#007711")
                     for r in self.module_parents:
+                        if debug:
+                            print(r)
                         if str(r['part_parent']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['Detector Unit']):
                             self.this_MODULE_relations_DU.append(r)
                         if str(r['part_parent']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['Slot']):
