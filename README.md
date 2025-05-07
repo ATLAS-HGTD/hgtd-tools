@@ -47,8 +47,9 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 - (~! Button to open /viewparts page to get further info~)
 - (~! Button to close application the nice way~)
 - (~! Appearance mode selection~)
-- ! Create standalone application (e.g. use pyinstaller?) -> postponed to v > 1.0.0
 - (~! Set Color of progressbar while it is loading to orange (showing that the process is not finished yet), let user know somehow that the process is still running~)
+- !!! Implement API calls against CERN SSO-protected endpoint (right now only against the "open" backend-hgtddb)
+- ! Create standalone application (e.g. use pyinstaller?) -> postponed to v > 1.0.0
 - ! Port the hybrid / sensor matching stuff over here and let user decide what kind of tool they want to use at the moment -> postponed to v > 1.0.0
 
 ## Showcase of typical use cases

@@ -37,7 +37,7 @@ class App(customtkinter.CTk):
         # fill sidebar
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="HGTD Tools", font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10), columnspan=2)
-        self.credits_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="v1.0.0 - May 2025\nAnnika Stein (JGU Mainz)")
+        self.credits_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="v1.0.1dev - May 2025\nAnnika Stein (JGU Mainz)")
         self.credits_label.grid(row=1, column=0, padx=20, pady=10, columnspan=2)
 
         self.progress_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="API Request Status")
@@ -619,7 +619,7 @@ class App(customtkinter.CTk):
                 self.info_label.configure(text=' ')
                 self.canvas.create_rectangle(40, 40, 360, 540, fill=data.fillColor_SU)
                 for mod in data.allDUs[self.displayedDUtype]:
-                    self.canvas_place_rounded_rectangle(mod['x'], mod['y'], mod['w'], mod['h'])
+                    self.canvas_place_rounded_rectangle(mod['x'], mod['y'], mod['w'], mod['h'], fill = data.fillColor_Slot)
                 self.canvas.create_text(140, 475, text=self.displayedDUtype, anchor='nw', font=('Arial',50), fill=data.fillColor_SU_Text)
                 self.canvas.create_text(145, 20, text='Connector side', anchor='nw', fill=data.fillColor_SU_Text)
                 self.canvas.create_text(145, 545, text='Capacitor side', anchor='nw', fill=data.fillColor_SU_Text)
@@ -655,7 +655,7 @@ class App(customtkinter.CTk):
                         if str(r['part_parent']['part_id']) == str(parentDU_partID):
                             if str(r['part']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['Module']):
                                 self.this_DU_relations_MODULE.append(r)
-                                # make the corresponding slot green
+                                # make the corresponding slot blue if already in use, white if not used
                                 for mod in data.allDUs[self.displayedDUtype]:
                                     if mod['slot'] == str(r['position']):
                                         self.canvas_place_rounded_rectangle(mod['x'], mod['y'], mod['w'], mod['h'], fill=data.fillColor_AlreadyLoadedSlot)
