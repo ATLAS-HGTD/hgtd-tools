@@ -1,4 +1,6 @@
 # run: conda env create -f env-312-minimalLinux.yml
+# https://github.com/TomSchimansky/CustomTkinter/issues/2286#issue-2158676584
+# https://github.com/conda-forge/tk-feedstock/pull/40#issuecomment-2381409555
 name: hgtd
 
 channels:

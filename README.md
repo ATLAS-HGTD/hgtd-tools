@@ -49,7 +49,7 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 - (~! Appearance mode selection~)
 - (~! Set Color of progressbar while it is loading to orange (showing that the process is not finished yet), let user know somehow that the process is still running~)
 - !!! Implement API calls against CERN SSO-protected endpoint (right now only against the "open" backend-hgtddb)
-- !!! Resolve issues related to appearance on linux with conda https://github.com/conda-forge/tk-feedstock/pull/40#issuecomment-2381409555
+- !!! Resolve issues related to appearance on linux with conda https://github.com/conda-forge/tk-feedstock/pull/40#issuecomment-2381409555 - tk already implemented as alternative yaml, maybe experiment with https://github.com/TomSchimansky/CustomTkinter/pull/2646/files DrawEngine (https://github.com/TomSchimansky/CustomTkinter/issues/2467#issuecomment-2164833158) https://github.com/TomSchimansky/CustomTkinter/issues/2596
 - ! Create standalone application (e.g. use pyinstaller?) -> postponed to v > 1.0.0
 - ! Port the hybrid / sensor matching stuff over here and let user decide what kind of tool they want to use at the moment -> postponed to v > 1.0.0
 
