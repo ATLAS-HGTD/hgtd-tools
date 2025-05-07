@@ -49,6 +49,7 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 - (~! Appearance mode selection~)
 - (~! Set Color of progressbar while it is loading to orange (showing that the process is not finished yet), let user know somehow that the process is still running~)
 - !!! Implement API calls against CERN SSO-protected endpoint (right now only against the "open" backend-hgtddb)
+- !!! Resolve issues related to appearance on linux with conda https://github.com/conda-forge/tk-feedstock/pull/40#issuecomment-2381409555
 - ! Create standalone application (e.g. use pyinstaller?) -> postponed to v > 1.0.0
 - ! Port the hybrid / sensor matching stuff over here and let user decide what kind of tool they want to use at the moment -> postponed to v > 1.0.0
 
@@ -101,6 +102,7 @@ This suite is written in python, and a conda environment is recommended. The inc
 2. Clone the repository, e.g. via `git clone ssh://git@gitlab.cern.ch:7999/anstein/hgtd-tools.git` (here: using ssh key).
 3. Depending on how conda was installed, it might require opening a new shell and / or sourcing the `~/.bashrc`.
 5. Install the environment using the given yaml file: `cd hgtd-tools; conda env create -f env-312.yml` (you can find it in the main directory).
+   Note: experimental support for Linux with a slightly different tk variant related to appearance, fonts etc. on Linux: use the file `env-312-minimalLinux.yml`.
 
 If you don't like conda (☹️ how? 🤨) or you want to minimize the packages to be installed, make sure to run the tools with a recent python3 environment containing `customtkinter`, `requests`, which can be installed with `pip`. Other used packages of hgtd-tools are already part of the regular python3 lib.
 

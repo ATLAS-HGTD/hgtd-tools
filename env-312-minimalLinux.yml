@@ -1,0 +1,19 @@
+# run: conda env create -f env-312-minimalLinux.yml
+name: hgtd
+
+channels:
+  - conda-forge
+  - nodefaults
+
+dependencies:
+  - python=3.12.*
+  - conda
+  - tk[build=xft_*]
+  - jupyterlab
+  - matplotlib
+  - numpy
+  - pip
+  - pyyaml
+
+  - pip:
+    - customtkinter
