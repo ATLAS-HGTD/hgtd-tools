@@ -7,9 +7,12 @@
 
 <div align="center">
 
-![Static Badge](https://img.shields.io/badge/python-3.12-blue) ![Static Badge](https://img.shields.io/badge/hgtd--tools-1.0.0-blue)
+![Static Badge](https://img.shields.io/badge/python-3.12-blue) ![Static Badge](https://img.shields.io/badge/hgtd--tools-1.0.0-blue) <br>
 
+![Static Badge](https://img.shields.io/badge/tested_on-macOS-green) ![Static Badge](https://img.shields.io/badge/experimental_support_on-Linux-orange) ![Static Badge](https://img.shields.io/badge/unkown_support_for-Windows-black)
 </div>
+
+⭐️ You can help with testing and improving the tools for more platforms! ⭐️
 
 ## Description
 These tools interact with the HGTD Production Database for the HGTD Phase-II Upgrade of the ATLAS Experiment at CERN.
@@ -35,23 +38,9 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 - Distinction between local lookup files and fetching dynamic tables where needed
 
 ### Open points requiring implementation
-- (~!!! Replace local files with API-requested files (only few more parts missing, most are already dynamically retrieved)~ first implementation done, being tested (probably a bit slow), second implementation does not need to get full partstree only the children for the specific DU)
-- (~!!! Checks for existing slot / mod relations: if they exist, delete them and create the new ones from VLQ~)
-    - !!! ~or user decides against that, corrects their entered values~ - kinda implemented already because user sees where the DU is already placed in VLQ
-    - !!! ~(and when doing loading as well to catch the case where the same module was previously loaded to a different DU or on that DU in a different location)~ - this module can then not be filled to any slot on the shown DU
-    - !!! ~or other case when module shall be loaded into a position that is already occupied by another module~ - user can not add that one because we check for existing children of the DU, and to help visually we display the already used ones)
-    - !!! ~catch when VLQ is already occupied by another DU, ask user if they want to disconnect the existing DU (with same DU type) in that VLQ and later on also disconnect any modules from the affected slots~
-- (~!! Checks for fully loaded DU (or not yet fully loaded)~)
-- (~!! Display loaded modules in canvas when doing Detector Assembly (CERN)~)
-- (~!! Catch when Layer is not suitable for front/back side DU type: allowed: Layer 0,3 for Front, Layer 1,2 for Back, also check for allowed vessel, allowed quadrant, nicer textwrap for info message~)
-- (~! Button to open /viewparts page to get further info~)
-- (~! Button to close application the nice way~)
-- (~! Appearance mode selection~)
-- (~! Set Color of progressbar while it is loading to orange (showing that the process is not finished yet), let user know somehow that the process is still running~)
-- !!! Implement API calls against CERN SSO-protected endpoint (right now only against the "open" backend-hgtddb)
-- !!! Resolve issues related to appearance on linux with conda https://github.com/conda-forge/tk-feedstock/pull/40#issuecomment-2381409555 - tk already implemented as alternative yaml, maybe experiment with https://github.com/TomSchimansky/CustomTkinter/pull/2646/files DrawEngine (https://github.com/TomSchimansky/CustomTkinter/issues/2467#issuecomment-2164833158) https://github.com/TomSchimansky/CustomTkinter/issues/2596
-- ! Create standalone application (e.g. use pyinstaller?) -> postponed to v > 1.0.0
-- ! Port the hybrid / sensor matching stuff over here and let user decide what kind of tool they want to use at the moment -> postponed to v > 1.0.0
+New features, bugs, compatibility improvements and other items are collected with the [Issues](https://gitlab.cern.ch/anstein/hgtd-tools/-/issues)
+
+Some of them are also bound to [Milestones](https://gitlab.cern.ch/anstein/hgtd-tools/-/milestones)
 
 ## Showcase of typical use cases
 A video showing the main features included with v0.0.1 is available under this [cernbox link](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/public/for_HGTD/screencast_hgtd-tools_v0p0p1.mov) (protected / atlas-hgtd group access only).
