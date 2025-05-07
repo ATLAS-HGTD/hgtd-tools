@@ -93,7 +93,8 @@ class App(customtkinter.CTk):
 
         self.combobox_parent = customtkinter.CTkComboBox(self.combobox_frame,
                                                     values=["Detector Unit", "Detector"],
-                                                    command=self.combobox_p_c_event_select
+                                                    command=self.combobox_p_c_event_select,
+                                                         state="readonly"
                                                         )
         self.combobox_parent.grid(row=1, column=1, padx=20, pady=(10, 10), sticky="nsew")
         self.combobox_parent.set("- Select -")
@@ -109,7 +110,8 @@ class App(customtkinter.CTk):
 
         self.combobox_child = customtkinter.CTkComboBox(self.combobox_frame,
                                                     values=["Module", "Detector Unit"],
-                                                    command=self.combobox_p_c_event_select)
+                                                    command=self.combobox_p_c_event_select,
+                                                         state="readonly")
         self.combobox_child.grid(row=4, column=1, padx=20, pady=(10, 10), sticky="nsew")
         self.combobox_child.set("- Select -")
         self.inspect_child_button = customtkinter.CTkButton(self.combobox_frame, text="INSPECT CHILD",
