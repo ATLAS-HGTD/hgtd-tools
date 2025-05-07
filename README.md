@@ -7,7 +7,7 @@
 
 <div align="center">
 
-![Static Badge](https://img.shields.io/badge/python-3.12-blue)
+![Static Badge](https://img.shields.io/badge/python-3.12-blue) ![Static Badge](https://img.shields.io/badge/hgtd--tools-1.0.0-blue)
 
 </div>
 
@@ -47,12 +47,49 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 - (~! Button to open /viewparts page to get further info~)
 - (~! Button to close application the nice way~)
 - (~! Appearance mode selection~)
-- ! Create standalone application (e.g. use pyinstaller?)
+- ! Create standalone application (e.g. use pyinstaller?) -> postponed to v > 1.0.0
 - (~! Set Color of progressbar while it is loading to orange (showing that the process is not finished yet), let user know somehow that the process is still running~)
-- ! Port the hybrid / sensor matching stuff over here and let user decide what kind of tool they want to use at the moment
+- ! Port the hybrid / sensor matching stuff over here and let user decide what kind of tool they want to use at the moment -> postponed to v > 1.0.0
 
-## Visuals
+## Showcase of typical use cases
 A video showing the main features included with v0.0.1 is available under this [cernbox link](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/public/for_HGTD/screencast_hgtd-tools_v0p0p1.mov) (protected / atlas-hgtd group access only).
+
+### General aspects
+#### API status
+HGTD Tools shows a dynamic progress bar whenever one or multiple API requests are ongoing.
+
+<span style="color:green">Green</span>: request was successful (triggered by status codes in the 200s)  
+<span style="color:yellow">Yellow</span>: ongoing request, please wait  
+<span style="color:red">Red</span>: request resulted in an error that is specified in the status bar in the footer of the application
+
+Example: if you lose connection to the web e.g. by purposefully switching off WiFi for this example, your app will look like this:
+
+![](docs/showcase_api_error.png)
+
+#### Appearance mode
+Default appearance mode is System default, otherwise feel free to select from Light and Dark mode.
+
+### Module Loading
+HGTD Tools shows already loaded module slots on a selected DU. User actions like switching between Loading / Assembly, or selecting different parent or child parts reloads this view freshly with API calls to the database.
+
+![](docs/showcase_module_loading_existing.png)
+
+When loading a new module to a position on the DU that is not already blocked by another module, this position is highlighted in green. You can proceed with the ADD PARTS TREE button.
+
+![](docs/showcase_module_loading_new.png)
+
+Trying to load a module into a position that is already in use is not possible. This requires a further user action to prevent accidentally overwriting something. As noted in the message, feel free to inspect the affected parts clicking the INSPECT ... buttons below the selected serial numbers.
+
+![](docs/showcase_module_loading_notAllowed.png)
+
+### Detector Assembly (CERN)
+HGTD Tools complains if the desired Layer is not compatible with the type of the DU to load there. Other implemented cases catch allowed / not allowed Vessel and Quadrant attributes.
+
+![](docs/showcase_detector_assembly_incompatibleVLQ.png)
+
+HGTD Tools asks the user for confirmation, if a VesselLayerQuadrant combination was already used for the desired DU type (= already occupied).
+
+![](docs/showcase_detector_assembly_occupiedVLQ.png)
 
 ## Installation
 This suite is written in python, and a conda environment is recommended. The included yaml file also lists a couple of useful packages assisting with further analysing / interpreting the data and was tested to work in April 2025.
@@ -73,6 +110,17 @@ To open the main window with GUI, execute the following:
 ```shell
 python main.py
 ```
+
+## Reusing the included API module
+The `api.py` module can be used standalone as well to make API requests to the HGTD Production Database. Note that the included functions also return the response `status_code` and `reason` and handle a variety of possible errors.
+
+The basic types of requests are:
+
+GET: without payload, fetch some specified record/view etc.  
+POST: sends a payload (dictionary as json)  
+DELETE: without payload, remove some record
+
+Those three variants are implemented as `api.fetch_information`, `api.post_information`, `api.delete_information` handling the endpoint, headers etc. for you so you don't have to worry about anything besides the actual information received, posted or deleted.
 
 ## Acknowledgements
 Thanks to an unknown reddit user who gave me hope when the PyQt6 installation wouldn't want to work with my setup / machine. This [link](https://www.reddit.com/r/Tkinter/comments/snrb1f/comment/hw4bylf/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button) brought me to [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) and the GUI is built on top of the tutorial.
