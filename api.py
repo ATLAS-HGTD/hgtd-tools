@@ -8,10 +8,9 @@ apiUrlPrefix = 'https://backend-hgtddb.app.cern.ch/hgtddb'
 frontendUrlPrefix = 'https://nginx-hgtddb.app.cern.ch'
 
 def fetch_information(endpoint, debug = False):
-    request = requests.get(apiUrlPrefix + endpoint)
     # https://stackoverflow.com/a/47007419
     try:
-        request = requests.get(apiUrlPrefix + endpoint,timeout=600)
+        request = requests.get(apiUrlPrefix + endpoint, timeout=600)
         request.raise_for_status()
         if debug:
             print('>> GET response:', request.status_code, request.reason)
