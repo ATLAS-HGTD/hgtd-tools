@@ -24,6 +24,7 @@ class App(customtkinter.CTk):
         icon = tkinter.PhotoImage(file="windowIcon.png")
         self.iconphoto(True,icon)
 
+        self.n_items_to_show_in_cbx = 16
         # configure grid layout
         self.grid_columnconfigure((0, 1, 2), weight=1)
         self.grid_rowconfigure((0,1), weight=1)
@@ -64,7 +65,7 @@ class App(customtkinter.CTk):
 
         self.textbox = customtkinter.CTkTextbox(master=self.explain_frame, width=400, wrap='word')
         self.textbox.pack(fill="both", expand=True, padx=20, pady=20)
-        self.textbox.insert("0.0", "Each Support Unit is oriented in such a way that when looking at its face, the module connectors are at the top (or on the right), and module capacitors are on the bottom (or on the left).\n\nUser actions (loading sites / assembly at CERN): First step at a loading site: fill the Detector Unit with modules, click on the canvas to select the correct position and use the button below. Once finished, move to the assembly step at CERN and enter the position manually when connecting a Detector Unit with the Detector (VxLxQx). Note: A back Detector Unit can only be on layer 1 or 2, a front Detector Unit can only be on layer 0 or 3.")
+        self.textbox.insert("0.0", "Each Support Unit is oriented in such a way that when looking at its face, the module connectors are at the top (or on the right), and module capacitors are on the bottom (or on the left).\n\nUser actions (loading sites / assembly at CERN): First step at a loading site: fill the Detector Unit with modules, click on the canvas to select the correct position and use the button below. Once finished, move to the assembly step at CERN and enter the position manually when connecting a Detector Unit with the Detector (VxLxQx). Note: A back Detector Unit can only be on layer 1 or 2, a front Detector Unit can only be on layer 0 or 3.\n\nToo long dropdown selections are split into chunks, you can select which chunk shall be shown with the arrow buttons. This is ensure compatibility with more operating systems.")
         self.textbox.configure(state='disabled')
 
         # create main frame with widgets
@@ -91,13 +92,27 @@ class App(customtkinter.CTk):
         self.combobox_parent_label = customtkinter.CTkLabel(self.combobox_frame, text="Parent Part SN")
         self.combobox_parent_label.grid(row=1, column=0, padx=20, pady=(10, 10), sticky="nsew")
 
-        self.combobox_parent = customtkinter.CTkComboBox(self.combobox_frame,
+        self.combobox_parent_paginationFrame = customtkinter.CTkFrame(self.combobox_frame)
+        self.combobox_parent_paginationFrame.grid(row=1, column=1, padx=20, pady=(10, 10), sticky="nsew")
+        self.combobox_parent_paginationFrame_label = customtkinter.CTkLabel(self.combobox_parent_paginationFrame, text="0/0")
+        self.combobox_parent_paginationFrame_label.grid(row=0, column=0, padx=(10,5), pady=5, sticky="nsew")
+        self.combobox_parent_paginationButtonLeft = customtkinter.CTkButton(self.combobox_parent_paginationFrame,
+                                                                           text="<", width=30,
+                                                   command=self.button_combobox_parent_paginationButtonLeft_click)
+        self.combobox_parent_paginationButtonLeft.grid(row=0, column=1, padx=5, pady=5)
+        self.combobox_parent = customtkinter.CTkComboBox(self.combobox_parent_paginationFrame,
                                                     values=["Detector Unit", "Detector"],
                                                     command=self.combobox_p_c_event_select,
                                                          state="readonly"
                                                         )
-        self.combobox_parent.grid(row=1, column=1, padx=20, pady=(10, 10), sticky="nsew")
+        self.combobox_parent.grid(row=0, column=2, padx=0, pady=5, sticky="nsew")
         self.combobox_parent.set("- Select -")
+        self.combobox_parent_paginationButtonRight = customtkinter.CTkButton(self.combobox_parent_paginationFrame,
+                                                                           text=">", width=30,
+                                                   command=self.button_combobox_parent_paginationButtonRight_click)
+        self.combobox_parent_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
+
+        
         self.inspect_parent_button = customtkinter.CTkButton(self.combobox_frame, text="INSPECT PARENT",
                                                    command=self.button_inspect_parent_event_click)
         self.inspect_parent_button.grid(row=2, column=1, padx=20, pady=(10, 10))
@@ -108,12 +123,25 @@ class App(customtkinter.CTk):
         self.combobox_child_label = customtkinter.CTkLabel(self.combobox_frame, text="Child Part SN")
         self.combobox_child_label.grid(row=4, column=0, padx=20, pady=(10, 10), sticky="nsew")
 
-        self.combobox_child = customtkinter.CTkComboBox(self.combobox_frame,
+        self.combobox_child_paginationFrame = customtkinter.CTkFrame(self.combobox_frame)
+        self.combobox_child_paginationFrame.grid(row=4, column=1, padx=20, pady=(10, 10), sticky="nsew")
+        self.combobox_child_paginationFrame_label = customtkinter.CTkLabel(self.combobox_child_paginationFrame, text="0/0")
+        self.combobox_child_paginationFrame_label.grid(row=0, column=0, padx=(10,5), pady=5, sticky="nsew")
+        self.combobox_child_paginationButtonLeft = customtkinter.CTkButton(self.combobox_child_paginationFrame,
+                                                                           text="<", width=30,
+                                                   command=self.button_combobox_child_paginationButtonLeft_click)
+        self.combobox_child_paginationButtonLeft.grid(row=0, column=1, padx=5, pady=5)
+        self.combobox_child = customtkinter.CTkComboBox(self.combobox_child_paginationFrame,
                                                     values=["Module", "Detector Unit"],
                                                     command=self.combobox_p_c_event_select,
                                                          state="readonly")
-        self.combobox_child.grid(row=4, column=1, padx=20, pady=(10, 10), sticky="nsew")
+        self.combobox_child.grid(row=0, column=2, padx=0, pady=5, sticky="nsew")
         self.combobox_child.set("- Select -")
+        self.combobox_child_paginationButtonRight = customtkinter.CTkButton(self.combobox_child_paginationFrame,
+                                                                           text=">", width=30,
+                                                   command=self.button_combobox_child_paginationButtonRight_click)
+        self.combobox_child_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
+        
         self.inspect_child_button = customtkinter.CTkButton(self.combobox_frame, text="INSPECT CHILD",
                                                    command=self.button_inspect_child_event_click)
         self.inspect_child_button.grid(row=5, column=1, padx=20, pady=(10, 10))
@@ -141,6 +169,10 @@ class App(customtkinter.CTk):
         self.this_DU_relations_MODULE = []
         self.this_MODULE_relations_DU = []
         self.this_MODULE_relations_SLOT = []
+        self.cbx_par_n_pages = 0
+        self.cbx_chi_n_pages = 0
+        self.cbx_par_shown_page = 0
+        self.cbx_chi_shown_page = 0
 
 
         # footer: info for user (e.g. Warning, Error)
@@ -179,11 +211,19 @@ class App(customtkinter.CTk):
             self.possible_parents_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_parents)
             self.possible_children_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_children)
             self.possible_parents_SNs = [entry[0] for entry in self.possible_parents_SNs_and_partIDs]
+            self.possible_parents_SNs_chunked = [self.possible_parents_SNs[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_parents_SNs), self.n_items_to_show_in_cbx)]
             self.possible_children_SNs = [entry[0] for entry in self.possible_children_SNs_and_partIDs]
+            self.possible_children_SNs_chunked = [self.possible_children_SNs[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_children_SNs), self.n_items_to_show_in_cbx)]
             self.possible_parents_partIDs = [entry[1] for entry in self.possible_parents_SNs_and_partIDs]
             self.possible_children_partIDs = [entry[1] for entry in self.possible_children_SNs_and_partIDs]
-            self.combobox_parent.configure(values=self.possible_parents_SNs)
-            self.combobox_child.configure(values=self.possible_children_SNs)
+            self.cbx_par_n_pages = len(self.possible_parents_SNs_chunked)
+            self.cbx_chi_n_pages = len(self.possible_children_SNs_chunked)
+            self.cbx_par_shown_page = 1
+            self.cbx_chi_shown_page = 1
+            self.combobox_parent_paginationFrame_label.configure(text=f"{self.cbx_par_shown_page}/{self.cbx_par_n_pages}")
+            self.combobox_child_paginationFrame_label.configure(text=f"{self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
+            self.combobox_parent.configure(values=self.possible_parents_SNs_chunked[0])
+            self.combobox_child.configure(values=self.possible_children_SNs_chunked[0])
 
     def button_add_event_click(self, debug = False):
         chi = self.combobox_child.get()
@@ -322,6 +362,26 @@ class App(customtkinter.CTk):
                     self.loading_wheel_A.start()
                     self.update_progressbar(self.loading_wheel_A)
 
+    def button_combobox_child_paginationButtonLeft_click(self):
+        self.cbx_chi_shown_page = max(self.cbx_chi_shown_page - 1, 1)
+        self.combobox_child_paginationFrame_label.configure(text=f"{self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
+        self.combobox_child.configure(values=self.possible_children_SNs_chunked[self.cbx_chi_shown_page - 1])
+
+    def button_combobox_child_paginationButtonRight_click(self):
+        self.cbx_chi_shown_page = min(self.cbx_chi_shown_page + 1, self.cbx_chi_n_pages)
+        self.combobox_child_paginationFrame_label.configure(text=f"{self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
+        self.combobox_child.configure(values=self.possible_children_SNs_chunked[self.cbx_chi_shown_page - 1])
+        
+    def button_combobox_parent_paginationButtonLeft_click(self):
+        self.cbx_par_shown_page = max(self.cbx_par_shown_page - 1, 1)
+        self.combobox_parent_paginationFrame_label.configure(text=f"{self.cbx_par_shown_page}/{self.cbx_par_n_pages}")
+        self.combobox_parent.configure(values=self.possible_parents_SNs_chunked[self.cbx_par_shown_page - 1])
+
+    def button_combobox_parent_paginationButtonRight_click(self):
+        self.cbx_par_shown_page = min(self.cbx_par_shown_page + 1, self.cbx_par_n_pages)
+        self.combobox_parent_paginationFrame_label.configure(text=f"{self.cbx_par_shown_page}/{self.cbx_par_n_pages}")
+        self.combobox_parent.configure(values=self.possible_parents_SNs_chunked[self.cbx_par_shown_page - 1])
+        
     def button_inspect_child_event_click(self):
         childSNIn = self.combobox_child.get()
         if childSNIn != '- Select -':
@@ -698,11 +758,19 @@ class App(customtkinter.CTk):
             self.possible_parents_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_parents)
             self.possible_children_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_children)
             self.possible_parents_SNs = [entry[0] for entry in self.possible_parents_SNs_and_partIDs]
+            self.possible_parents_SNs_chunked = [self.possible_parents_SNs[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_parents_SNs), self.n_items_to_show_in_cbx)]
             self.possible_children_SNs = [entry[0] for entry in self.possible_children_SNs_and_partIDs]
+            self.possible_children_SNs_chunked = [self.possible_children_SNs[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_children_SNs), self.n_items_to_show_in_cbx)]
             self.possible_parents_partIDs = [entry[1] for entry in self.possible_parents_SNs_and_partIDs]
             self.possible_children_partIDs = [entry[1] for entry in self.possible_children_SNs_and_partIDs]
-            self.combobox_parent.configure(values=self.possible_parents_SNs)
-            self.combobox_child.configure(values=self.possible_children_SNs)
+            self.cbx_par_n_pages = len(self.possible_parents_SNs_chunked)
+            self.cbx_chi_n_pages = len(self.possible_children_SNs_chunked)
+            self.cbx_par_shown_page = 1
+            self.cbx_chi_shown_page = 1
+            self.combobox_parent_paginationFrame_label.configure(text=f"{self.cbx_par_shown_page}/{self.cbx_par_n_pages}")
+            self.combobox_child_paginationFrame_label.configure(text=f"{self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
+            self.combobox_parent.configure(values=self.possible_parents_SNs_chunked[0])
+            self.combobox_child.configure(values=self.possible_children_SNs_chunked[0])
 
     def fetch_slots(self):
         try:
