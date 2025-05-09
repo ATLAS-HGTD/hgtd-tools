@@ -8,6 +8,7 @@ import tkinter
 import api
 import data
 import util
+from ctk_scrollDropdownFrame import CTkScrollableDropdownFrame as CTkScrollableDropdown
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -114,6 +115,15 @@ class App(customtkinter.CTk):
                                                          state="readonly")
         self.combobox_child.grid(row=4, column=1, padx=20, pady=(10, 10), sticky="nsew")
         self.combobox_child.set("- Select -")
+        # If we need to tackle a longer list of options, there is a custom dropdown frame to handle them
+        #self.longcombobox = customtkinter.CTkComboBox(self.combobox_frame)
+        #self.longcombobox.grid(row=6, column=1, padx=20, pady=10, sticky="nsew")
+        #CTkScrollableDropdownFrame(self.combobox_child, values=['abc' for i in range(1000)], justify="left", button_color="transparent", x=100)
+        # Attach to Combobox
+        #combobox = customtkinter.CTkComboBox(root, width=240)
+        #combobox.pack(fill="x", padx=10, pady=10)
+        self.combobox_child_scrollable = CTkScrollableDropdown(self.combobox_child, x=self.combobox_child.winfo_x(), y=self.combobox_child.winfo_y(), justify="left", button_color="transparent")
+
         self.inspect_child_button = customtkinter.CTkButton(self.combobox_frame, text="INSPECT CHILD",
                                                    command=self.button_inspect_child_event_click)
         self.inspect_child_button.grid(row=5, column=1, padx=20, pady=(10, 10))
@@ -183,7 +193,7 @@ class App(customtkinter.CTk):
             self.possible_parents_partIDs = [entry[1] for entry in self.possible_parents_SNs_and_partIDs]
             self.possible_children_partIDs = [entry[1] for entry in self.possible_children_SNs_and_partIDs]
             self.combobox_parent.configure(values=self.possible_parents_SNs)
-            self.combobox_child.configure(values=self.possible_children_SNs)
+            self.combobox_child_scrollable.configure(values=self.possible_children_SNs)
 
     def button_add_event_click(self, debug = False):
         chi = self.combobox_child.get()
@@ -702,7 +712,7 @@ class App(customtkinter.CTk):
             self.possible_parents_partIDs = [entry[1] for entry in self.possible_parents_SNs_and_partIDs]
             self.possible_children_partIDs = [entry[1] for entry in self.possible_children_SNs_and_partIDs]
             self.combobox_parent.configure(values=self.possible_parents_SNs)
-            self.combobox_child.configure(values=self.possible_children_SNs)
+            self.combobox_child_scrollable.configure(self.possible_children_SNs)
 
     def fetch_slots(self):
         try:
