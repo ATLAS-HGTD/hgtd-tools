@@ -144,7 +144,7 @@ class App(customtkinter.CTk):
         self.combobox_child_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
         
         self.inspect_child_button = customtkinter.CTkButton(self.combobox_frame, text="INSPECT CHILD",
-                                                   command=self.button_inspect_child_event_click)
+            command=self.button_inspect_child_event_click)
         self.inspect_child_button.grid(row=5, column=1, padx=20, pady=(10, 10))
 
         self.position_label = customtkinter.CTkLabel(self.combobox_frame, text="Position (derived from canvas interaction)")
@@ -155,8 +155,12 @@ class App(customtkinter.CTk):
         self.position_entry.grid(row=6, column=1, padx=20, pady=(20, 10), sticky="nsew")
 
         self.add_button = customtkinter.CTkButton(self.combobox_frame, text="ADD PARTS TREE",
-                                                   command=self.button_add_event_click)
+            command=self.button_add_event_click)
         self.add_button.grid(row=7, column=1, padx=20, pady=(20, 10))
+
+        self.inspect_clicked_button = customtkinter.CTkButton(self.combobox_frame, text="INSPECT CLICKED MODULE",
+            command=self.button_inspect_clicked_event_click, state='disabled')
+        self.inspect_clicked_button.grid(row=9, column=1, padx=20, pady=(20, 10))
 
 
         # right sub widget: canvas containing DUs to click on
@@ -174,7 +178,7 @@ class App(customtkinter.CTk):
         self.cbx_chi_n_pages = 0
         self.cbx_par_shown_page = 0
         self.cbx_chi_shown_page = 0
-
+        self.clicked_module = []
 
         # footer: info for user (e.g. Warning, Error)
         self.info_label = customtkinter.CTkLabel(self.main_frame, text=" ", font=customtkinter.CTkFont(size=16, weight="bold"))
@@ -389,6 +393,10 @@ class App(customtkinter.CTk):
             chi_partID = self.possible_children_partIDs[self.possible_children_SNs.index(childSNIn)]
             util.open_webbrowser_with_url(f'/viewparts/{chi_partID}')
 
+    def button_inspect_clicked_event_click(self):
+        if len(self.clicked_module) > 0:
+            util.open_webbrowser_with_url(f'/viewparts/{self.clicked_module['part']['part_id']}')
+
     def button_inspect_parent_event_click(self):
         parentSNIn = self.combobox_parent.get()
         if parentSNIn != '- Select -':
@@ -435,6 +443,9 @@ class App(customtkinter.CTk):
             self.update_progressbar(self.loading_wheel)
 
     def canvas_event_click(self, event, debug = False):
+        self.clicked_module = []
+        self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE')
+        self.inspect_clicked_button.configure(state='disabled')
         if self.segmented_button.get() == 'Module Loading':
             if self.displayedDUtype != 'None':
                 arrayOfModulesInDU = data.allDUs[self.displayedDUtype]
@@ -464,6 +475,9 @@ class App(customtkinter.CTk):
                             self.position_variable.set(slot['slot'])
                             notAllowedSlot = False
                             if slot['slot'] in alreadyUsedSlots:
+                                self.clicked_module = alreadyConnectedModules[alreadyUsedSlots.index(slot['slot'])]
+                                self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
+                                self.inspect_clicked_button.configure(state='normal')
                                 notAllowedSlot = True
                                 self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_AlreadyLoadedSlot)
                             else:
@@ -487,7 +501,22 @@ class App(customtkinter.CTk):
                         else:
                             self.info_label.configure(text=' ')
         else:
-            pass
+            if self.displayedDUtype != 'None':
+                arrayOfModulesInDU = data.allDUs[self.displayedDUtype]
+                alreadyConnectedModules = self.this_DU_relations_MODULE # list of relations, as in partstree
+                if debug:
+                    print(alreadyConnectedModules)
+                alreadyUsedSlots = [entry['position'] for entry in alreadyConnectedModules]
+                mouseInSomeMod = False
+                mouseX = self.canvas.canvasx(event.x)
+                mouseY = self.canvas.canvasy(event.y)
+                for slot in arrayOfModulesInDU:
+                    if util.isInSlot(slot, mouseX, mouseY):
+                        mouseInSomeMod = True
+                        if slot['slot'] in alreadyUsedSlots:
+                            self.clicked_module = alreadyConnectedModules[alreadyUsedSlots.index(slot['slot'])]
+                            self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
+                            self.inspect_clicked_button.configure(state='normal')
 
     # https://stackoverflow.com/a/44100075
     def canvas_place_rounded_rectangle(self, x1, y1, width, height, radius=25, **kwargs):
@@ -675,7 +704,7 @@ class App(customtkinter.CTk):
             parentDU_partID = self.possible_children_partIDs[self.possible_children_SNs.index(DU_SN)]
 
         self.duAlreadyPlacedText = self.canvas.create_text(380, 525, text=f'', anchor='nw', fill=data.fillColor_SU_Text)
-
+        self.clicked_module = []
         for key in data.allDUs.keys():
             if key in DU_SN:
                 self.displayedDUtype = key
@@ -722,6 +751,7 @@ class App(customtkinter.CTk):
                                 for mod in data.allDUs[self.displayedDUtype]:
                                     if mod['slot'] == str(r['position']):
                                         self.canvas_place_rounded_rectangle(mod['x'], mod['y'], mod['w'], mod['h'], fill=data.fillColor_AlreadyLoadedSlot)
+                                        self.clicked_module = r['part']
                     if len(self.this_DU_relations_MODULE) == len(data.allDUs[self.displayedDUtype]):
                         self.canvas.create_text(380, 475, text='Fully loaded DU', anchor='nw', fill=data.fillColor_SU_Text)
                     if detector != []:
