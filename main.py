@@ -22,6 +22,7 @@ class App(customtkinter.CTk):
         self.title("HGTD Tools")
         self.geometry(f"{1500}x{1000}")
         icon = tkinter.PhotoImage(file="windowIcon.png")
+        self.wm_iconbitmap()
         self.iconphoto(True,icon)
 
         self.n_items_to_show_in_cbx = 16
@@ -49,10 +50,10 @@ class App(customtkinter.CTk):
 
         self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="Appearance Mode:", anchor="w")
         self.appearance_mode_label.grid(row=5, column=0, padx=10, pady=10)
-        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame_left, values=["Light", "Dark", "System"],
+        self.appearance_mode_optionmenu = customtkinter.CTkOptionMenu(self.sidebar_frame_left, values=["Light", "Dark", "System"],
                                                                        command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=5, column=1, padx=10, pady=10)
-        self.appearance_mode_optionemenu.set("System")
+        self.appearance_mode_optionmenu.grid(row=5, column=1, padx=10, pady=10)
+        self.appearance_mode_optionmenu.set("System")
 
         self.exit_image = customtkinter.CTkImage(Image.open("right-from-bracket-solid.png"), size=(20,20))
         self.btnLogout = customtkinter.CTkButton(self.sidebar_frame_left, image=self.exit_image, text="Close", compound='left', fg_color="#cf352e", hover_color="#B02B25", command=self.exit, width=60)
@@ -65,7 +66,7 @@ class App(customtkinter.CTk):
 
         self.textbox = customtkinter.CTkTextbox(master=self.explain_frame, width=400, wrap='word')
         self.textbox.pack(fill="both", expand=True, padx=20, pady=20)
-        self.textbox.insert("0.0", "Each Support Unit is oriented in such a way that when looking at its face, the module connectors are at the top (or on the right), and module capacitors are on the bottom (or on the left).\n\nUser actions (loading sites / assembly at CERN): First step at a loading site: fill the Detector Unit with modules, click on the canvas to select the correct position and use the button below. Once finished, move to the assembly step at CERN and enter the position manually when connecting a Detector Unit with the Detector (VxLxQx). Note: A back Detector Unit can only be on layer 1 or 2, a front Detector Unit can only be on layer 0 or 3.\n\nToo long dropdown selections are split into chunks, you can select which chunk shall be shown with the arrow buttons. This is ensure compatibility with more operating systems.")
+        self.textbox.insert("0.0", "Each Support Unit is oriented in such a way that when looking at its face, the module connectors are at the top (or on the right), and module capacitors are on the bottom (or on the left).\n\nUser actions (loading sites / assembly at CERN): First step at a loading site: fill the Detector Unit with modules, click on the canvas to select the correct position and use the button below. Once finished, move to the assembly step at CERN and enter the position manually when connecting a Detector Unit with the Detector (VxLxQx). Note: A back Detector Unit can only be on layer 1 or 2, a front Detector Unit can only be on layer 0 or 3.\n\nToo long dropdown selections are split into chunks, you can select which chunk shall be shown with the arrow buttons. This is to ensure compatibility with more operating systems.")
         self.textbox.configure(state='disabled')
 
         # create main frame with widgets
