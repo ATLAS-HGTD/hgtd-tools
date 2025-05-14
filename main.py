@@ -22,7 +22,7 @@ class ToplevelWindow(customtkinter.CTkToplevel):
 
         self.textbox = customtkinter.CTkTextbox(master=self, width=400, wrap='word')
         self.textbox.pack(fill="both", expand=True, padx=20, pady=20)
-        self.textbox.insert("0.0", "Each Support Unit is oriented in such a way that when looking at its face, the module connectors are at the top (or on the right), and module capacitors are on the bottom (or on the left).\nUser actions (loading sites / assembly at CERN): First step at a loading site: fill the Detector Unit with modules, click on the canvas to select the correct position and use the button below. Once finished, move to the assembly step at CERN and enter the position manually when connecting a Detector Unit with the Detector (VxLxQx). Note: A back Detector Unit can only be on layer 1 or 2, a front Detector Unit can only be on layer 0 or 3.\nToo long dropdown selections are split into chunks, you can select which chunk shall be shown with the arrow buttons. This is to ensure compatibility with more operating systems.")
+        self.textbox.insert("0.0", "Each Support Unit is oriented in such a way that when looking at its face, the module connectors are at the top (or on the right), and module capacitors are on the bottom (or on the left).\nUser actions (loading sites / assembly at CERN): First step at a loading site: fill the Detector Unit with modules, click on the canvas to select the correct position and use the button below. Once finished, move to the assembly step at CERN and enter the position manually when connecting a Detector Unit with the Detector (VxLxQx). Note: A back Detector Unit can only be on layer 1 or 2, a front Detector Unit can only be on layer 0 or 3.\nToo long dropdown selections are split into chunks, you can select which chunk shall be shown with the arrow buttons. This is to ensure compatibility with more operating systems.\n\nHint: manufacturers for modules should be interpreted as assembly sites. This field is taken live from all manufacturers available in the database and hence does not necessarily agree with the six defined assembly sites.\n\nHint 2: Blue option menus contain static choices (=hardcoded), while grey comboboxes are retrieved dynamically (=from the DB).\n\nHint 3: if you do not pre-select children by trivial attributes like manufacturer or type, the option to choose only not-yet-connected children will be slow, as is has to check from the full set of children. Pre-select with the other options to speed this process up.")
         self.textbox.configure(state='disabled')
         
 class App(customtkinter.CTk):
@@ -60,26 +60,26 @@ class App(customtkinter.CTk):
         self.progressbar.set(1)
 
         self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="Theme:", anchor="e")
-        self.appearance_mode_label.grid(row=5, column=0, padx=10, pady=10)
+        self.appearance_mode_label.grid(row=5, column=0, padx=5, pady=10)
         self.appearance_mode_optionmenu = customtkinter.CTkOptionMenu(self.sidebar_frame_left, values=["Light", "Dark", "System"],
                                                                        command=self.change_appearance_mode_event, width=60)
-        self.appearance_mode_optionmenu.grid(row=5, column=1, padx=10, pady=10)
+        self.appearance_mode_optionmenu.grid(row=5, column=1, padx=5, pady=10)
         self.appearance_mode_optionmenu.set("System")
 
         self.help_image = customtkinter.CTkImage(Image.open("circle-question.png"), size=(20,20))
         self.btnHelp = customtkinter.CTkButton(self.sidebar_frame_left, image=self.help_image, text="Help", compound='left', fg_color="#339941", hover_color="#228831", command=self.help, width=60)
-        self.btnHelp.grid(row=6, column=0, pady=10, padx=10, columnspan=2)
+        self.btnHelp.grid(row=6, column=0, pady=10, padx=5, columnspan=2)
         self.help_window = None
         
         self.exit_image = customtkinter.CTkImage(Image.open("right-from-bracket-solid.png"), size=(20,20))
         self.btnLogout = customtkinter.CTkButton(self.sidebar_frame_left, image=self.exit_image, text="Close", compound='left', fg_color="#cf352e", hover_color="#B02B25", command=self.exit, width=60)
-        self.btnLogout.grid(row=7, column=0, pady=10, padx=10, columnspan=2)
+        self.btnLogout.grid(row=7, column=0, pady=10, padx=5, columnspan=2)
 
         # work in main widget (column w.r.t. root >= 1)
 
         # create main frame with widgets
         self.main_frame = customtkinter.CTkFrame(self)
-        self.main_frame.grid(row=0, column=1, rowspan=1, columnspan=2, padx=20, pady=20, sticky="nsew")
+        self.main_frame.grid(row=0, column=1, rowspan=1, columnspan=2, padx=10, pady=10, sticky="nsew")
         self.main_frame.grid_columnconfigure((0,1), weight=1)
         self.main_frame.grid_rowconfigure(1, weight=1)
 
@@ -88,16 +88,16 @@ class App(customtkinter.CTk):
                                                                  values=["Module Loading", "Detector Assembly (CERN)"],
                                                                  command=self.button_mode_event_click)
         self.segmented_button.set("Module Loading")
-        self.segmented_button.grid(row=0, column=0, padx=20, pady=(20, 0), sticky="nsew")
+        self.segmented_button.grid(row=0, column=0, padx=5, pady=(5, 0), sticky="nsew")
 
         # left sub widget: form
         self.combobox_frame = customtkinter.CTkFrame(self.main_frame, width = 600)
-        self.combobox_frame.grid(row=1, column=0, padx=20, pady=20, sticky="nsew")
+        self.combobox_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
         self.combobox_frame.grid_columnconfigure((0,1), weight=1)
         
         # parent
         self.parent_frame = customtkinter.CTkFrame(self.combobox_frame)
-        self.parent_frame.grid(row=0, column=0, padx=20, pady=5, sticky="nsew", columnspan=2)
+        self.parent_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
         self.parent_frame.grid_columnconfigure((0,1), weight=1)
         
         self.combobox_parent_T_label = customtkinter.CTkLabel(self.parent_frame, text="Parent Part Type: Detector Unit")
@@ -158,7 +158,7 @@ class App(customtkinter.CTk):
 
         # child
         self.child_frame = customtkinter.CTkFrame(self.combobox_frame)
-        self.child_frame.grid(row=1, column=0, padx=20, pady=5, sticky="nsew", columnspan=2)
+        self.child_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
         self.child_frame.grid_columnconfigure((0,1), weight=1)
         
         self.combobox_child_T_label = customtkinter.CTkLabel(self.child_frame, text="Child Part Type: Module")
@@ -166,13 +166,13 @@ class App(customtkinter.CTk):
 
         
         self.child_conn_optionmenu = customtkinter.CTkOptionMenu(self.child_frame, values=["Not yet connected children", "All children"],
-                                                                       command=self.change_child_conn_event, width=60)
-        self.child_conn_optionmenu.grid(row=1, column=0, padx=10, pady=10)
-        self.child_conn_optionmenu.set("Not yet connected children")
-        self.child_manu_optionmenu = customtkinter.CTkOptionMenu(self.child_frame, values=["All assembly sites"],
-                                                                       command=self.change_child_conn_event, width=60)
-        self.child_manu_optionmenu.grid(row=1, column=1, padx=10, pady=10)
-        self.child_manu_optionmenu.set("All assembly sites") # ToDo: change values depending on mode
+                                                                       command=self.change_child_conn_event, width=250)
+        self.child_conn_optionmenu.grid(row=1, column=0, padx=5, pady=10)
+        self.child_conn_optionmenu.set("All children")
+        self.combobox_child_manu = customtkinter.CTkComboBox(self.child_frame, values=["All manufacturers"],
+                                                                       command=self.combobox_child_manu_event, width=250)
+        self.combobox_child_manu.grid(row=1, column=1, padx=5, pady=10)
+        self.combobox_child_manu.set("All manufacturers") # ToDo: change values depending on mode
 
 
         #self.combobox_chi_type_label = customtkinter.CTkLabel(self.child_frame, text="DU type")
@@ -229,7 +229,7 @@ class App(customtkinter.CTk):
 
         # position / click
         self.position_frame = customtkinter.CTkFrame(self.combobox_frame)
-        self.position_frame.grid(row=2, column=0, padx=20, pady=5, sticky="nsew", columnspan=2)
+        self.position_frame.grid(row=2, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
         self.position_frame.grid_columnconfigure((0,1), weight=1)
         
         self.position_label = customtkinter.CTkLabel(self.position_frame, text="Position (derived from canvas interaction)")
@@ -250,10 +250,10 @@ class App(customtkinter.CTk):
 
         # right sub widget: canvas containing DUs to click on
         self.canvas_label = customtkinter.CTkLabel(self.main_frame, text="Interactive canvas: accepting user click")
-        self.canvas_label.grid(row=0, column=1, padx=20, pady=(20, 10), sticky="nsew")
+        self.canvas_label.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
 
         self.canvas = customtkinter.CTkCanvas(self.main_frame, width = 500, height = 700, background='white')
-        self.canvas.grid(row=1, column=1, padx=20, pady=20, sticky="nsew")
+        self.canvas.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
         self.canvas.bind('<Button-1>', self.canvas_event_click)
         self.displayedDUtype = "None"
 
@@ -280,17 +280,25 @@ class App(customtkinter.CTk):
         self.cbx_ctype_shown_page = 0
         self.clicked_module = []
 
+        self.par_type = None
+        self.chi_type = None
+        self.chi_conn = None
+        self.chi_manu = None
+
         # Get first parents and children (Module Loading)
         try:
             self.possible_parents, self.last_responseText = util.get_relevant_parts('Detector Unit')
             self.possible_children, self.last_responseText = util.get_relevant_parts('Module')
+            self.manufacturers, self.last_responseText = util.get_manufacturers()
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
             self.possible_parents = []
             self.possible_children = []
+            self.manufacturers = []
             self.last_responseText = str(e)
         except ValueError as e:
             self.possible_parents = []
             self.possible_children = []
+            self.manufacturers = []
             self.last_responseText = str(e)
 
         if self.last_responseText[:3] != '200':
@@ -322,14 +330,15 @@ class App(customtkinter.CTk):
             self.cbx_chi_shown_page = 1
             self.cbx_ptype_shown_page = 1
             self.cbx_ctype_shown_page = 1
-            self.combobox_parent_paginationFrame_label.configure(text=f"{self.cbx_par_shown_page}/{self.cbx_par_n_pages}")
-            self.combobox_child_paginationFrame_label.configure(text=f"{self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
-            self.combobox_par_type_paginationFrame_label.configure(text=f"{self.cbx_ptype_shown_page}/{self.cbx_ptype_n_pages}")
-            self.combobox_chi_type_paginationFrame_label.configure(text=f"{self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}")
+            self.combobox_parent_paginationFrame_label.configure(text=f"page {self.cbx_par_shown_page}/{self.cbx_par_n_pages}")
+            self.combobox_child_paginationFrame_label.configure(text=f"page {self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
+            self.combobox_par_type_paginationFrame_label.configure(text=f"page {self.cbx_ptype_shown_page}/{self.cbx_ptype_n_pages}")
+            self.combobox_chi_type_paginationFrame_label.configure(text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}")
             self.combobox_parent.configure(values=self.possible_parents_SNs_chunked[0])
             self.combobox_child.configure(values=self.possible_children_SNs_chunked[0])
             self.combobox_par_type.configure(values=self.possible_par_types_chunked[0])
             self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[0])
+            self.combobox_child_manu.configure(values=["All manufacturers"]+[m['manufacturer_name'] for m in self.manufacturers])
 
     def button_add_event_click(self, debug = False):
         chi = self.combobox_child.get()
@@ -470,42 +479,42 @@ class App(customtkinter.CTk):
 
     def button_combobox_child_paginationButtonLeft_click(self):
         self.cbx_chi_shown_page = max(self.cbx_chi_shown_page - 1, 1)
-        self.combobox_child_paginationFrame_label.configure(text=f"{self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
+        self.combobox_child_paginationFrame_label.configure(text=f"page {self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
         self.combobox_child.configure(values=self.possible_children_SNs_chunked[self.cbx_chi_shown_page - 1])
 
     def button_combobox_child_paginationButtonRight_click(self):
         self.cbx_chi_shown_page = min(self.cbx_chi_shown_page + 1, self.cbx_chi_n_pages)
-        self.combobox_child_paginationFrame_label.configure(text=f"{self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
+        self.combobox_child_paginationFrame_label.configure(text=f"page {self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
         self.combobox_child.configure(values=self.possible_children_SNs_chunked[self.cbx_chi_shown_page - 1])
         
     def button_combobox_parent_paginationButtonLeft_click(self):
         self.cbx_par_shown_page = max(self.cbx_par_shown_page - 1, 1)
-        self.combobox_parent_paginationFrame_label.configure(text=f"{self.cbx_par_shown_page}/{self.cbx_par_n_pages}")
+        self.combobox_parent_paginationFrame_label.configure(text=f"page {self.cbx_par_shown_page}/{self.cbx_par_n_pages}")
         self.combobox_parent.configure(values=self.possible_parents_SNs_chunked[self.cbx_par_shown_page - 1])
 
     def button_combobox_parent_paginationButtonRight_click(self):
         self.cbx_par_shown_page = min(self.cbx_par_shown_page + 1, self.cbx_par_n_pages)
-        self.combobox_parent_paginationFrame_label.configure(text=f"{self.cbx_par_shown_page}/{self.cbx_par_n_pages}")
+        self.combobox_parent_paginationFrame_label.configure(text=f"page {self.cbx_par_shown_page}/{self.cbx_par_n_pages}")
         self.combobox_parent.configure(values=self.possible_parents_SNs_chunked[self.cbx_par_shown_page - 1])
         
     def button_combobox_par_type_paginationButtonLeft_click(self):
         self.cbx_ptype_shown_page = max(self.cbx_ptype_shown_page - 1, 1)
-        self.combobox_par_type_paginationFrame_label.configure(text=f"{self.cbx_ptype_shown_page}/{self.cbx_ptype_n_pages}")
+        self.combobox_par_type_paginationFrame_label.configure(text=f"page {self.cbx_ptype_shown_page}/{self.cbx_ptype_n_pages}")
         self.combobox_par_type.configure(values=self.possible_par_types_chunked[self.cbx_ptype_shown_page - 1])
 
     def button_combobox_par_type_paginationButtonRight_click(self):
         self.cbx_ptype_shown_page = min(self.cbx_ptype_shown_page + 1, self.cbx_ptype_n_pages)
-        self.combobox_par_type_paginationFrame_label.configure(text=f"{self.cbx_ptype_shown_page}/{self.cbx_ptype_n_pages}")
+        self.combobox_par_type_paginationFrame_label.configure(text=f"page {self.cbx_ptype_shown_page}/{self.cbx_ptype_n_pages}")
         self.combobox_par_type.configure(values=self.possible_par_types_chunked[self.cbx_ptype_shown_page - 1])
         
     def button_combobox_chi_type_paginationButtonLeft_click(self):
         self.cbx_ctype_shown_page = max(self.cbx_ctype_shown_page - 1, 1)
-        self.combobox_chi_type_paginationFrame_label.configure(text=f"{self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}")
+        self.combobox_chi_type_paginationFrame_label.configure(text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}")
         self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[self.cbx_ctype_shown_page - 1])
 
     def button_combobox_chi_type_paginationButtonRight_click(self):
         self.cbx_ctype_shown_page = min(self.cbx_ctype_shown_page + 1, self.cbx_ctype_n_pages)
-        self.combobox_chi_type_paginationFrame_label.configure(text=f"{self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}")
+        self.combobox_chi_type_paginationFrame_label.configure(text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}")
         self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[self.cbx_ctype_shown_page - 1])
         
     def button_inspect_child_event_click(self):
@@ -538,6 +547,15 @@ class App(customtkinter.CTk):
         self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE')
         self.inspect_clicked_button.configure(state='disabled')
 
+        self.par_type = None
+        self.combobox_par_type.set("- Select -")
+        self.chi_type = None
+        self.combobox_chi_type.set("- Select -")
+        self.chi_conn = None
+        self.child_conn_optionmenu.set("All children")
+        self.chi_manu = None
+        self.combobox_child_manu.set("All manufacturers")
+
         self.progressbar.set(0)
         self.info_label.configure(text=' ')
         self.canvas.delete("all")
@@ -545,7 +563,7 @@ class App(customtkinter.CTk):
             self.combobox_par_type_label.grid()
             self.combobox_par_type_paginationFrame.grid()
             
-            self.child_manu_optionmenu.grid()
+            self.combobox_child_manu.grid()
             
             self.combobox_chi_type_paginationFrame.grid_remove()
             
@@ -564,7 +582,7 @@ class App(customtkinter.CTk):
             self.combobox_par_type_label.grid_remove()
             self.combobox_par_type_paginationFrame.grid_remove()
             
-            self.child_manu_optionmenu.grid_remove()
+            self.combobox_child_manu.grid_remove()
             
             self.combobox_chi_type_paginationFrame.grid()
             
@@ -688,13 +706,44 @@ class App(customtkinter.CTk):
         customtkinter.set_appearance_mode(new_appearance_mode)
 
     def change_child_conn_event(self, child_conn):
-        pass
+        self.chi_conn = self.child_conn_optionmenu.get()
+        self.combobox_child.set("- Select -")
+        
+        if self.segmented_button.get() == 'Module Loading':
+            self.loading_wheel = threading.Thread(target=self.fetch_p_c, args=('Detector Unit','Module'))
+            self.loading_wheel.start()
+            self.update_progressbar(self.loading_wheel)
+        else:
+            self.loading_wheel = threading.Thread(target=self.fetch_p_c, args=('Detector','Detector Unit'))
+            self.loading_wheel.start()
+            self.update_progressbar(self.loading_wheel)
 
-    def combobox_par_type_event_select(self):
-        pass
+    def combobox_child_manu_event(self, child_manu):
+        self.chi_manu = self.combobox_child_manu.get()
+        self.combobox_child.set("- Select -")
+        
+        self.loading_wheel = threading.Thread(target=self.fetch_p_c, args=('Detector Unit','Module'))
+        self.loading_wheel.start()
+        self.update_progressbar(self.loading_wheel)
 
-    def combobox_chi_type_event_select(self):
-        pass
+    def combobox_par_type_event_select(self, par_type):
+        self.par_type = self.combobox_par_type.get()
+        self.combobox_parent.set("- Select -")
+        
+        self.loading_wheel = threading.Thread(target=self.fetch_p_c, args=('Detector Unit','Module'))
+        self.loading_wheel.start()
+        self.update_progressbar(self.loading_wheel)
+
+    def combobox_chi_type_event_select(self, chi_type):
+        # this is relevant for child = DU, and you want to specify
+        # which DU type shall be shown
+        # from the children, select those that have the type in their SN
+        self.chi_type = self.combobox_chi_type.get()
+        self.combobox_child.set("- Select -")
+        
+        self.loading_wheel = threading.Thread(target=self.fetch_p_c, args=('Detector','Detector Unit'))
+        self.loading_wheel.start()
+        self.update_progressbar(self.loading_wheel)
 
     def combobox_p_c_event_select(self, unused_var_to_please_python):
         self.displayedDUtype = "None"
@@ -933,6 +982,20 @@ class App(customtkinter.CTk):
         else:
             self.api_status = 1
             self.progressbar.configure(progress_color="#007711")
+            
+            if p == 'Detector Unit' and c == 'Module':
+                if self.par_type != None and self.par_type != 'All DU types':
+                    self.possible_parents = [pp for pp in self.possible_parents if self.par_type in pp['serial_number']]
+                if self.chi_manu != None and self.chi_manu != 'All manufacturers':
+                    self.possible_children = [pp for pp in self.possible_children if self.chi_manu == str(pp['manufacturer']['manufacturer_name'])]
+
+            if p == 'Detector' and c == 'Detector Unit':
+                if self.chi_type != None and self.chi_type != 'All DU types':
+                    self.possible_children = [pc for pc in self.possible_children if self.chi_type in pc['serial_number']]
+            
+            if self.chi_conn != None and self.chi_conn != 'All children':
+                self.possible_children = [pp for pp in self.possible_children if (len(util.get_parents(pp['part_id'])[0])) == 0]
+                    
             self.possible_parents_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_parents)
             self.possible_children_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_children)
             self.possible_parents_SNs = [entry[0] for entry in self.possible_parents_SNs_and_partIDs]
@@ -943,12 +1006,20 @@ class App(customtkinter.CTk):
             self.possible_children_partIDs = [entry[1] for entry in self.possible_children_SNs_and_partIDs]
             self.cbx_par_n_pages = len(self.possible_parents_SNs_chunked)
             self.cbx_chi_n_pages = len(self.possible_children_SNs_chunked)
-            self.cbx_par_shown_page = 1
-            self.cbx_chi_shown_page = 1
-            self.combobox_parent_paginationFrame_label.configure(text=f"{self.cbx_par_shown_page}/{self.cbx_par_n_pages}")
-            self.combobox_child_paginationFrame_label.configure(text=f"{self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
-            self.combobox_parent.configure(values=self.possible_parents_SNs_chunked[0])
-            self.combobox_child.configure(values=self.possible_children_SNs_chunked[0])
+            self.cbx_par_shown_page = min(1, self.cbx_par_n_pages)
+            self.cbx_chi_shown_page = min(1, self.cbx_chi_n_pages)
+            self.combobox_parent_paginationFrame_label.configure(text=f"page {self.cbx_par_shown_page}/{self.cbx_par_n_pages}")
+            self.combobox_child_paginationFrame_label.configure(text=f"page {self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
+            if self.cbx_par_n_pages > 0:
+                self.combobox_parent.configure(values=self.possible_parents_SNs_chunked[0])
+            else:
+                self.combobox_parent.configure(values=[])
+                self.combobox_parent.set("- Select -")
+            if self.cbx_chi_n_pages > 0:
+                self.combobox_child.configure(values=self.possible_children_SNs_chunked[0])
+            else:
+                self.combobox_child.configure(values=[])
+                self.combobox_child.set("- Select -")
 
     def fetch_slots(self):
         try:

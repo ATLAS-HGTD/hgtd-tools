@@ -53,7 +53,7 @@ def get_relevant_parts(partKoP_shortname, onlyNonDeleted = True, getFullAttribut
                 with open('./local/all_slots.json', 'w') as f:
                     json.dump(these_parts, f)
                 slots, responseText = api.fetch_information(f'/partslistbykop/{KoP_ID}/')
-                with open('./local/all_slots.json', 'w') as f:
+                with open('./local/slots.json', 'w') as f:
                     json.dump(slots, f)
                 for alSl in these_parts:
                     for s in slots:
@@ -86,11 +86,14 @@ def get_relevant_parts(partKoP_shortname, onlyNonDeleted = True, getFullAttribut
 def get_parents(chi_partID, onlyNonDeleted = True):
     try:
         partstree, responseText = api.fetch_information(f'/parentslist/{chi_partID}/')
-        interesting_partstree = []
-        for p in partstree:
-            if p['is_record_deleted'] == 'F':
-                interesting_partstree.append(p)
-        return interesting_partstree, responseText
+        if onlyNonDeleted:
+            interesting_partstree = []
+            for p in partstree:
+                if p['is_record_deleted'] == 'F':
+                    interesting_partstree.append(p)
+            return interesting_partstree, responseText
+        else:
+            return partstree, responseText
     except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
         raise e
     except ValueError as e:
@@ -100,11 +103,30 @@ def get_parents(chi_partID, onlyNonDeleted = True):
 def get_children(par_partID, onlyNonDeleted = True):
     try:
         partstree, responseText = api.fetch_information(f'/childslist/{par_partID}/')
-        interesting_partstree = []
-        for p in partstree:
-            if p['is_record_deleted'] == 'F':
-                interesting_partstree.append(p)
-        return interesting_partstree, responseText
+        if onlyNonDeleted:
+            interesting_partstree = []
+            for p in partstree:
+                if p['is_record_deleted'] == 'F':
+                    interesting_partstree.append(p)
+            return interesting_partstree, responseText
+        else:
+            return partstree, responseText
+    except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+        raise e
+    except ValueError as e:
+        raise e
+
+def get_manufacturers(onlyNonDeleted = True):
+    try:
+        manufacturers, responseText = api.fetch_information(f'/manufacturers')
+        if onlyNonDeleted:
+            interesting_manufacturers = []
+            for m in manufacturers:
+                if m['is_record_deleted'] == 'F':
+                    interesting_manufacturers.append(m)
+            return interesting_manufacturers, responseText
+        else:
+            return manufacturers, responseText
     except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
         raise e
     except ValueError as e:

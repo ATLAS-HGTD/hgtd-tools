@@ -18,69 +18,25 @@
 These tools interact with the HGTD Production Database for the HGTD Phase-II Upgrade of the ATLAS Experiment at CERN.
 
 ### Features
-- API
-- GUI
-- Module Loading
-- Detector Assembly (CERN)
-
-### Already working
-- Selecting and writing parent / child relations with a GUI: canvas to select slots for modules for Module Loading, form data will be processed via "click" position
-- Search through partstree and slots to perform multiple POST requests in one go: Detector Assembly (CERN) puts DU on Detector, loaded Modules get Slots
-- Uses standard coordinate system for global attributes: Vessel, Layer, Quadrant, DU type / SU type, Row (global), Module (global) and can map to local attributes: Row (on DU), Module (on DU)
-- Support for all 48 DU types, including those that have "horizontal" and "vertical" modules on the same unit
-- Loaded modules are shown as blue slots when doing Module Loading or Detector Assembly (CERN), desired slots of the user doing Module Loading are highlighted in green
-- If DU is already placed in detector, show where it is (Vessel / Layer / Quadrant)
-- Catch wrong VLQ entries knowing which combinations are allowed
-- Delete request for all existing slots for loaded modules (propagate new VLQ) when new Detector Assembly (CERN) operation is initiated with another VLQ, i.e. effectively replace with new ones
-- API request status is updating while thread is running, progressbar fill with different colors
-- Any operation that would overwrite the module loading is caught, user first needs to disconnect the module from existing parent DUs or parent Slots or confirm overwriting existing relation(s) in case of detector assembly
-- Overwriting existing DU assembly (together with module connections to slots) is possible on the other hand, and propagates the new slots, should automatically delete child relations of affected slots
-- Distinction between local lookup files and fetching dynamic tables where needed
+- API (GET / POST / DELETE)
+  - with dynamic progress bar to see API request status
+  - efficient lookup of information in local files (e.g. static Slot table) and fetching of dynamic information via ProdDB API
+- GUI (Linux / Mac / Windows)
+  - clickable canvas to get local coordinates easily, conversion to global coordinates done internally where needed
+  - buttons to inspect affected parts
+- Modes
+  - Module Loading (DU -> MODULE)
+  - Detector Assembly (CERN) (DETECTOR -> DU & SLOT -> MODULE)
+- Logic
+  - new relations can overwrite old ones, if user agrees to do so (implementing replacement of existing relations)
+  - user can not load / assemble parts that are not allowed to take that spot (implementing constraints for already used positions, and parts not matching the target position by type)
+  - if operation requires subsequent operations (e.g. connecting modules to slots when placing a DU on the detector), perform those subsequent operations in one go
+  - query selection before choosing parent / child from full list (e.g. DU type, module manufacturer, child not yet connected or all possible children)
 
 ### Open points requiring implementation
 New features, bugs, compatibility improvements and other items are collected with the [Issues](https://gitlab.cern.ch/anstein/hgtd-tools/-/issues)
 
 Some of them are also bound to [Milestones](https://gitlab.cern.ch/anstein/hgtd-tools/-/milestones)
-
-## Showcase of typical use cases
-A video showing the main features included with v0.0.1 is available under this [cernbox link](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/public/for_HGTD/screencast_hgtd-tools_v0p0p1.mov) (protected / atlas-hgtd group access only).
-
-### General aspects
-#### API status
-HGTD Tools shows a dynamic progress bar whenever one or multiple API requests are ongoing.
-
-<span style="color:green">Green</span>: request was successful (triggered by status codes in the 200s)  
-<span style="color:yellow">Yellow</span>: ongoing request, please wait  
-<span style="color:red">Red</span>: request resulted in an error that is specified in the status bar in the footer of the application
-
-Example: if you lose connection to the web e.g. by purposefully switching off WiFi for this example, your app will look like this:
-
-![](docs/showcase_api_error.png)
-
-#### Appearance mode
-Default appearance mode is System default, otherwise feel free to select from Light and Dark mode.
-
-### Module Loading
-HGTD Tools shows already loaded module slots on a selected DU. User actions like switching between Loading / Assembly, or selecting different parent or child parts reloads this view freshly with API calls to the database.
-
-![](docs/showcase_module_loading_existing.png)
-
-When loading a new module to a position on the DU that is not already blocked by another module, this position is highlighted in green. You can proceed with the ADD PARTS TREE button.
-
-![](docs/showcase_module_loading_new.png)
-
-Trying to load a module into a position that is already in use is not possible. This requires a further user action to prevent accidentally overwriting something. As noted in the message, feel free to inspect the affected parts clicking the INSPECT ... buttons below the selected serial numbers.
-
-![](docs/showcase_module_loading_notAllowed.png)
-
-### Detector Assembly (CERN)
-HGTD Tools complains if the desired Layer is not compatible with the type of the DU to load there. Other implemented cases catch allowed / not allowed Vessel and Quadrant attributes.
-
-![](docs/showcase_detector_assembly_incompatibleVLQ.png)
-
-HGTD Tools asks the user for confirmation, if a VesselLayerQuadrant combination was already used for the desired DU type (= already occupied).
-
-![](docs/showcase_detector_assembly_occupiedVLQ.png)
 
 ## Installation
 This suite is written in python, and a conda environment is recommended. The included yaml file also lists a couple of useful packages assisting with further analysing / interpreting the data and was tested to work in April 2025.
@@ -108,12 +64,52 @@ If you don't like conda (☹️ how? 🤨) or you want to minimize the packages 
 
 ## Usage
 
-To open the main window with GUI, execute the following:
+To open the main window with GUI, execute the following (using either Anaconda Prompt or your preferred shell with which you installed miniconda):
 
 ```shell
 conda activate hgtd
 python main.py
 ```
+
+## Showcase of typical use cases
+A video showing the main features included with v0.0.1 is available under this [cernbox link](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/public/for_HGTD/screencast_hgtd-tools_v0p0p1.mov) (protected / atlas-hgtd group access only).
+
+### General aspects
+#### API status
+HGTD Tools shows a dynamic progress bar whenever one or multiple API requests are ongoing.
+
+<span style="color:green">Green</span>: request was successful (triggered by status codes in the 200s)  
+<span style="color:yellow">Yellow</span>: ongoing request, please wait  
+<span style="color:red">Red</span>: request resulted in an error that is specified in the status bar in the footer of the application
+
+Example: if you lose connection to the web e.g. by purposefully switching off WiFi for this example, your app will look like this:
+
+![](docs/showcase_api_error.png)
+
+#### Appearance mode (theme)
+Default appearance mode is System default, otherwise feel free to select from Light and Dark mode.
+
+### Module Loading
+HGTD Tools shows already loaded module slots on a selected DU. User actions like switching between Loading / Assembly, or selecting different parent or child parts reloads this view freshly with API calls to the database.
+
+![](docs/showcase_module_loading_existing.png)
+
+When loading a new module to a position on the DU that is not already blocked by another module, this position is highlighted in green. You can proceed with the ADD PARTS TREE button.
+
+![](docs/showcase_module_loading_new.png)
+
+Trying to load a module into a position that is already in use is not possible. This requires a further user action to prevent accidentally overwriting something. As noted in the message, feel free to inspect the affected parts clicking the INSPECT ... buttons below the selected serial numbers.
+
+![](docs/showcase_module_loading_notAllowed.png)
+
+### Detector Assembly (CERN)
+HGTD Tools complains if the desired Layer is not compatible with the type of the DU to load there. Other implemented cases catch allowed / not allowed Vessel and Quadrant attributes.
+
+![](docs/showcase_detector_assembly_incompatibleVLQ.png)
+
+HGTD Tools asks the user for confirmation, if a VesselLayerQuadrant combination was already used for the desired DU type (= already occupied).
+
+![](docs/showcase_detector_assembly_occupiedVLQ.png)
 
 ## Reusing the included API module
 The `api.py` module can be used standalone as well to make API requests to the HGTD Production Database. Note that the included functions also return the response `status_code` and `reason` and handle a variety of possible errors.
