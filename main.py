@@ -287,6 +287,7 @@ class App(customtkinter.CTk):
 
         # Get first parents and children (Module Loading)
         try:
+            # ToDo: use this as long as the token is valid self.access_token = util.get_access_token()
             self.possible_parents, self.last_responseText = util.get_relevant_parts('Detector Unit')
             self.possible_children, self.last_responseText = util.get_relevant_parts('Module')
             self.manufacturers, self.last_responseText = util.get_manufacturers()
@@ -992,7 +993,9 @@ class App(customtkinter.CTk):
             if p == 'Detector' and c == 'Detector Unit':
                 if self.chi_type != None and self.chi_type != 'All DU types':
                     self.possible_children = [pc for pc in self.possible_children if self.chi_type in pc['serial_number']]
-            
+
+            # do the most expensive part last (when easy filters on existing data have already been applied)
+            # expensive meaning need to make calls to the API for each part in the list that survived the previous cuts
             if self.chi_conn != None and self.chi_conn != 'All children':
                 self.possible_children = [pp for pp in self.possible_children if (len(util.get_parents(pp['part_id'])[0])) == 0]
                     

@@ -1,4 +1,4 @@
-import json, requests
+import getpass, json, requests
 from pprint import pprint
 
 # Interaction with hgtd-proddb REST API
@@ -6,11 +6,69 @@ from pprint import pprint
 # Without SSO
 apiUrlPrefix = 'https://backend-hgtddb.app.cern.ch/hgtddb'
 frontendUrlPrefix = 'https://nginx-hgtddb.app.cern.ch'
+# New backend with protection (e.g. access token) 
+access_token_url = 'https://auth.cern.ch/auth/realms/cern/api-access/token'
+password_token_url = 'https://auth.cern.ch/auth/realms/cern/protocol/openid-connect/token'
+protectedApiUrlPrefix = 'https://hgtddb-api.web.cern.ch/hgtddb'
 
-def fetch_information(endpoint, debug = False):
+def get_access_token(grant_type = 'client_credentials', debug = False):
+    applicationDetails = {}    
+    applicationDetails['grant_type'] = (None, grant_type)
+    if grant_type == 'client_credentials':
+        applicationDetails['client_id'] = (None, 'hgtd-api-client')
+        applicationDetails['client_secret'] = (None, 'tfMW775EPllKczpWh3uZaE3VQ2aOHUnr')
+        applicationDetails['audience'] = (None, 'webframeworks-paas-hgtddb')
+        url_to_use = access_token_url
+    '''    
+    # not yet implemented
+    elif grant_type == 'password':
+        username = input('Enter username: ')
+        password = getpass.getpass('Enter password: ')
+        sixdigit = input('Enter 6-digit verification code: ')
+
+        applicationDetails['scope'] = (None, 'openid')
+        applicationDetails['username'] = (None, username)
+        applicationDetails['password'] = (None, password)
+        applicationDetails['totp'] = (None, sixdigit)
+        applicationDetails['client_id'] = (None, 'public-client')
+        applicationDetails['client_secret'] = (None, '')
+        url_to_use = password_token_url
+    '''
+    headers = {'content-type': 'application/x-www-form-urlencoded'}
+
+    try:
+        request = requests.post(url_to_use, data=applicationDetails, headers=headers)
+        request.raise_for_status()
+        if debug:
+            print(request.text)
+        return json.loads(request.text)['access_token']
+    except requests.exceptions.HTTPError as errh:
+        if debug:
+            print("Http Error:",errh)
+        raise requests.exceptions.HTTPError("Http Error:",errh)
+    except requests.exceptions.ConnectionError as errc:
+        if debug:
+            print("Error Connecting:",errc)
+        raise requests.exceptions.ConnectionError("Error Connecting:",errc)
+    except requests.exceptions.Timeout as errt:
+        if debug:
+            print("Timeout Error:",errt)
+        raise requests.exceptions.Timeout("Timeout Error:",errt)
+    except requests.exceptions.RequestException as err:
+        if debug:
+            print("OOps: Something Else",err)
+        raise requests.exceptions.RequestException("OOps: Something Else",err)
+
+def fetch_information(endpoint, authorized = True, debug = False):
     # https://stackoverflow.com/a/47007419
     try:
-        request = requests.get(apiUrlPrefix + endpoint, timeout=600)
+        if authorized:
+            access_token = get_access_token()
+            authorization = 'Bearer ' + access_token
+            headers = {'Authorization': authorization, 'content-type': 'application/json'}
+            request = requests.get(protectedApiUrlPrefix + endpoint, timeout=600, headers=headers)
+        else:
+            request = requests.get(apiUrlPrefix + endpoint, timeout=600)
         request.raise_for_status()
         if debug:
             print('>> GET response:', request.status_code, request.reason)
@@ -32,13 +90,19 @@ def fetch_information(endpoint, debug = False):
             print("OOps: Something Else",err)
         raise requests.exceptions.RequestException("OOps: Something Else",err)
 
-def post_information(endpoint, payload, debug = False, dryrun = False):
+def post_information(endpoint, payload, authorized = True, debug = False, dryrun = False):
     headers = {'content-type': 'application/json'}
     if debug:
         pprint(payload)
     if not dryrun:
         try:
-            response = requests.post(apiUrlPrefix + endpoint, data=json.dumps(payload), headers=headers)
+            if authorized:
+                access_token = get_access_token()
+                authorization = 'Bearer ' + access_token
+                headers = {'Authorization': authorization, 'content-type': 'application/json'}
+                response = requests.post(protectedApiUrlPrefix + endpoint, data=json.dumps(payload), headers=headers)
+            else:
+                response = requests.post(apiUrlPrefix + endpoint, data=json.dumps(payload), headers=headers)
             response.raise_for_status()
             if debug:
                 print('>> PATCH response:', response.status_code, response.reason)
@@ -63,13 +127,19 @@ def post_information(endpoint, payload, debug = False, dryrun = False):
         print('>>> Dryrun post operation with endpoint', endpoint)
         print('>>> and payload', payload)
 
-def delete_information(endpoint, debug = False, dryrun = False):
+def delete_information(endpoint, authorized = True, debug = False, dryrun = False):
     if not dryrun:
         try:
-            response = requests.delete(apiUrlPrefix + endpoint)
+            if authorized:
+                access_token = get_access_token()
+                authorization = 'Bearer ' + access_token
+                headers = {'Authorization': authorization, 'content-type': 'application/json'}
+                response = requests.delete(protectedApiUrlPrefix + endpoint, headers=headers)
+            else:
+                response = requests.delete(apiUrlPrefix + endpoint)
             response.raise_for_status()
             if debug:
-                print('>> PATCH response:', response.status_code, response.reason)
+                print('>> DELETE response:', response.status_code, response.reason)
             return f'{response.status_code}, {response.reason}'
         except requests.exceptions.HTTPError as errh:
             if debug:
