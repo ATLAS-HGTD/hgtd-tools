@@ -1,15 +1,72 @@
 import getpass, json, requests
 from pprint import pprint
 
-# Interaction with hgtd-proddb REST API
-# The requests are all made against the "old" backend
-# Without SSO
-apiUrlPrefix = 'https://backend-hgtddb.app.cern.ch/hgtddb'
+# === To open links in browser
+# Redirect to new frontend
 frontendUrlPrefix = 'https://nginx-hgtddb.app.cern.ch'
-# New backend with protection (e.g. access token) 
-access_token_url = 'https://auth.cern.ch/auth/realms/cern/api-access/token'
-password_token_url = 'https://auth.cern.ch/auth/realms/cern/protocol/openid-connect/token'
+
+# === Interaction with hgtd-proddb REST API
+# This was the "old" backend, now retired, without SSO
+apiUrlPrefix = 'https://backend-hgtddb.app.cern.ch/hgtddb'
+# New backend API with protection (e.g. access token, oidc)
 protectedApiUrlPrefix = 'https://hgtddb-api.web.cern.ch/hgtddb'
+# CERN endpoint to receive API access tokens (e.g. for new backend),
+# method client_credentials
+access_token_url = 'https://auth.cern.ch/auth/realms/cern/api-access/token'
+# We do not yet use password grant_type method to talk to the hgtd-api
+#password_token_url = 'https://auth.cern.ch/auth/realms/cern/protocol/openid-connect/token'
+
+# === For user authentication via OpenID (CERN SSO)
+# Used to write usernames that are different from the default "None"
+# which would result in the default user ATLAS_HGTD_PROD
+kc_server= "https://auth.cern.ch"
+client_id = "public-client"
+client_secret = ""
+keycloak_endpoint = kc_server+"/auth/realms/cern/protocol/openid-connect/token"
+userinfo_endpoint = kc_server+"/auth/realms/cern/protocol/openid-connect/userinfo"
+
+def get_user(us,pw,to, debug=False):   
+    try:
+        # get an access token
+        request = requests.post(
+            keycloak_endpoint,
+            data={
+                "grant_type": "password",
+                "scope": "openid",
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "password": pw,
+                "username": us,
+                "totp": to
+                }
+        )
+        request.raise_for_status()
+        access_token = request.json()['access_token']
+        # use access token to talk to userinfo endpoint
+        request = requests.post(
+            userinfo_endpoint,
+            data={"access_token": access_token}
+        )
+        request.raise_for_status()
+        if debug:
+            print(request.text)
+        return request.json()['cern_upn'], f'{request.status_code}, {request.reason}'
+    except requests.exceptions.HTTPError as errh:
+        if debug:
+            print("Http Error:",errh)
+        raise requests.exceptions.HTTPError("Http Error:",errh)
+    except requests.exceptions.ConnectionError as errc:
+        if debug:
+            print("Error Connecting:",errc)
+        raise requests.exceptions.ConnectionError("Error Connecting:",errc)
+    except requests.exceptions.Timeout as errt:
+        if debug:
+            print("Timeout Error:",errt)
+        raise requests.exceptions.Timeout("Timeout Error:",errt)
+    except requests.exceptions.RequestException as err:
+        if debug:
+            print("OOps: Something Else",err)
+        raise requests.exceptions.RequestException("OOps: Something Else",err)
 
 def get_access_token(grant_type = 'client_credentials', debug = False):
     applicationDetails = {}    

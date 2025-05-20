@@ -24,7 +24,60 @@ class ToplevelWindow(customtkinter.CTkToplevel):
         self.textbox.pack(fill="both", expand=True, padx=20, pady=20)
         self.textbox.insert("0.0", "Each Support Unit is oriented in such a way that when looking at its face, the module connectors are at the top (or on the right), and module capacitors are on the bottom (or on the left).\nUser actions (loading sites / assembly at CERN): First step at a loading site: fill the Detector Unit with modules, click on the canvas to select the correct position and use the button below. Once finished, move to the assembly step at CERN and enter the position manually when connecting a Detector Unit with the Detector (VxLxQx). Note: A back Detector Unit can only be on layer 1 or 2, a front Detector Unit can only be on layer 0 or 3.\nToo long dropdown selections are split into chunks, you can select which chunk shall be shown with the arrow buttons. This is to ensure compatibility with more operating systems.\n\nHint: manufacturers for modules should be interpreted as assembly sites. This field is taken live from all manufacturers available in the database and hence does not necessarily agree with the six defined assembly sites.\n\nHint 2: Blue option menus contain static choices (=hardcoded), while grey comboboxes are retrieved dynamically (=from the DB).\n\nHint 3: if you do not pre-select children by trivial attributes like manufacturer or type, the option to choose only not-yet-connected children will be slow, as is has to check from the full set of children. Pre-select with the other options to speed this process up.")
         self.textbox.configure(state='disabled')
+
+
+class AuthenticateWindow(customtkinter.CTkToplevel):
+    def __init__(self, callback, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.title("HGTD Tools - Authenticate new user")
+        self.geometry("900x300")
+
+        self.grid_columnconfigure((0, 1, 2), weight=1)
+        self.grid_rowconfigure((0,1), weight=1)
         
+        self.callback = callback
+
+        self.entries_frame = customtkinter.CTkFrame(self, corner_radius=0)
+        self.entries_frame.grid(row=0, column=0, rowspan=3, columnspan=3, sticky="nsew")
+
+        self.auth_info_label = customtkinter.CTkLabel(self.entries_frame, text="Type in your user data to authenticate as a new user of HGTD-Tools.")
+        self.auth_info_label.grid(row=0, column=0, padx=10, pady=10, columnspan=3)
+
+        self.username_variable = customtkinter.StringVar(value="")
+        self.username_entry = customtkinter.CTkEntry(self.entries_frame, textvariable=self.username_variable, state='normal')
+        self.username_entry.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
+        self.username_label = customtkinter.CTkLabel(self.entries_frame, text="Username")
+        self.username_label.grid(row=2, column=0, padx=10, pady=10)
+
+        self.password_variable = customtkinter.StringVar(value="")
+        self.password_entry = customtkinter.CTkEntry(self.entries_frame, textvariable=self.password_variable, state='normal', show="*")
+        self.password_entry.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
+        self.password_label = customtkinter.CTkLabel(self.entries_frame, text="Password")
+        self.password_label.grid(row=2, column=1, padx=10, pady=10)
+
+        self.totp_variable = customtkinter.StringVar(value="")
+        self.totp_entry = customtkinter.CTkEntry(self.entries_frame, textvariable=self.totp_variable, state='normal')
+        self.totp_entry.grid(row=1, column=2, padx=10, pady=10, sticky="nsew")
+        self.totp_label = customtkinter.CTkLabel(self.entries_frame, text="2FA 6-digit code, if configured (leave empty if you are not using 2FA yet)")
+        self.totp_label.grid(row=2, column=2, padx=10, pady=10)
+
+        self.auth_button = customtkinter.CTkButton(self.entries_frame, text="Authenticate me!", command=self.auth)
+        self.auth_button.grid(row=3, column=1, padx=10, pady=10)
+
+        self.auth_user, self.last_responseText = None, None
+        
+    def auth(self):
+        try:
+            self.auth_user, self.last_responseText = api.get_user(self.username_variable.get(), self.password_variable.get(), self.totp_variable.get())
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+            self.last_responseText = str(e)
+        except ValueError as e:
+            self.last_responseText = str(e)
+
+        self.callback(self.auth_user, self.last_responseText) # send back to the other class.
+        self.destroy()
+
+
 class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
@@ -50,7 +103,7 @@ class App(customtkinter.CTk):
         # fill sidebar
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="HGTD Tools", font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10), columnspan=2)
-        self.credits_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="v1.2.1dev - May 2025\nAnnika Stein (JGU Mainz)")
+        self.credits_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="v1.3.0dev - May 2025\nAnnika Stein (JGU Mainz)")
         self.credits_label.grid(row=1, column=0, padx=20, pady=10, columnspan=2)
 
         self.progress_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="API Request Status")
@@ -59,21 +112,30 @@ class App(customtkinter.CTk):
         self.progressbar.grid(row=3, column=0, padx=20, pady=10, columnspan=2)
         self.progressbar.set(1)
 
+        self.user_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="User:", anchor="e")
+        self.user_label.grid(row=5, column=0, padx=5, pady=10)
+        self.user_optionmenu = customtkinter.CTkOptionMenu(self.sidebar_frame_left, values=['None', 'new...'],
+                                                                       command=self.change_user_event, width=60)
+        self.user_optionmenu.grid(row=5, column=1, padx=5, pady=10)
+        self.user_optionmenu.set("None")
+        self.user_window = None
+        
+
         self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="Theme:", anchor="e")
-        self.appearance_mode_label.grid(row=5, column=0, padx=5, pady=10)
+        self.appearance_mode_label.grid(row=6, column=0, padx=5, pady=10)
         self.appearance_mode_optionmenu = customtkinter.CTkOptionMenu(self.sidebar_frame_left, values=["Light", "Dark", "System"],
                                                                        command=self.change_appearance_mode_event, width=60)
-        self.appearance_mode_optionmenu.grid(row=5, column=1, padx=5, pady=10)
+        self.appearance_mode_optionmenu.grid(row=6, column=1, padx=5, pady=10)
         self.appearance_mode_optionmenu.set("System")
 
         self.help_image = customtkinter.CTkImage(Image.open("circle-question.png"), size=(20,20))
         self.btnHelp = customtkinter.CTkButton(self.sidebar_frame_left, image=self.help_image, text="Help", compound='left', fg_color="#339941", hover_color="#228831", command=self.help, width=60)
-        self.btnHelp.grid(row=6, column=0, pady=10, padx=5, columnspan=2)
+        self.btnHelp.grid(row=7, column=0, pady=10, padx=5, columnspan=2)
         self.help_window = None
         
         self.exit_image = customtkinter.CTkImage(Image.open("right-from-bracket-solid.png"), size=(20,20))
         self.btnLogout = customtkinter.CTkButton(self.sidebar_frame_left, image=self.exit_image, text="Close", compound='left', fg_color="#cf352e", hover_color="#B02B25", command=self.exit, width=60)
-        self.btnLogout.grid(row=7, column=0, pady=10, padx=5, columnspan=2)
+        self.btnLogout.grid(row=8, column=0, pady=10, padx=5, columnspan=2)
 
         # work in main widget (column w.r.t. root >= 1)
 
@@ -285,6 +347,9 @@ class App(customtkinter.CTk):
         self.chi_conn = None
         self.chi_manu = None
 
+        self.user = 'None'
+        self.users = ['None', 'new...']
+
         # Get first parents and children (Module Loading)
         try:
             # ToDo: use this as long as the token is valid self.access_token = util.get_access_token()
@@ -341,6 +406,39 @@ class App(customtkinter.CTk):
             self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[0])
             self.combobox_child_manu.configure(values=["All manufacturers"]+[m['manufacturer_name'] for m in self.manufacturers])
 
+    def authenticate_return_function(self, result, response):
+        if response[:2] != '20':
+            self.api_status = 0
+            self.progressbar.configure(progress_color="#ff0000")
+            
+            info_text = wrapped_text.fill(f'Error: New user could not be authenticated.\n{response}')
+            print(f'>>> {info_text}')
+            self.info_label.configure(text=info_text)
+            
+            self.user_optionmenu.set('None')
+        else:
+            self.api_status = 1
+            self.progressbar.configure(progress_color="#007711")
+            
+            self.info_label.configure(text=' ')
+            
+            self.user = result
+            self.last_responseText = response
+            
+            old_users = self.users[:-1] # all old ones without 'new...'
+            if result not in old_users:
+                new_users = old_users + [result, 'new...']
+                self.users = new_users
+                self.user_optionmenu.configure(values = new_users)
+            self.user_optionmenu.set(result)
+
+    def authenticate_user(self):
+        # open a tiny window with extra inputs, return new_authenticated_user
+        if self.user_window is None or not self.user_window.winfo_exists():
+            self.user_window = AuthenticateWindow(self.authenticate_return_function)  # create window if its None or destroyed
+        else:
+            self.user_window.focus()  # if window exists focus it
+        
     def button_add_event_click(self, debug = False):
         chi = self.combobox_child.get()
         par = self.combobox_parent.get()
@@ -353,12 +451,21 @@ class App(customtkinter.CTk):
             self.info_label.configure(text=' ')
             chi_partID = self.possible_children_partIDs[self.possible_children_SNs.index(chi)]
             par_partID = self.possible_parents_partIDs[self.possible_parents_SNs.index(par)]
-            part_tree = {
-                'position': pos,
-                'is_record_deleted': 'F',
-                'part': chi_partID,
-                'part_parent': par_partID,
-            }
+            if self.user != 'None' and self.user != 'new...':
+                part_tree = {
+                    'position': pos,
+                    'is_record_deleted': 'F',
+                    'part': chi_partID,
+                    'part_parent': par_partID,
+                    'record_insertion_user': self.user,
+                }
+            else:
+                part_tree = {
+                    'position': pos,
+                    'is_record_deleted': 'F',
+                    'part': chi_partID,
+                    'part_parent': par_partID,
+                }
             allowed_VLQ = False
             occupied_VLQ = False
             confirmed = pos
@@ -719,6 +826,30 @@ class App(customtkinter.CTk):
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
 
+    def change_user_event(self, selected_user: str):
+        if selected_user == 'None':
+            self.user = None
+        elif selected_user == 'new...':
+            # authenticate as user
+            try:
+                self.authenticate_user()
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                self.last_responseText = str(e)
+            except ValueError as e:
+                self.last_responseText = str(e)
+
+            if self.last_responseText[:2] != '20':
+                self.api_status = 0
+                self.progressbar.configure(progress_color="#ff0000")
+                info_text = wrapped_text.fill(f'Error: New user could not be authenticated.\n{self.last_responseText}')
+                print(f'>>> {info_text}')
+                self.info_label.configure(text=info_text)
+            else:
+                self.api_status = 1
+                self.progressbar.configure(progress_color="#007711")
+        else:
+            self.user = selected_user
+        
     def combobox_child_manu_event(self, child_manu):
         self.chi_manu = self.combobox_child_manu.get()
         self.combobox_child.set("- Select -")
@@ -826,12 +957,21 @@ class App(customtkinter.CTk):
                             and sl['SU_Row'] == attribute_SU_r \
                             and sl['SU_Module'] == attribute_SU_m):
                             # found a slot :-)
-                            part_tree = {
-                                'position': '',
-                                'is_record_deleted': 'F',
-                                'part': entry['part']['part_id'],
-                                'part_parent': sl['part_id'],
-                            }
+                            if self.user != 'None' and self.user != 'new...':
+                                part_tree = {
+                                    'position': '',
+                                    'is_record_deleted': 'F',
+                                    'part': entry['part']['part_id'],
+                                    'part_parent': sl['part_id'],
+                                    'record_insertion_user': self.user,
+                                }
+                            else:
+                                part_tree = {
+                                    'position': '',
+                                    'is_record_deleted': 'F',
+                                    'part': entry['part']['part_id'],
+                                    'part_parent': sl['part_id'],
+                                }
                             try:
                                 self.last_responseText = api.post_information('/partstreelist', part_tree)
                             except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
