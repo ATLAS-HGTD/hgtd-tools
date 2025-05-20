@@ -84,32 +84,34 @@ HGTD Tools shows a dynamic progress bar whenever one or multiple API requests ar
 
 Example: if you lose connection to the web e.g. by purposefully switching off WiFi for this example, your app will look like this:
 
-![](docs/showcase_api_error.png)
+![](docs/showcase_v1p2p0_api_error.png)
 
 #### Appearance mode (theme)
 Default appearance mode is System default, otherwise feel free to select from Light and Dark mode.
 
 ### Module Loading
-HGTD Tools shows already loaded module slots on a selected DU. User actions like switching between Loading / Assembly, or selecting different parent or child parts reloads this view freshly with API calls to the database.
+HGTD Tools looks like this when first starting the app. You have various options, comboboxes etc. to preselect the parts to be shown. User actions like switching between Loading / Assembly, or selecting different parent or child parts reloads this view freshly with API calls to the database.
 
-![](docs/showcase_module_loading_existing.png)
+![](docs/showcase_v1p2p0_module_loading_start.png)
+
+HGTD Tools shows already loaded module slots on a selected DU in blue. User actions like switching between Loading / Assembly, or selecting different parent or child parts reloads this view freshly with API calls to the database.
 
 When loading a new module to a position on the DU that is not already blocked by another module, this position is highlighted in green. You can proceed with the ADD PARTS TREE button.
 
-![](docs/showcase_module_loading_new.png)
+![](docs/showcase_v1p2p0_module_loading_new.png)
 
 Trying to load a module into a position that is already in use is not possible. This requires a further user action to prevent accidentally overwriting something. As noted in the message, feel free to inspect the affected parts clicking the INSPECT ... buttons below the selected serial numbers.
 
-![](docs/showcase_module_loading_notAllowed.png)
+![](docs/showcase_v1p2p0_module_loading_notAllowed.png)
 
 ### Detector Assembly (CERN)
 HGTD Tools complains if the desired Layer is not compatible with the type of the DU to load there. Other implemented cases catch allowed / not allowed Vessel and Quadrant attributes.
 
-![](docs/showcase_detector_assembly_incompatibleVLQ.png)
+![](docs/showcase_v1p2p0_detector_assembly_incompatibleVLQ.png)
 
 HGTD Tools asks the user for confirmation, if a VesselLayerQuadrant combination was already used for the desired DU type (= already occupied).
 
-![](docs/showcase_detector_assembly_occupiedVLQ.png)
+![](docs/showcase_v1p2p0_detector_assembly_occupiedVLQ.png)
 
 ## Reusing the included API module
 The `api.py` module can be used standalone as well to make API requests to the HGTD Production Database. Note that the included functions also return the response `status_code` and `reason` and handle a variety of possible errors.
