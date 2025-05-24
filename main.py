@@ -721,48 +721,49 @@ class App(customtkinter.CTk):
                 alreadyConnectedDUsForModule = self.this_MODULE_relations_DU
                 alreadyConnectedSLOTsForModule = self.this_MODULE_relations_SLOT
 
+                mouseInSomeMod = False
+                mouseX = self.canvas.canvasx(event.x)
+                mouseY = self.canvas.canvasy(event.y)
+                for slot in arrayOfModulesInDU:
+                    if util.isInSlot(slot, mouseX, mouseY):
+                        mouseInSomeMod = True
+                        possible_slot = slot['slot']
+                        notAllowedSlot = False
+                        if slot['slot'] in alreadyUsedSlots:
+                            self.clicked_module = alreadyConnectedModules[alreadyUsedSlots.index(slot['slot'])]
+                            self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
+                            self.inspect_clicked_button.configure(state='normal')
+                            notAllowedSlot = True
+                            self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_AlreadyLoadedSlot)
+                        else:
+                            self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_ActiveSlot)
+                    else:
+                        if slot['slot'] in alreadyUsedSlots:
+                            self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_AlreadyLoadedSlot)
+                        else:
+                            self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_Slot)
                 if len(alreadyConnectedDUsForModule) + len(alreadyConnectedSLOTsForModule) > 0:
                     self.position_variable.set("- automatic -")
-                    info_text = 'Warning: This module is already connected to some parent.\nSelect a different one, or disconnect the parents of this module by inspecting the Module.\nThere you can delete existing relations with the red trash button.'
+                    info_text = 'Warning: Your selected child is already connected to some parent.\nSelect a different one, or disconnect the parents of this module by inspecting the Module.\nThere you can delete existing relations with the red trash button.'
                     print(f'>>> {info_text}')
                     if debug:
                         print('Existing connections to the following DU(s):',[DU['part_parent']['serial_number'] for DU in alreadyConnectedDUsForModule])
                         print('Existing connections to the following Slot(s):',[SLOT['part_parent']['serial_number'] for SLOT in alreadyConnectedSLOTsForModule])
                     self.info_label.configure(text=info_text)
+                if not mouseInSomeMod:
+                    self.position_variable.set("- automatic -")
+                    info_text = info_text + '\n\nWarning: Place mouse in some module slot.' if info_text != ' ' else 'Warning: Place mouse in some module slot.'
+                    print(f'>>> {info_text}')
+                    self.info_label.configure(text=info_text)
                 else:
-                    mouseInSomeMod = False
-                    mouseX = self.canvas.canvasx(event.x)
-                    mouseY = self.canvas.canvasy(event.y)
-                    for slot in arrayOfModulesInDU:
-                        if util.isInSlot(slot, mouseX, mouseY):
-                            mouseInSomeMod = True
-                            self.position_variable.set(slot['slot'])
-                            notAllowedSlot = False
-                            if slot['slot'] in alreadyUsedSlots:
-                                self.clicked_module = alreadyConnectedModules[alreadyUsedSlots.index(slot['slot'])]
-                                self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
-                                self.inspect_clicked_button.configure(state='normal')
-                                notAllowedSlot = True
-                                self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_AlreadyLoadedSlot)
-                            else:
-                                self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_ActiveSlot)
-                        else:
-                            if slot['slot'] in alreadyUsedSlots:
-                                self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_AlreadyLoadedSlot)
-                            else:
-                                self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_Slot)
-                    if not mouseInSomeMod:
+                    if notAllowedSlot:
                         self.position_variable.set("- automatic -")
-                        info_text = 'Warning: Place mouse in some module slot.'
+                        info_text = info_text + '\n\nWarning: This slot is already in use.\nSelect a different one, or disconnect the already loaded module by inspecting the DU.\nThere you can delete existing relations with the red trash button.' if info_text != ' ' else 'Warning: This slot is already in use.\nSelect a different one, or disconnect the already loaded module by inspecting the DU.\nThere you can delete existing relations with the red trash button.'
                         print(f'>>> {info_text}')
                         self.info_label.configure(text=info_text)
                     else:
-                        if notAllowedSlot:
-                            self.position_variable.set("- automatic -")
-                            info_text = 'Warning: This slot is already in use.\nSelect a different one, or disconnect the already loaded module by inspecting the DU.\nThere you can delete existing relations with the red trash button.'
-                            print(f'>>> {info_text}')
-                            self.info_label.configure(text=info_text)
-                        else:
+                        if info_text == ' ':
+                            self.position_variable.set(possible_slot)
                             self.info_label.configure(text=' ')
         else:
             if self.displayedDUtype != 'None':
