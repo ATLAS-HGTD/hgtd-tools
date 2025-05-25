@@ -103,7 +103,7 @@ class App(customtkinter.CTk):
         # fill sidebar
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="HGTD Tools", font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10), columnspan=2)
-        self.credits_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="v1.3.0 - May 2025\nAnnika Stein (JGU Mainz)")
+        self.credits_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="v1.3.1dev - May 2025\nAnnika Stein (JGU Mainz)")
         self.credits_label.grid(row=1, column=0, padx=20, pady=10, columnspan=2)
 
         self.progress_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="API Request Status")
@@ -305,9 +305,17 @@ class App(customtkinter.CTk):
             command=self.button_add_event_click)
         self.add_button.grid(row=7, column=1, padx=20, pady=(20, 10))
 
-        self.inspect_clicked_button = customtkinter.CTkButton(self.position_frame, text="INSPECT CLICKED MODULE",
+        self.clicked_position_frame = customtkinter.CTkFrame(self.position_frame)
+        self.clicked_position_frame.grid(row=9, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
+        self.clicked_position_frame.grid_columnconfigure((0,1), weight=1)
+        
+        self.inspect_clicked_button = customtkinter.CTkButton(self.clicked_position_frame, text="INSPECT CLICKED MODULE",
             command=self.button_inspect_clicked_event_click, state='disabled')
-        self.inspect_clicked_button.grid(row=9, column=1, padx=20, pady=(20, 10))
+        self.inspect_clicked_button.grid(row=0, column=1, padx=20, pady=(20, 10))
+        
+        self.delete_clicked_button = customtkinter.CTkButton(self.clicked_position_frame, text="UNLOAD CLICKED MODULE",
+            command=self.button_delete_clicked_event_click, state='disabled', fg_color="#cf352e", hover_color="#B02B25")
+        self.delete_clicked_button.grid(row=0, column=0, padx=20, pady=(20, 10))
 
 
         # right sub widget: canvas containing DUs to click on
@@ -624,6 +632,46 @@ class App(customtkinter.CTk):
         self.cbx_ctype_shown_page = min(self.cbx_ctype_shown_page + 1, self.cbx_ctype_n_pages)
         self.combobox_chi_type_paginationFrame_label.configure(text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}")
         self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[self.cbx_ctype_shown_page - 1])
+
+    def button_delete_clicked_event_click(self):
+        if len(self.clicked_module) > 0:
+            try:
+                self.last_responseText = util.delete_parents(self.clicked_module['part']['part_id'])
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                    self.last_responseText = str(e)
+            except ValueError as e:
+                self.last_responseText = str(e)
+    
+            if self.last_responseText[:2] != '20':
+                self.api_status = 0
+                self.progressbar.configure(progress_color="#ff0000")
+                info_text = wrapped_text.fill(f'Error: Existing module relation could not be deleted (unloaded) with ProdDB API.\n{self.last_responseText}')
+                print(f'>>> {info_text}')
+                self.info_label.configure(text=info_text)
+            else:
+                self.api_status = 1
+                self.progressbar.configure(progress_color="#007711")
+
+                # reload DU etc.
+                self.displayedDUtype = "None"
+                self.this_DU_relations_MODULE = []
+                self.this_MODULE_relations_DU = []
+                self.this_MODULE_relations_SLOT = []
+                self.possible_parents = []
+                self.possible_children = []
+                self.slots = None
+                self.partstree = None
+                self.clicked_module = []
+                self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE')
+                self.inspect_clicked_button.configure(state='disabled')
+                self.delete_clicked_button.configure(text=f'UNLOAD CLICKED MODULE')
+                self.delete_clicked_button.configure(state='disabled')
+                
+                parentSNIn = self.combobox_parent.get()
+                childSNIn = self.combobox_child.get()
+                self.loading_wheel = threading.Thread(target=self.fetch_loaded_DU_and_display, args=(childSNIn, parentSNIn))
+                self.loading_wheel.start()
+                self.update_progressbar(self.loading_wheel)
         
     def button_inspect_child_event_click(self):
         childSNIn = self.combobox_child.get()
@@ -654,6 +702,8 @@ class App(customtkinter.CTk):
         self.clicked_module = []
         self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE')
         self.inspect_clicked_button.configure(state='disabled')
+        self.delete_clicked_button.configure(text=f'UNLOAD CLICKED MODULE')
+        self.delete_clicked_button.configure(state='disabled')
 
         self.par_type = None
         self.combobox_par_type.set("- Select -")
@@ -710,6 +760,9 @@ class App(customtkinter.CTk):
         self.clicked_module = []
         self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE')
         self.inspect_clicked_button.configure(state='disabled')
+        self.delete_clicked_button.configure(text=f'UNLOAD CLICKED MODULE')
+        self.delete_clicked_button.configure(state='disabled')
+        info_text = ' '
         if self.segmented_button.get() == 'Module Loading':
             if self.displayedDUtype != 'None':
                 arrayOfModulesInDU = data.allDUs[self.displayedDUtype]
@@ -733,6 +786,8 @@ class App(customtkinter.CTk):
                             self.clicked_module = alreadyConnectedModules[alreadyUsedSlots.index(slot['slot'])]
                             self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
                             self.inspect_clicked_button.configure(state='normal')
+                            self.delete_clicked_button.configure(text=f'UNLOAD CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
+                            self.delete_clicked_button.configure(state='normal')
                             notAllowedSlot = True
                             self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_AlreadyLoadedSlot)
                         else:
@@ -782,6 +837,8 @@ class App(customtkinter.CTk):
                             self.clicked_module = alreadyConnectedModules[alreadyUsedSlots.index(slot['slot'])]
                             self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
                             self.inspect_clicked_button.configure(state='normal')
+                            self.delete_clicked_button.configure(text=f'UNLOAD CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
+                            self.delete_clicked_button.configure(state='normal')
 
     # https://stackoverflow.com/a/44100075
     def canvas_place_rounded_rectangle(self, x1, y1, width, height, radius=25, **kwargs):
