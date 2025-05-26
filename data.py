@@ -2,7 +2,8 @@ KoPID_from_partKoPName = {
     'Detector Unit' : 2407,
     'Detector' : 2414,
     'Module' : 1005,
-    'Slot' : 2412
+    'Slot' : 2412,
+    'PEB' : 2410
 }
 
 # hardcoded part ids for testing parts (HGTD Database test)
@@ -172,6 +173,10 @@ allDUkeysStr = ''
 for key in allDUs.keys():
     allDUkeysStr += f"{key},";
     totalNModules += len(allDUs[key])
+
+allPEBs = ['1F', '1B', '2F', '2B', '3F', '3B']
+F_PEBs = ['1F', '1B', '2F', '2B', '3F']
+B_PEBs = ['1F', '1B', '2F', '2B', '3B']
 
 fillColor_SU = '#f4f4bb'
 fillColor_Slot = '#ffffff'
