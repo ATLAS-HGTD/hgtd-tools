@@ -3,7 +3,8 @@ KoPID_from_partKoPName = {
     'Detector' : 2414,
     'Module' : 1005,
     'Slot' : 2412,
-    'PEB' : 2410
+    'PEB' : 2410,
+    'FT' : 2409
 }
 
 # hardcoded part ids for testing parts (HGTD Database test)

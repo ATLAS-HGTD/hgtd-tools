@@ -133,6 +133,10 @@ class App(customtkinter.CTk):
             command=lambda: self.button_mode_event_click('Detector Assembly (CERN): PEB'), fg_color="#555555", hover_color="#444444")
         self.operation_mode_DA_PEB_button.grid(row=3, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
 
+        self.operation_mode_DA_FT_button = customtkinter.CTkButton(self.operation_mode_frame, text="Detector Assembly (CERN): FT",
+            command=lambda: self.button_mode_event_click('Detector Assembly (CERN): FT'), fg_color="#555555", hover_color="#444444")
+        self.operation_mode_DA_FT_button.grid(row=4, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
+
 
         self.user_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="User:", anchor="e")
         self.user_label.grid(row=6, column=0, padx=5, pady=10)
@@ -166,6 +170,12 @@ class App(customtkinter.CTk):
         self.main_frame.grid(row=0, column=1, rowspan=1, columnspan=2, padx=10, pady=10, sticky="nsew")
         self.main_frame.grid_columnconfigure((0,1), weight=1)
         self.main_frame.grid_rowconfigure(1, weight=1)
+
+        # ********************************************
+        #
+        # === Parent/Child selection for ML/DU/PEB ===
+        #
+        # ********************************************
 
         # left sub widget: form
         self.combobox_frame = customtkinter.CTkFrame(self.main_frame, width = 600)
@@ -341,6 +351,105 @@ class App(customtkinter.CTk):
         self.info_label = customtkinter.CTkLabel(self.main_frame, text=" ", font=customtkinter.CTkFont(size=16, weight="bold"))
         self.info_label.grid(row=2, column=0, padx=20, pady=20, columnspan=2)
 
+        # ******************************************
+        #
+        # === Slot global/local for FT selection ===
+        #
+        # ******************************************
+
+        self.ft_rel_frame = customtkinter.CTkFrame(self.main_frame, width = 600)
+        self.ft_rel_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew", rowspan=2, columnspan=2)
+        self.ft_rel_frame.grid_remove()
+
+        #
+        # === 1st line ===
+        #
+        self.slot_sel_frame = customtkinter.CTkFrame(self.ft_rel_frame)
+        self.slot_sel_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew", columnspan=3)
+        self.slot_sel_frame.grid_columnconfigure((0,1,2,3,4), weight=1)
+        self.slot_sel_frame.grid_rowconfigure((0,1,2), weight=1)
+
+        self.slot_vessel_optionmenu = customtkinter.CTkOptionMenu(self.slot_sel_frame, values=["Vessel: 1", "Vessel: 2"],
+                                                                       command=self.change_child_conn_event, width=200)
+        self.slot_vessel_optionmenu.grid(row=0, column=0, padx=5, pady=10)
+        self.slot_vessel_optionmenu.set("Vessel: 1")
+
+        self.slot_layer_optionmenu = customtkinter.CTkOptionMenu(self.slot_sel_frame, values=["Layer: 0", "Layer: 1", "Layer: 2", "Layer: 3"],
+                                                                       command=self.change_child_conn_event, width=200)
+        self.slot_layer_optionmenu.grid(row=1, column=0, padx=5, pady=10)
+        self.slot_layer_optionmenu.set("Layer: 0")
+
+        self.slot_quadrant_optionmenu = customtkinter.CTkOptionMenu(self.slot_sel_frame, values=["Quadrant: 0", "Quadrant: 1", "Quadrant: 2", "Quadrant: 3"],
+                                                                       command=self.change_child_conn_event, width=200)
+        self.slot_quadrant_optionmenu.grid(row=2, column=0, padx=5, pady=10)
+        self.slot_quadrant_optionmenu.set("Quadrant: 0")
+
+        self.slot_global_label = customtkinter.CTkLabel(self.slot_sel_frame, text="Global")
+        self.slot_global_label.grid(row=0, column=1, padx=20, pady=10, sticky="nsew")
+        
+        self.slot_local_label = customtkinter.CTkLabel(self.slot_sel_frame, text="Local")
+        self.slot_local_label.grid(row=2, column=1, padx=20, pady=10, sticky="nsew")
+        
+        self.slot_DU_type_label = customtkinter.CTkLabel(self.slot_sel_frame, text="DU type")
+        self.slot_DU_type_label.grid(row=1, column=2, padx=20, pady=10, sticky="nsew")
+        self.slot_row_label = customtkinter.CTkLabel(self.slot_sel_frame, text="Row")
+        self.slot_row_label.grid(row=1, column=3, padx=20, pady=10, sticky="nsew")
+        self.slot_mod_label = customtkinter.CTkLabel(self.slot_sel_frame, text="Mod")
+        self.slot_mod_label.grid(row=1, column=4, padx=20, pady=10, sticky="nsew")
+        
+        #
+        # === 2nd line ===
+        #
+        self.ft_gen_label = customtkinter.CTkLabel(self.ft_rel_frame, text="Suitable FT batch(es)/meta-generation for this VLQ:")
+        self.ft_gen_label.grid(row=1, column=0, padx=20, pady=10, sticky="nsew")
+
+        self.ft_gen_label_output = customtkinter.CTkLabel(self.ft_rel_frame, text=" ")
+        self.ft_gen_label_output.grid(row=1, column=1, padx=20, pady=10, sticky="nsew")
+
+        #
+        # === 3rd line ===
+        #
+        self.ft_type_label = customtkinter.CTkLabel(self.ft_rel_frame, text="Derived FT type of this FT generation for this Slot:")
+        self.ft_type_label.grid(row=2, column=0, padx=20, pady=10, sticky="nsew")
+        
+        self.ft_type_label_output = customtkinter.CTkLabel(self.ft_rel_frame, text=" ")
+        self.ft_type_label_output.grid(row=2, column=1, padx=20, pady=10, sticky="nsew")
+
+        #
+        # === 4th line ===
+        #
+        self.combobox_ft_label = customtkinter.CTkLabel(self.ft_rel_frame, text="Free FTs matching selection criteria:")
+        self.combobox_ft_label.grid(row=3, column=0, padx=20, pady=10, sticky="nsew")
+
+        self.combobox_ft_paginationFrame = customtkinter.CTkFrame(self.ft_rel_frame)
+        self.combobox_ft_paginationFrame.grid(row=3, column=1, padx=20, pady=10, sticky="nsew")
+        self.combobox_ft_paginationFrame_label = customtkinter.CTkLabel(self.combobox_ft_paginationFrame, text="0/0")
+        self.combobox_ft_paginationFrame_label.grid(row=0, column=0, padx=(10,5), pady=5, sticky="nsew")
+        self.combobox_ft_paginationButtonLeft = customtkinter.CTkButton(self.combobox_ft_paginationFrame,
+                                                                           text="<", width=30,
+                                                   command=self.button_combobox_ft_paginationButtonLeft_click)
+        self.combobox_ft_paginationButtonLeft.grid(row=0, column=1, padx=5, pady=5)
+        self.combobox_ft = customtkinter.CTkComboBox(self.combobox_ft_paginationFrame,
+                                                    values=["Nothing"],
+                                                    command=self.combobox_ft_event_select,
+                                                    state="readonly",width=200)
+        self.combobox_ft.grid(row=0, column=2, padx=0, pady=5, sticky="nsew")
+        self.combobox_ft.set("- Select -")
+        self.combobox_ft_paginationButtonRight = customtkinter.CTkButton(self.combobox_ft_paginationFrame,
+                                                                           text=">", width=30,
+                                                   command=self.button_combobox_ft_paginationButtonRight_click)
+        self.combobox_ft_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
+
+
+        self.add_ft_button = customtkinter.CTkButton(self.ft_rel_frame, text="ADD PARTS TREE",
+            command=self.button_add_ft_event_click)
+        self.add_ft_button.grid(row=3, column=2, padx=20, pady=10)
+
+        # *************************************************
+        #
+        # === Filling variables with defaults / startup ===
+        #
+        # *************************************************
 
         # First startup of program: default values
         self.api_status = 1
@@ -352,10 +461,12 @@ class App(customtkinter.CTk):
         self.this_MODULE_relations_SLOT = []
         self.cbx_par_n_pages = 0
         self.cbx_chi_n_pages = 0
+        self.cbx_ft_n_pages = 0
         self.cbx_ptype_n_pages = 0
         self.cbx_ctype_n_pages = 0
         self.cbx_par_shown_page = 0
         self.cbx_chi_shown_page = 0
+        self.cbx_ft_shown_page = 0
         self.cbx_ptype_shown_page = 0
         self.cbx_ctype_shown_page = 0
         self.clicked_module = []
@@ -373,15 +484,18 @@ class App(customtkinter.CTk):
             # ToDo: use this as long as the token is valid self.access_token = util.get_access_token()
             self.possible_parents, self.last_responseText = util.get_relevant_parts('Detector Unit')
             self.possible_children, self.last_responseText = util.get_relevant_parts('Module')
+            self.possible_ft, self.last_responseText = util.get_relevant_parts('FT')
             self.manufacturers, self.last_responseText = util.get_manufacturers()
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
             self.possible_parents = []
             self.possible_children = []
+            self.possible_ft = []
             self.manufacturers = []
             self.last_responseText = str(e)
         except ValueError as e:
             self.possible_parents = []
             self.possible_children = []
+            self.possible_ft = []
             self.manufacturers = []
             self.last_responseText = str(e)
 
@@ -396,30 +510,38 @@ class App(customtkinter.CTk):
             self.progressbar.configure(progress_color="#007711")
             self.possible_parents_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_parents)
             self.possible_children_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_children)
+            self.possible_ft_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_ft)
             self.possible_parents_SNs = [entry[0] for entry in self.possible_parents_SNs_and_partIDs]
             self.possible_parents_SNs_chunked = [self.possible_parents_SNs[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_parents_SNs), self.n_items_to_show_in_cbx)]
             self.possible_children_SNs = [entry[0] for entry in self.possible_children_SNs_and_partIDs]
             self.possible_children_SNs_chunked = [self.possible_children_SNs[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_children_SNs), self.n_items_to_show_in_cbx)]
+            self.possible_ft_SNs = [entry[0] for entry in self.possible_ft_SNs_and_partIDs]
+            self.possible_ft_SNs_chunked = [self.possible_ft_SNs[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_ft_SNs), self.n_items_to_show_in_cbx)]
             self.possible_par_types = ["All DU types"]+list(data.allDUs.keys())
             self.possible_par_types_chunked = [self.possible_par_types[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_par_types), self.n_items_to_show_in_cbx)]
             self.possible_chi_types = ["All DU types"]+list(data.allDUs.keys())
             self.possible_chi_types_chunked = [self.possible_chi_types[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_chi_types), self.n_items_to_show_in_cbx)]
             self.possible_parents_partIDs = [entry[1] for entry in self.possible_parents_SNs_and_partIDs]
             self.possible_children_partIDs = [entry[1] for entry in self.possible_children_SNs_and_partIDs]
+            self.possible_ft_partIDs = [entry[1] for entry in self.possible_ft_SNs_and_partIDs]
             self.cbx_par_n_pages = len(self.possible_parents_SNs_chunked)
             self.cbx_chi_n_pages = len(self.possible_children_SNs_chunked)
+            self.cbx_ft_n_pages = len(self.possible_ft_SNs_chunked)
             self.cbx_ptype_n_pages = len(self.possible_par_types_chunked)
             self.cbx_ctype_n_pages = len(self.possible_chi_types_chunked)
             self.cbx_par_shown_page = 1
             self.cbx_chi_shown_page = 1
+            self.cbx_ft_shown_page = 1
             self.cbx_ptype_shown_page = 1
             self.cbx_ctype_shown_page = 1
             self.combobox_parent_paginationFrame_label.configure(text=f"page {self.cbx_par_shown_page}/{self.cbx_par_n_pages}")
             self.combobox_child_paginationFrame_label.configure(text=f"page {self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
+            self.combobox_ft_paginationFrame_label.configure(text=f"page {self.cbx_ft_shown_page}/{self.cbx_ft_n_pages}")
             self.combobox_par_type_paginationFrame_label.configure(text=f"page {self.cbx_ptype_shown_page}/{self.cbx_ptype_n_pages}")
             self.combobox_chi_type_paginationFrame_label.configure(text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}")
             self.combobox_parent.configure(values=self.possible_parents_SNs_chunked[0])
             self.combobox_child.configure(values=self.possible_children_SNs_chunked[0])
+            self.combobox_ft.configure(values=self.possible_ft_SNs_chunked[0])
             self.combobox_par_type.configure(values=self.possible_par_types_chunked[0])
             self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[0])
             self.combobox_child_manu.configure(values=["All manufacturers"]+[m['manufacturer_name'] for m in self.manufacturers])
@@ -456,6 +578,9 @@ class App(customtkinter.CTk):
             self.user_window = AuthenticateWindow(self.authenticate_return_function)  # create window if its None or destroyed
         else:
             self.user_window.focus()  # if window exists focus it
+
+    def button_add_ft_event_click(self, debug = False):
+        pass
 
     def button_add_event_click(self, debug = False):
         chi = self.combobox_child.get()
@@ -590,67 +715,74 @@ class App(customtkinter.CTk):
                         print(f'>>> {info_text}')
                         self.info_label.configure(text=info_text)
                     else:
-                        attribute_Layer = pos.split('L').pop().split('Q')[0]
-                        if attribute_Layer not in ['0', '1', '2', '3']:
-                            info_text = wrapped_text.fill(f'Error: You can not load to this layer.\nLayer attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Layer}!')
+                        if attribute_Vessel in ['D'] and self.displayed_PEB_type != '1F':
+                            info_text = wrapped_text.fill(f'Error: You can not load to this vessel (demonstrator).\nDemonstratorV1 only accepts PEB type 1F, but you selected a PEB of type {self.displayed_PEB_type}!')
                             print(f'>>> {info_text}')
                             self.info_label.configure(text=info_text)
                         else:
-                            if attribute_Layer == '0' or attribute_Layer == '3':
-                                allowed_types = data.F_PEBs
-                                not_allowed_type = '3B'
-                            else:#elif attribute_Layer == '1' or attribute_Layer == '2':
-                                allowed_types = data.B_PEBs
-                                not_allowed_type = '3F'
-                            if self.displayed_PEB_type == not_allowed_type:
-                                info_text = wrapped_text.fill(f'Error: You can not load this PEB to this layer.\nLayer {attribute_Layer} only accepts {allowed_types} PEBs, but you selected a {self.displayed_PEB_type} PEB!')
+                            attribute_Layer = pos.split('L').pop().split('Q')[0]
+                            if attribute_Layer not in ['0', '1', '2', '3']:
+                                info_text = wrapped_text.fill(f'Error: You can not load to this layer.\nLayer attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Layer}!')
                                 print(f'>>> {info_text}')
                                 self.info_label.configure(text=info_text)
                             else:
-                                attribute_Quadrant = pos.split('Q').pop()
-                                if attribute_Quadrant not in ['0', '1', '2', '3']:
-                                    info_text = wrapped_text.fill(f'Error: You can not load to this quadrant.\nQuadrant attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Quadrant}!')
+                                if attribute_Layer == '0' or attribute_Layer == '3':
+                                    allowed_types = data.F_PEBs
+                                    not_allowed_type = '3B'
+                                else:#elif attribute_Layer == '1' or attribute_Layer == '2':
+                                    allowed_types = data.B_PEBs
+                                    not_allowed_type = '3F'
+                                if self.displayed_PEB_type == not_allowed_type:
+                                    info_text = wrapped_text.fill(f'Error: You can not load this PEB to this layer.\nLayer {attribute_Layer} only accepts {allowed_types} PEBs, but you selected a {self.displayed_PEB_type} PEB!')
                                     print(f'>>> {info_text}')
                                     self.info_label.configure(text=info_text)
                                 else:
-                                    allowed_VLQ = True
-                                    children_of_targetDetector, self.last_responseText = util.get_children(par_partID)
-                                    PEB_already_occupying_target_position = ''
-                                    Det_PEB_relation_to_delete = ''
-                                    matching_relation = []
-                                    for c in children_of_targetDetector:
-                                        # make sure to only check for PEB children KoP, nothing else
-                                        if str(c['part']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['PEB']):
-                                            # position of Det child is the same as the desired one, and PEB type of desired PEB is same as the one that already occupies the spot:
-                                            if str(c['position']) == pos:
-                                                # need to fetch the attributes of maybe occupying children PEBs, because PEB type is only part of attributes (not part of SN sadly)
-                                                child_attributes, self.last_responseText = api.fetch_information(f'/partattrlist/{c['part']['part_id']}/')
-                                                PEB_type_occupying = [c for c in child_attributes if c['attribute']['name'] == 'Type'][0]['value']
-                                                if self.displayed_PEB_type in PEB_type_occupying:
-                                                    occupied_VLQ = True
-                                                    PEB_already_occupying_target_position = c['part']['serial_number']
-                                                    Det_PEB_relation_to_delete = c['record_id']
-                                                    matching_relation = c
-                                                    break
-                                    if occupied_VLQ:
-                                        confirmed = ''
-                                        dialog = customtkinter.CTkInputDialog(text=f"This Vessel Layer Quadrant is already occupied by the PEB {PEB_already_occupying_target_position}.\n" +
-                                            "Confirm by typing the desired Vessel Layer Quadrant (VxLyQz) again to overwrite it with your selected PEB:", title="Confirm dialog")
-                                        confirmed = dialog.get_input()
-                                        if debug:
-                                            print("Typed in slot from confirm dialog:", confirmed)
-                                        if confirmed == pos:
-                                            # DELETION OF PREVIOUS STUFF
-
-                                            # delete Det -> PEB relation for the DU that already occupies that VLQ
-                                            self.last_responseText = api.delete_information(f'/partstreedelete/{Det_PEB_relation_to_delete}/')
-
-                                            # POSTING NEW STUFF
-
-                                            # place new DU at this position by creating a new Det -> PEB relation
-                                            self.last_responseText = api.post_information('/partstreelist', part_tree)
+                                    attribute_Quadrant = pos.split('Q').pop()
+                                    if attribute_Quadrant not in ['0', '1', '2', '3']:
+                                        info_text = wrapped_text.fill(f'Error: You can not load to this quadrant.\nQuadrant attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Quadrant}!')
+                                        print(f'>>> {info_text}')
+                                        self.info_label.configure(text=info_text)
                                     else:
-                                        self.last_responseText = api.post_information('/partstreelist', part_tree)
+                                        allowed_VLQ = True
+                                        children_of_targetDetector, self.last_responseText = util.get_children(par_partID)
+                                        PEB_already_occupying_target_position = ''
+                                        Det_PEB_relation_to_delete = ''
+                                        matching_relation = []
+                                        for c in children_of_targetDetector:
+                                            # make sure to only check for PEB children KoP, nothing else
+                                            if str(c['part']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['PEB']):
+                                                # position of Det child is the same as the desired one, and PEB type of desired PEB is same as the one that already occupies the spot:
+                                                if str(c['position']) == pos:
+                                                    # == OLD ==: previous schema did not include PEB Type in PEB SN
+                                                    # == OLD ==:  => used to need to fetch the attributes of maybe occupying children PEBs, because PEB type was only part of attributes (not part of SN sadly)
+                                                    # == OLD ==: child_attributes, self.last_responseText = api.fetch_information(f'/partattrlist/{c['part']['part_id']}/')
+                                                    # == OLD ==: PEB_type_occupying = [c for c in child_attributes if c['attribute']['name'] == 'Type'][0]['value']
+                                                    # NEW: PEB type is part of PEB SN!
+                                                    if self.displayed_PEB_type in c['part']['serial_number']:
+                                                        occupied_VLQ = True
+                                                        PEB_already_occupying_target_position = c['part']['serial_number']
+                                                        Det_PEB_relation_to_delete = c['record_id']
+                                                        matching_relation = c
+                                                        break
+                                        if occupied_VLQ:
+                                            confirmed = ''
+                                            dialog = customtkinter.CTkInputDialog(text=f"This Vessel Layer Quadrant is already occupied by the PEB {PEB_already_occupying_target_position}.\n" +
+                                                "Confirm by typing the desired Vessel Layer Quadrant (VxLyQz) again to overwrite it with your selected PEB:", title="Confirm dialog")
+                                            confirmed = dialog.get_input()
+                                            if debug:
+                                                print("Typed in slot from confirm dialog:", confirmed)
+                                            if confirmed == pos:
+                                                # DELETION OF PREVIOUS STUFF
+    
+                                                # delete Det -> PEB relation for the DU that already occupies that VLQ
+                                                self.last_responseText = api.delete_information(f'/partstreedelete/{Det_PEB_relation_to_delete}/')
+    
+                                                # POSTING NEW STUFF
+    
+                                                # place new DU at this position by creating a new Det -> PEB relation
+                                                self.last_responseText = api.post_information('/partstreelist', part_tree)
+                                        else:
+                                            self.last_responseText = api.post_information('/partstreelist', part_tree)
 
             except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
                 self.last_responseText = str(e)
@@ -682,6 +814,16 @@ class App(customtkinter.CTk):
         self.cbx_chi_shown_page = min(self.cbx_chi_shown_page + 1, self.cbx_chi_n_pages)
         self.combobox_child_paginationFrame_label.configure(text=f"page {self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
         self.combobox_child.configure(values=self.possible_children_SNs_chunked[self.cbx_chi_shown_page - 1])
+
+    def button_combobox_ft_paginationButtonLeft_click(self):
+        self.cbx_ft_shown_page = max(self.cbx_ft_shown_page - 1, 1)
+        self.combobox_ft_paginationFrame_label.configure(text=f"page {self.cbx_ft_shown_page}/{self.cbx_ft_n_pages}")
+        self.combobox_ft.configure(values=self.possible_ft_SNs_chunked[self.cbx_ft_shown_page - 1])
+
+    def button_combobox_ft_paginationButtonRight_click(self):
+        self.cbx_ft_shown_page = min(self.cbx_ft_shown_page + 1, self.cbx_ft_n_pages)
+        self.combobox_ft_paginationFrame_label.configure(text=f"page {self.cbx_ft_shown_page}/{self.cbx_ft_n_pages}")
+        self.combobox_ft.configure(values=self.possible_ft_SNs_chunked[self.cbx_ft_shown_page - 1])
 
     def button_combobox_parent_paginationButtonLeft_click(self):
         self.cbx_par_shown_page = max(self.cbx_par_shown_page - 1, 1)
@@ -802,6 +944,13 @@ class App(customtkinter.CTk):
             self.operation_mode_ML_button.configure(fg_color="#339941", hover_color="#228831")
             self.operation_mode_DA_DU_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_DA_PEB_button.configure(fg_color="#555555", hover_color="#444444")
+            self.operation_mode_DA_FT_button.configure(fg_color="#555555", hover_color="#444444")
+
+            self.combobox_frame.grid()
+            self.canvas_label.grid()
+            self.canvas.grid()
+            self.info_label.grid()
+            self.ft_rel_frame.grid_remove()
 
             self.combobox_par_type_label.grid()
             self.combobox_par_type_paginationFrame.grid()
@@ -827,6 +976,13 @@ class App(customtkinter.CTk):
             self.operation_mode_ML_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_DA_DU_button.configure(fg_color="#339941", hover_color="#228831")
             self.operation_mode_DA_PEB_button.configure(fg_color="#555555", hover_color="#444444")
+            self.operation_mode_DA_FT_button.configure(fg_color="#555555", hover_color="#444444")
+
+            self.combobox_frame.grid()
+            self.canvas_label.grid()
+            self.canvas.grid()
+            self.info_label.grid()
+            self.ft_rel_frame.grid_remove()
 
             self.combobox_par_type_label.grid_remove()
             self.combobox_par_type_paginationFrame.grid_remove()
@@ -859,6 +1015,13 @@ class App(customtkinter.CTk):
             self.operation_mode_ML_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_DA_DU_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_DA_PEB_button.configure(fg_color="#339941", hover_color="#228831")
+            self.operation_mode_DA_FT_button.configure(fg_color="#555555", hover_color="#444444")
+
+            self.combobox_frame.grid()
+            self.canvas_label.grid_remove()
+            self.canvas.grid_remove()
+            self.info_label.grid()
+            self.ft_rel_frame.grid_remove()
 
             self.combobox_par_type_label.grid_remove()
             self.combobox_par_type_paginationFrame.grid_remove()
@@ -887,6 +1050,51 @@ class App(customtkinter.CTk):
             self.loading_wheel = threading.Thread(target=self.fetch_p_c, args=('Detector','PEB'))
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
+        elif self.operation_mode  == "Detector Assembly (CERN): FT":
+            self.operation_mode_ML_button.configure(fg_color="#555555", hover_color="#444444")
+            self.operation_mode_DA_DU_button.configure(fg_color="#555555", hover_color="#444444")
+            self.operation_mode_DA_PEB_button.configure(fg_color="#555555", hover_color="#444444")
+            self.operation_mode_DA_FT_button.configure(fg_color="#339941", hover_color="#228831")
+
+            self.combobox_frame.grid_remove()
+            self.canvas_label.grid_remove()
+            self.canvas.grid_remove()
+            self.info_label.grid_remove()
+            self.ft_rel_frame.grid()
+
+            self.loading_wheel = threading.Thread(target=self.fetch_slots)
+            self.loading_wheel.start()
+            self.update_progressbar(self.loading_wheel)
+
+            '''
+            self.combobox_par_type_label.grid_remove()
+            self.combobox_par_type_paginationFrame.grid_remove()
+
+            self.combobox_child_manu.grid_remove()
+
+            self.possible_chi_types = ["All PEB types"]+data.allPEBs
+            self.possible_chi_types_chunked = [self.possible_chi_types[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_chi_types), self.n_items_to_show_in_cbx)]
+            self.cbx_ctype_n_pages = len(self.possible_chi_types_chunked)
+            self.cbx_ctype_shown_page = 1
+            self.combobox_chi_type_paginationFrame_label.configure(text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}")
+            self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[0])
+
+            self.combobox_chi_type_paginationFrame.grid()
+
+            self.clicked_position_frame.grid_remove()
+
+            self.canvas_label.configure(text='Static canvas: served from database')
+            self.combobox_parent.set("- Select -")
+            self.combobox_child.set("- Select -")
+            self.combobox_parent_T_label.configure(text="Parent Part Type: Detector")
+            self.combobox_child_T_label.configure(text="Child Part Type: PEB")
+            self.position_label.configure(text="Position (type by hand)")
+            self.position_variable.set("VxLyQz")
+            self.position_entry.configure(state="normal")
+            self.loading_wheel = threading.Thread(target=self.fetch_p_c, args=('Detector','PEB'))
+            self.loading_wheel.start()
+            self.update_progressbar(self.loading_wheel)
+            '''
 
     def canvas_event_click(self, event, debug = False):
         self.clicked_module = []
@@ -1064,7 +1272,8 @@ class App(customtkinter.CTk):
         # this is relevant for child = DU, and you want to specify
         # which DU type shall be shown
         # from the children, select those that have the type in their SN
-        # for PEBs, PEB type is an attribute and not part of SN
+        # == OLD ==: for PEBs, PEB type is an attribute and not part of SN
+        # NEW: for PEBs, PEB type is now also part of the SN!
         self.chi_type = self.combobox_chi_type.get()
         self.combobox_child.set("- Select -")
 
@@ -1076,6 +1285,9 @@ class App(customtkinter.CTk):
             self.loading_wheel = threading.Thread(target=self.fetch_p_c, args=('Detector','PEB'))
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
+
+    def combobox_ft_event_select(self, unused_var_to_please_python):
+        pass
 
     def combobox_p_c_event_select(self, unused_var_to_please_python):
         self.displayedDUtype = "None"
@@ -1315,36 +1527,47 @@ class App(customtkinter.CTk):
             print(childSNIn)
             print(PEB_partID)
             print(self.possible_children)
-        self.displayed_PEB_type = self.possible_children[self.possible_children_SNs.index(PEB_SN)]['Type']
+        # == OLD ==: PEB type used to be only an attribute
+        #self.displayed_PEB_type = self.possible_children[self.possible_children_SNs.index(PEB_SN)]['Type']
+        for key in data.allPEBs:
+            if key in PEB_SN:
+                self.displayed_PEB_type = key
+                self.info_label.configure(text=' ')
+
+                # find out if this PEB is already placed somewhere
+                info_text = ' '
+                self.info_label.configure(text=info_text)
+                try:
+                    detector, self.last_responseText = util.get_parents(PEB_partID)
+                except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                    detector = []
+                    self.last_responseText = str(e)
+                except ValueError as e:
+                    detector = []
+                    self.last_responseText = str(e)
         
-        # find out if this PEB is already placed somewhere
-        info_text = ' '
-        self.info_label.configure(text=info_text)
-        try:
-            detector, self.last_responseText = util.get_parents(PEB_partID)
-        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-            detector = []
-            self.last_responseText = str(e)
-        except ValueError as e:
-            detector = []
-            self.last_responseText = str(e)
-
-        if self.last_responseText[:3] != '200':
-            self.api_status = 0
-            self.progressbar.configure(progress_color="#ff0000")
-            info_text = wrapped_text.fill(f'Error: PEB relations could not be loaded from ProdDB API.\n{self.last_responseText}')
-            print(f'>>> {info_text}')
-            self.info_label.configure(text=info_text)
-        else:
-            self.api_status = 1
-            self.progressbar.configure(progress_color="#007711")
-
-            if detector != []:
-                # this PEB was already placed somewhere in the detector!!
-                for r in detector:
-                    info_text = f'Info: This PEB is already mounted to the parent detector, at {r['position']}.'
+                if self.last_responseText[:3] != '200':
+                    self.api_status = 0
+                    self.progressbar.configure(progress_color="#ff0000")
+                    info_text = wrapped_text.fill(f'Error: PEB relations could not be loaded from ProdDB API.\n{self.last_responseText}')
                     print(f'>>> {info_text}')
                     self.info_label.configure(text=info_text)
+                    break
+                else:
+                    self.api_status = 1
+                    self.progressbar.configure(progress_color="#007711")
+        
+                    if detector != []:
+                        # this PEB was already placed somewhere in the detector!!
+                        for r in detector:
+                            info_text = f'Info: This PEB is already mounted to the parent detector, at {r['position']}.'
+                            print(f'>>> {info_text}')
+                            self.info_label.configure(text=info_text)
+                    break
+        else:
+            info_text = 'Warning: PEB type could not be retrieved from PEB SN.'
+            print(f'>>> {info_text}')
+            self.info_label.configure(text=info_text)
 
     def fetch_p_c(self, p, c):
         try:
@@ -1415,7 +1638,7 @@ class App(customtkinter.CTk):
 
     def fetch_slots(self):
         try:
-            self.slots, self.last_responseText = util.get_relevant_parts('Slot', getFullAttributes = True, useLocal = True)
+            self.slots, self.last_responseText = util.get_relevant_parts('Slot', getFullAttributes = True)
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
             self.slots = None
             self.last_responseText = str(e)

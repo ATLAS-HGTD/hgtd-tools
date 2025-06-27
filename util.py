@@ -78,18 +78,22 @@ def get_relevant_parts(partKoP_shortname, onlyNonDeleted = True, getFullAttribut
                     for s in slots:
                         if alSl['part_serial_number'] == s['serial_number']:
                             alSl['part_id'] = s['part_id']
-            elif partKoP_shortname == 'PEB':
-                these_parts, responseText = api.fetch_information(f'/partattributelistbykop/{KoP_ID}/')
-                with open('./local/all_pebs.json', 'w') as f:
-                    json.dump(these_parts, f)
-                pebs, responseText = api.fetch_information(f'/partslistbykop/{KoP_ID}/')
-                with open('./local/pebs.json', 'w') as f:
-                    json.dump(pebs, f)
-                for alPeb in these_parts:
-                    for p in pebs:
-                        if alPeb['part_serial_number'] == p['serial_number']:
-                            alPeb['part_id'] = p['part_id']
-                            alPeb['serial_number'] = p['serial_number']
+
+            # == OLD ==: had to load PEB attributes to get PEB type in the past, now not necessary anymore
+            # because NEW: PEB type is part of PEB SN
+            #elif partKoP_shortname == 'PEB':
+            #    these_parts, responseText = api.fetch_information(f'/partattributelistbykop/{KoP_ID}/')
+            #    with open('./local/all_pebs.json', 'w') as f:
+            #        json.dump(these_parts, f)
+            #    pebs, responseText = api.fetch_information(f'/partslistbykop/{KoP_ID}/')
+            #    with open('./local/pebs.json', 'w') as f:
+            #        json.dump(pebs, f)
+            #    for alPeb in these_parts:
+            #        for p in pebs:
+            #            if alPeb['part_serial_number'] == p['serial_number']:
+            #                alPeb['part_id'] = p['part_id']
+            #                alPeb['serial_number'] = p['serial_number']
+
             else:
                 these_parts, responseText = api.fetch_information(f'/{retrieve}/{KoP_ID}/')
                 if retrieve != 'partattributelistbykop':
