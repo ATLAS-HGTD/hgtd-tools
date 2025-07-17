@@ -104,14 +104,31 @@ def get_relevant_parts(partKoP_shortname, onlyNonDeleted = True, getFullAttribut
             # the lifetime of the detector, the Slot table itself stays constant
             # => can be stored as a local file, don't need to load it freshly each time
             # (at least that's my understanding now during R&D of the database tools)
+
+            # the following two files result from dumping the API-accessed files
+            '''
             with open('./local/all_slots.json') as allSlotsJson:
                 these_parts, responseText = json.load(allSlotsJson), '200: Local File'
             with open('./local/slots.json') as slotsJson:
                 slots, responseText = json.load(slotsJson), '200: Local File'
+                
             for alSl in these_parts:
                 for s in slots:
                     if alSl['part_serial_number'] == s['serial_number']:
                         alSl['part_id'] = s['part_id']
+            '''
+
+            # the following two files result from manually downloading, exporting and converting them
+            # this was done because the API endpoint above results in OOMKilled errors!
+            with open('./local/Slot_Table_fullJune2025_demo54mod.json') as allSlotsJson:
+                these_parts, responseText = json.load(allSlotsJson), '200: Local File'
+            with open('./local/Slot_fullJune2025_demo54mod.json') as slotsJson:
+                slots, responseText = json.load(slotsJson), '200: Local File'
+                
+            for alSl in these_parts:
+                for s in slots:
+                    if alSl['part_serial_number'] == s['Serial #']:
+                        alSl['part_id'] = s['Part ID']
         return these_parts, responseText
     except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
         raise e

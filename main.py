@@ -347,10 +347,6 @@ class App(customtkinter.CTk):
         self.canvas.bind('<Button-1>', self.canvas_event_click)
         self.displayedDUtype = "None"
 
-        # footer: info for user (e.g. Warning, Error)
-        self.info_label = customtkinter.CTkLabel(self.main_frame, text=" ", font=customtkinter.CTkFont(size=16, weight="bold"))
-        self.info_label.grid(row=2, column=0, padx=20, pady=20, columnspan=2)
-
         # ******************************************
         #
         # === Slot global/local for FT selection ===
@@ -444,6 +440,10 @@ class App(customtkinter.CTk):
         self.add_ft_button = customtkinter.CTkButton(self.ft_rel_frame, text="ADD PARTS TREE",
             command=self.button_add_ft_event_click)
         self.add_ft_button.grid(row=3, column=2, padx=20, pady=10)
+
+        # footer: info for user (e.g. Warning, Error)
+        self.info_label = customtkinter.CTkLabel(self.main_frame, text=" ", font=customtkinter.CTkFont(size=16, weight="bold"))
+        self.info_label.grid(row=2, column=0, padx=20, pady=20, columnspan=2)
 
         # *************************************************
         #
@@ -1059,7 +1059,7 @@ class App(customtkinter.CTk):
             self.combobox_frame.grid_remove()
             self.canvas_label.grid_remove()
             self.canvas.grid_remove()
-            self.info_label.grid_remove()
+            self.info_label.grid()
             self.ft_rel_frame.grid()
 
             self.loading_wheel = threading.Thread(target=self.fetch_slots)
@@ -1638,7 +1638,7 @@ class App(customtkinter.CTk):
 
     def fetch_slots(self):
         try:
-            self.slots, self.last_responseText = util.get_relevant_parts('Slot', getFullAttributes = True)
+            self.slots, self.last_responseText = util.get_relevant_parts('Slot', getFullAttributes = True, useLocal = True)
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
             self.slots = None
             self.last_responseText = str(e)
