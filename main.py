@@ -103,7 +103,7 @@ class App(customtkinter.CTk):
         # fill sidebar
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="HGTD Tools", font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10), columnspan=2)
-        self.credits_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="v1.3.1dev - May 2025\nAnnika Stein (JGU Mainz)")
+        self.credits_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="v1.4.0dev - July 2025\nAnnika Stein (JGU Mainz)")
         self.credits_label.grid(row=1, column=0, padx=20, pady=10, columnspan=2)
 
         self.progress_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="API Request Status")
@@ -365,7 +365,7 @@ class App(customtkinter.CTk):
         self.slot_sel_frame.grid_columnconfigure((0,1,2,3,4), weight=1)
         self.slot_sel_frame.grid_rowconfigure((0,1,2), weight=1)
 
-        self.slot_vessel_optionmenu = customtkinter.CTkOptionMenu(self.slot_sel_frame, values=["Vessel: 1", "Vessel: 2"],
+        self.slot_vessel_optionmenu = customtkinter.CTkOptionMenu(self.slot_sel_frame, values=["Vessel: 1", "Vessel: 2", "Vessel: D"],
                                                                        command=self.change_child_conn_event, width=200)
         self.slot_vessel_optionmenu.grid(row=0, column=0, padx=5, pady=10)
         self.slot_vessel_optionmenu.set("Vessel: 1")
@@ -380,18 +380,47 @@ class App(customtkinter.CTk):
         self.slot_quadrant_optionmenu.grid(row=2, column=0, padx=5, pady=10)
         self.slot_quadrant_optionmenu.set("Quadrant: 0")
 
-        self.slot_global_label = customtkinter.CTkLabel(self.slot_sel_frame, text="Global")
+        self.slot_global_label = customtkinter.CTkLabel(self.slot_sel_frame, text="Global (type in):")
         self.slot_global_label.grid(row=0, column=1, padx=20, pady=10, sticky="nsew")
+
+        self.find_slot_button = customtkinter.CTkButton(self.slot_sel_frame, text="FIND IN SLOT TABLE",
+            command=self.button_find_slot_event_click)
+        self.find_slot_button.grid(row=1, column=1, padx=20, pady=10, sticky="nsew")
         
-        self.slot_local_label = customtkinter.CTkLabel(self.slot_sel_frame, text="Local")
+        
+        self.slot_local_label = customtkinter.CTkLabel(self.slot_sel_frame, text="Local (derived):")
         self.slot_local_label.grid(row=2, column=1, padx=20, pady=10, sticky="nsew")
         
         self.slot_DU_type_label = customtkinter.CTkLabel(self.slot_sel_frame, text="DU type")
         self.slot_DU_type_label.grid(row=1, column=2, padx=20, pady=10, sticky="nsew")
+        
+        self.slot_loc_DUtype_variable = customtkinter.StringVar(value="- automatic -")
+        self.slot_loc_DUtype_entry = customtkinter.CTkEntry(self.slot_sel_frame, textvariable=self.slot_loc_DUtype_variable, state='disabled')
+        self.slot_loc_DUtype_entry.grid(row=2, column=2, padx=20, pady=10, sticky="nsew")
+
+        
+        self.slot_glob_row_variable = customtkinter.StringVar(value="")
+        self.slot_glob_row_entry = customtkinter.CTkEntry(self.slot_sel_frame, textvariable=self.slot_glob_row_variable)
+        self.slot_glob_row_entry.grid(row=0, column=3, padx=20, pady=10, sticky="nsew")
+        
         self.slot_row_label = customtkinter.CTkLabel(self.slot_sel_frame, text="Row")
         self.slot_row_label.grid(row=1, column=3, padx=20, pady=10, sticky="nsew")
+        
+        self.slot_loc_row_variable = customtkinter.StringVar(value="- automatic -")
+        self.slot_loc_row_entry = customtkinter.CTkEntry(self.slot_sel_frame, textvariable=self.slot_loc_row_variable, state='disabled')
+        self.slot_loc_row_entry.grid(row=2, column=3, padx=20, pady=10, sticky="nsew")
+
+
+        self.slot_glob_mod_variable = customtkinter.StringVar(value="")
+        self.slot_glob_mod_entry = customtkinter.CTkEntry(self.slot_sel_frame, textvariable=self.slot_glob_mod_variable)
+        self.slot_glob_mod_entry.grid(row=0, column=4, padx=20, pady=10, sticky="nsew")
+        
         self.slot_mod_label = customtkinter.CTkLabel(self.slot_sel_frame, text="Mod")
         self.slot_mod_label.grid(row=1, column=4, padx=20, pady=10, sticky="nsew")
+        
+        self.slot_loc_mod_variable = customtkinter.StringVar(value="- automatic -")
+        self.slot_loc_mod_entry = customtkinter.CTkEntry(self.slot_sel_frame, textvariable=self.slot_loc_mod_variable, state='disabled')
+        self.slot_loc_mod_entry.grid(row=2, column=4, padx=20, pady=10, sticky="nsew")
         
         #
         # === 2nd line ===
@@ -399,6 +428,8 @@ class App(customtkinter.CTk):
         self.ft_gen_label = customtkinter.CTkLabel(self.ft_rel_frame, text="Suitable FT batch(es)/meta-generation for this VLQ:")
         self.ft_gen_label.grid(row=1, column=0, padx=20, pady=10, sticky="nsew")
 
+        # demo: 20WFTC11F/20WFTS11F/20WFTG11F (old order cat 01--36), 20WFTG12F (new order cat 37--57)
+        # M0 & Full det: 20WFTCM1F/20WFTSM1F/20WFTGM1F (future cat 01--62)
         self.ft_gen_label_output = customtkinter.CTkLabel(self.ft_rel_frame, text=" ")
         self.ft_gen_label_output.grid(row=1, column=1, padx=20, pady=10, sticky="nsew")
 
@@ -414,7 +445,7 @@ class App(customtkinter.CTk):
         #
         # === 4th line ===
         #
-        self.combobox_ft_label = customtkinter.CTkLabel(self.ft_rel_frame, text="Free FTs matching selection criteria:")
+        self.combobox_ft_label = customtkinter.CTkLabel(self.ft_rel_frame, text="FTs matching selection criteria:")
         self.combobox_ft_label.grid(row=3, column=0, padx=20, pady=10, sticky="nsew")
 
         self.combobox_ft_paginationFrame = customtkinter.CTkFrame(self.ft_rel_frame)
@@ -437,9 +468,13 @@ class App(customtkinter.CTk):
         self.combobox_ft_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
 
 
+        self.inspect_ft_button = customtkinter.CTkButton(self.ft_rel_frame, text="INSPECT CHILD",
+            command=self.button_inspect_ft_event_click)
+        self.inspect_ft_button.grid(row=3, column=2, padx=20, pady=10)
+        
         self.add_ft_button = customtkinter.CTkButton(self.ft_rel_frame, text="ADD PARTS TREE",
             command=self.button_add_ft_event_click)
-        self.add_ft_button.grid(row=3, column=2, padx=20, pady=10)
+        self.add_ft_button.grid(row=4, column=2, padx=20, pady=10)
 
         # footer: info for user (e.g. Warning, Error)
         self.info_label = customtkinter.CTkLabel(self.main_frame, text=" ", font=customtkinter.CTkFont(size=16, weight="bold"))
@@ -895,6 +930,9 @@ class App(customtkinter.CTk):
                 self.loading_wheel.start()
                 self.update_progressbar(self.loading_wheel)
 
+    def button_find_slot_event_click(self):
+        pass
+    
     def button_inspect_child_event_click(self):
         childSNIn = self.combobox_child.get()
         if childSNIn != '- Select -':
@@ -911,6 +949,12 @@ class App(customtkinter.CTk):
             par_partID = self.possible_parents_partIDs[self.possible_parents_SNs.index(parentSNIn)]
             util.open_webbrowser_with_url(f'/viewparts/{par_partID}')
 
+    def button_inspect_ft_event_click(self):
+        childSNIn = self.combobox_ft.get()
+        if childSNIn != '- Select -':
+            chi_partID = self.possible_ft_partIDs[self.possible_ft_SNs.index(childSNIn)]
+            util.open_webbrowser_with_url(f'/viewparts/{chi_partID}')
+            
     # https://stackoverflow.com/a/23944658
     def button_mode_event_click(self, value):
         self.operation_mode = value
