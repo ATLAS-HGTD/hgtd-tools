@@ -931,7 +931,30 @@ class App(customtkinter.CTk):
                 self.update_progressbar(self.loading_wheel)
 
     def button_find_slot_event_click(self):
-        pass
+        self.info_label.configure(text=' ')
+        v = self.slot_vessel_optionmenu.get()[-1]
+        l = self.slot_layer_optionmenu.get()[-1]
+        q = self.slot_quadrant_optionmenu.get()[-1]
+        r = self.slot_glob_row_entry.get()
+        m = self.slot_glob_mod_entry.get()
+
+        combined_slot = f'V{v}:L{l}:Q{q}:R{r}:M{m}'
+
+        for s in self.slots:
+            if s['part_serial_number'] == combined_slot:
+                self.slot_loc_DUtype_variable.set(s['SU_type'])
+                self.slot_loc_row_variable.set(s['SU_Row'])
+                self.slot_loc_mod_variable.set(s['SU_Module'])
+                if v == 'D':
+                    self.ft_gen_label_output.configure(text='20WFTC11F/20WFTS11F/20WFTG11F (old order cat 01--36), 20WFTG12F (new order cat 37--57)')
+                else:
+                    self.ft_gen_label_output.configure(text='20WFTCM1F/20WFTSM1F/20WFTGM1F (future cat 01--62)')
+                self.ft_type_label_output.configure(text=f'{s['FT_length_category']} ({s['FT_Length_mm']} mm)')
+                break
+        else:
+            info_text = wrapped_text.fill(f'Error: Your combination of Vessel, Layer, Quadrant, Global Row & Module does not exist in the slot table.')
+            print(f'>>> {info_text}')
+            self.info_label.configure(text=info_text)
     
     def button_inspect_child_event_click(self):
         childSNIn = self.combobox_child.get()
