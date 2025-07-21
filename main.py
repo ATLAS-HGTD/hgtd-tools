@@ -494,6 +494,9 @@ class App(customtkinter.CTk):
         self.this_DU_relations_MODULE = []
         self.this_MODULE_relations_DU = []
         self.this_MODULE_relations_SLOT = []
+        self.this_FT_relations_SLOT = []
+        self.this_SLOT_relations_FT = []
+        self.ft_filter = ''
         self.cbx_par_n_pages = 0
         self.cbx_chi_n_pages = 0
         self.cbx_ft_n_pages = 0
@@ -937,6 +940,7 @@ class App(customtkinter.CTk):
         q = self.slot_quadrant_optionmenu.get()[-1]
         r = self.slot_glob_row_entry.get()
         m = self.slot_glob_mod_entry.get()
+        self.ft_filter = ''
 
         combined_slot = f'V{v}:L{l}:Q{q}:R{r}:M{m}'
 
@@ -947,9 +951,16 @@ class App(customtkinter.CTk):
                 self.slot_loc_mod_variable.set(s['SU_Module'])
                 if v == 'D':
                     self.ft_gen_label_output.configure(text='20WFTC11F/20WFTS11F/20WFTG11F (old order cat 01--36), 20WFTG12F (new order cat 37--57)')
+                    self.ft_filter = f'20WFTC11F/20WFTS11F/20WFTG11F/20WFTG12F+{s['FT_length_category']}'
                 else:
                     self.ft_gen_label_output.configure(text='20WFTCM1F/20WFTSM1F/20WFTGM1F (future cat 01--62)')
+                    self.ft_filter = f'20WFTCM1F/20WFTSM1F/20WFTGM1F+{s['FT_length_category']}'
                 self.ft_type_label_output.configure(text=f'{s['FT_length_category']} ({s['FT_Length_mm']} mm)')
+
+                # find all FTs that match this generation/category
+                self.loading_wheel = threading.Thread(target=self.fetch_ft)
+                self.loading_wheel.start()
+                self.update_progressbar(self.loading_wheel)
                 break
         else:
             info_text = wrapped_text.fill(f'Error: Your combination of Vessel, Layer, Quadrant, Global Row & Module does not exist in the slot table.')
@@ -985,8 +996,12 @@ class App(customtkinter.CTk):
         self.this_DU_relations_MODULE = []
         self.this_MODULE_relations_DU = []
         self.this_MODULE_relations_SLOT = []
+        self.this_FT_relations_SLOT = []
+        self.this_SLOT_relations_FT = []
+        self.ft_filter = ''
         self.possible_parents = []
         self.possible_children = []
+        self.possible_ft = []
         self.slots = None
         self.partstree = None
         self.clicked_module = []
@@ -1129,39 +1144,18 @@ class App(customtkinter.CTk):
             self.info_label.grid()
             self.ft_rel_frame.grid()
 
-            self.loading_wheel = threading.Thread(target=self.fetch_slots)
+            self.slot_vessel_optionmenu.set("Vessel: 1")
+            self.slot_layer_optionmenu.set("Layer: 0")
+            self.slot_quadrant_optionmenu.set("Quadrant: 0")
+            self.slot_loc_DUtype_variable.set('- automatic -')
+            self.slot_loc_row_variable.set('- automatic -')
+            self.slot_loc_mod_variable.set('- automatic -')
+            self.slot_glob_row_variable.set('')
+            self.slot_glob_mod_variable.set('')
+            
+            self.loading_wheel = threading.Thread(target=self.fetch_ft)
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
-
-            '''
-            self.combobox_par_type_label.grid_remove()
-            self.combobox_par_type_paginationFrame.grid_remove()
-
-            self.combobox_child_manu.grid_remove()
-
-            self.possible_chi_types = ["All PEB types"]+data.allPEBs
-            self.possible_chi_types_chunked = [self.possible_chi_types[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_chi_types), self.n_items_to_show_in_cbx)]
-            self.cbx_ctype_n_pages = len(self.possible_chi_types_chunked)
-            self.cbx_ctype_shown_page = 1
-            self.combobox_chi_type_paginationFrame_label.configure(text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}")
-            self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[0])
-
-            self.combobox_chi_type_paginationFrame.grid()
-
-            self.clicked_position_frame.grid_remove()
-
-            self.canvas_label.configure(text='Static canvas: served from database')
-            self.combobox_parent.set("- Select -")
-            self.combobox_child.set("- Select -")
-            self.combobox_parent_T_label.configure(text="Parent Part Type: Detector")
-            self.combobox_child_T_label.configure(text="Child Part Type: PEB")
-            self.position_label.configure(text="Position (type by hand)")
-            self.position_variable.set("VxLyQz")
-            self.position_entry.configure(state="normal")
-            self.loading_wheel = threading.Thread(target=self.fetch_p_c, args=('Detector','PEB'))
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            '''
 
     def canvas_event_click(self, event, debug = False):
         self.clicked_module = []
@@ -1354,7 +1348,8 @@ class App(customtkinter.CTk):
             self.update_progressbar(self.loading_wheel)
 
     def combobox_ft_event_select(self, unused_var_to_please_python):
-        pass
+        self.this_FT_relations_SLOT = []
+        self.this_SLOT_relations_FT = []
 
     def combobox_p_c_event_select(self, unused_var_to_please_python):
         self.displayedDUtype = "None"
@@ -1635,6 +1630,49 @@ class App(customtkinter.CTk):
             info_text = 'Warning: PEB type could not be retrieved from PEB SN.'
             print(f'>>> {info_text}')
             self.info_label.configure(text=info_text)
+
+    def fetch_ft(self):
+        try:
+            #self.possible_parents, self.last_responseText = util.get_relevant_parts(p)
+            self.fetch_slots()
+            self.possible_ft, self.last_responseText = util.get_relevant_parts('FT')
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+            #self.possible_parents = []
+            self.possible_ft = []
+            self.last_responseText = str(e)
+        except ValueError as e:
+            #self.possible_parents = []
+            self.possible_ft = []
+            self.last_responseText = str(e)
+
+        if self.last_responseText[:3] != '200':
+            self.api_status = 0
+            self.progressbar.configure(progress_color="#ff0000")
+            info_text = wrapped_text.fill(f'Error: Slots / FT could not be loaded from ProdDB API.\n{self.last_responseText}')
+            print(f'>>> {info_text}')
+            self.info_label.configure(text=info_text)
+        else:
+            self.api_status = 1
+            self.progressbar.configure(progress_color="#007711")
+
+            if self.ft_filter != '':
+                gen = self.ft_filter.split('+')[0].split('/') # multiple generations
+                cat = self.ft_filter[-2:] # the last two chars make the category
+
+                self.possible_ft = [pft for pft in self.possible_ft if any(gen_ in pft['serial_number'] for gen_ in gen) and int(pft['serial_number'][9:11]) == int(cat)]
+
+            self.possible_ft_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_ft)
+            self.possible_ft_SNs = [entry[0] for entry in self.possible_ft_SNs_and_partIDs]
+            self.possible_ft_SNs_chunked = [self.possible_ft_SNs[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_ft_SNs), self.n_items_to_show_in_cbx)]
+            self.possible_ft_partIDs = [entry[1] for entry in self.possible_ft_SNs_and_partIDs]
+            self.cbx_chi_n_pages = len(self.possible_ft_SNs_chunked)
+            self.cbx_chi_shown_page = min(1, self.cbx_ft_n_pages)
+            self.combobox_child_paginationFrame_label.configure(text=f"page {self.cbx_ft_shown_page}/{self.cbx_ft_n_pages}")
+            if len(self.possible_ft) > 0:
+                self.combobox_ft.configure(values=self.possible_ft_SNs_chunked[0])
+            else:
+                self.combobox_ft.configure(values=[])
+                self.combobox_ft.set("- Select -")
 
     def fetch_p_c(self, p, c):
         try:
