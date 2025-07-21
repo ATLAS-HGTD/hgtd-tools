@@ -38,10 +38,15 @@ def isInSlot(rect, x, y):
     return isInSlot
 
 # === Operations with API or Browser
-def open_webbrowser_with_url(url, debug = False):
-    if debug:
-        print(f'>>> Opening {api.frontendUrlPrefix + url} in webbrowser...')
-    webbrowser.open_new_tab(api.frontendUrlPrefix + url)
+def open_webbrowser_with_url(url, debug = False, noExtraPrefix = False):
+    if noExtraPrefix:
+        if debug:
+            print(f'>>> Opening {url} in webbrowser...')
+        webbrowser.open_new_tab(url)
+    else:
+        if debug:
+            print(f'>>> Opening {api.frontendUrlPrefix + url} in webbrowser...')
+        webbrowser.open_new_tab(api.frontendUrlPrefix + url)
 
 def delete_parents(chi_partID, onlyNonDeleted = True):
     try:

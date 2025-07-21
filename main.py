@@ -98,7 +98,7 @@ class App(customtkinter.CTk):
         self.sidebar_frame_left = customtkinter.CTkFrame(self, corner_radius=0)
         self.sidebar_frame_left.grid(row=0, column=0, rowspan=4, sticky="nsew")
         self.sidebar_frame_left.grid_columnconfigure((0,1), weight=1)
-        self.sidebar_frame_left.grid_rowconfigure(4, weight=1)
+        self.sidebar_frame_left.grid_rowconfigure(5, weight=1)
 
         # fill sidebar
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="HGTD Tools", font=customtkinter.CTkFont(size=20, weight="bold"))
@@ -112,7 +112,7 @@ class App(customtkinter.CTk):
         self.progressbar.grid(row=3, column=0, padx=20, pady=10, columnspan=2)
         self.progressbar.set(1)
 
-        # button to select use case of the tool
+        # buttons to select use case of the tool
         self.operation_mode_frame = customtkinter.CTkFrame(self.sidebar_frame_left)
         self.operation_mode_frame.grid(row=4, column=0, padx=5, pady=(20,5), sticky="nsew", columnspan=2)
         self.operation_mode_frame.grid_columnconfigure((0,1), weight=1)
@@ -137,31 +137,47 @@ class App(customtkinter.CTk):
             command=lambda: self.button_mode_event_click('Detector Assembly (CERN): FT'), fg_color="#555555", hover_color="#444444")
         self.operation_mode_DA_FT_button.grid(row=4, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
 
+        # buttons to go to external useful pages
+        self.useful_links_frame = customtkinter.CTkFrame(self.sidebar_frame_left)
+        self.useful_links_frame.grid(row=5, column=0, padx=5, pady=20, sticky="nsew", columnspan=2)
+        self.useful_links_frame.grid_columnconfigure((0,1), weight=1)
+
+        self.useful_links_label = customtkinter.CTkLabel(self.useful_links_frame, text="Useful Links", font=customtkinter.CTkFont(size=16, weight="bold"))
+        self.useful_links_label.grid(row=0, column=0, padx=20, pady=10, columnspan=2)
+
+        self.useful_links_Frontend_button = customtkinter.CTkButton(self.useful_links_frame, text="DB Frontend",
+            command=lambda: util.open_webbrowser_with_url(api.frontendUrlPrefix, noExtraPrefix = True), fg_color="#555555", hover_color="#444444")
+        self.useful_links_Frontend_button.grid(row=1, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
+
+        self.useful_links_Mockup_button = customtkinter.CTkButton(self.useful_links_frame, text="SN Decoder/Encoder",
+            command=lambda: util.open_webbrowser_with_url('https://annika-stein.web.cern.ch/module_mockup/serialnumber.html', noExtraPrefix = True), fg_color="#555555", hover_color="#444444")
+        self.useful_links_Mockup_button.grid(row=2, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
+
 
         self.user_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="User:", anchor="e")
-        self.user_label.grid(row=6, column=0, padx=5, pady=10)
+        self.user_label.grid(row=7, column=0, padx=5, pady=10)
         self.user_optionmenu = customtkinter.CTkOptionMenu(self.sidebar_frame_left, values=['None', 'new...'],
                                                                        command=self.change_user_event, width=60)
-        self.user_optionmenu.grid(row=6, column=1, padx=5, pady=10)
+        self.user_optionmenu.grid(row=7, column=1, padx=5, pady=10)
         self.user_optionmenu.set("None")
         self.user_window = None
 
 
         self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame_left, text="Theme:", anchor="e")
-        self.appearance_mode_label.grid(row=7, column=0, padx=5, pady=10)
+        self.appearance_mode_label.grid(row=8, column=0, padx=5, pady=10)
         self.appearance_mode_optionmenu = customtkinter.CTkOptionMenu(self.sidebar_frame_left, values=["Light", "Dark", "System"],
                                                                        command=self.change_appearance_mode_event, width=60)
-        self.appearance_mode_optionmenu.grid(row=7, column=1, padx=5, pady=10)
+        self.appearance_mode_optionmenu.grid(row=8, column=1, padx=5, pady=10)
         self.appearance_mode_optionmenu.set("System")
 
         self.help_image = customtkinter.CTkImage(Image.open("circle-question.png"), size=(20,20))
         self.btnHelp = customtkinter.CTkButton(self.sidebar_frame_left, image=self.help_image, text="Help", compound='left', fg_color="#339941", hover_color="#228831", command=self.help, width=60)
-        self.btnHelp.grid(row=8, column=0, pady=10, padx=5, columnspan=2)
+        self.btnHelp.grid(row=9, column=0, pady=10, padx=5, columnspan=2)
         self.help_window = None
 
         self.exit_image = customtkinter.CTkImage(Image.open("right-from-bracket-solid.png"), size=(20,20))
         self.btnLogout = customtkinter.CTkButton(self.sidebar_frame_left, image=self.exit_image, text="Close", compound='left', fg_color="#cf352e", hover_color="#B02B25", command=self.exit, width=60)
-        self.btnLogout.grid(row=9, column=0, pady=10, padx=5, columnspan=2)
+        self.btnLogout.grid(row=10, column=0, pady=20, padx=5, columnspan=2)
 
         # work in main widget (column w.r.t. root >= 1)
 
