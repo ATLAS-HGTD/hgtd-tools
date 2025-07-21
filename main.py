@@ -386,7 +386,10 @@ class App(customtkinter.CTk):
         self.find_slot_button = customtkinter.CTkButton(self.slot_sel_frame, text="FIND IN SLOT TABLE",
             command=self.button_find_slot_event_click)
         self.find_slot_button.grid(row=1, column=1, padx=20, pady=10, sticky="nsew")
-        
+
+        self.inspect_slot_button = customtkinter.CTkButton(self.slot_sel_frame, text="INSPECT SLOT",
+            command=self.button_inspect_slot_event_click)
+        self.inspect_slot_button.grid(row=3, column=1, padx=20, pady=10)
         
         self.slot_local_label = customtkinter.CTkLabel(self.slot_sel_frame, text="Local (derived):")
         self.slot_local_label.grid(row=2, column=1, padx=20, pady=10, sticky="nsew")
@@ -455,7 +458,7 @@ class App(customtkinter.CTk):
         
 
         self.combobox_ft_paginationFrame = customtkinter.CTkFrame(self.ft_rel_frame)
-        self.combobox_ft_paginationFrame.grid(row=4, column=1, padx=20, pady=10, sticky="nsew")
+        self.combobox_ft_paginationFrame.grid(row=4, column=1, padx=20, pady=10, sticky="ns")
         self.combobox_ft_paginationFrame_label = customtkinter.CTkLabel(self.combobox_ft_paginationFrame, text="0/0")
         self.combobox_ft_paginationFrame_label.grid(row=0, column=0, padx=(10,5), pady=5, sticky="nsew")
         self.combobox_ft_paginationButtonLeft = customtkinter.CTkButton(self.combobox_ft_paginationFrame,
@@ -477,6 +480,10 @@ class App(customtkinter.CTk):
         self.inspect_ft_button = customtkinter.CTkButton(self.ft_rel_frame, text="INSPECT FT",
             command=self.button_inspect_ft_event_click)
         self.inspect_ft_button.grid(row=4, column=2, padx=20, pady=10)
+
+        self.delete_connected_ft_button = customtkinter.CTkButton(self.ft_rel_frame, text="DISCONNECT SELECTED FT",
+            command=self.button_delete_connected_ft_event_click, state='disabled', fg_color="#cf352e", hover_color="#B02B25")
+        self.delete_connected_ft_button.grid(row=5, column=1, padx=20, pady=(20, 10))
         
         self.add_ft_button = customtkinter.CTkButton(self.ft_rel_frame, text="ADD PARTS TREE",
             command=self.button_add_ft_event_click)
@@ -503,6 +510,7 @@ class App(customtkinter.CTk):
         self.this_FT_relations_SLOT = []
         self.this_SLOT_relations_FT = []
         self.ft_filter = ''
+        self.combined_slot = ''
         self.cbx_par_n_pages = 0
         self.cbx_chi_n_pages = 0
         self.cbx_ft_n_pages = 0
@@ -625,7 +633,92 @@ class App(customtkinter.CTk):
             self.user_window.focus()  # if window exists focus it
 
     def button_add_ft_event_click(self, debug = False):
-        pass
+        chi = self.combobox_ft.get()
+        par = self.combined_slot
+        if chi == '- Select -' or par == '':
+            info_text = 'Warning: Select a FT & Slot from the respective lists to proceed.'
+            print(f'>>> {info_text}')
+            self.info_label.configure(text=info_text)
+        else:
+            self.info_label.configure(text=' ')
+            chi_partID = self.possible_ft_partIDs[self.possible_ft_SNs.index(chi)]
+            for s in self.slots:
+                if s['part_serial_number'] == par:
+                    par_partID = s['part_id']
+                    break
+            if self.user != 'None' and self.user != 'new...':
+                part_tree = {
+                    'position': '',
+                    'is_record_deleted': 'F',
+                    'part': chi_partID,
+                    'part_parent': par_partID,
+                    'record_insertion_user': self.user,
+                }
+            else:
+                part_tree = {
+                    'position': '',
+                    'is_record_deleted': 'F',
+                    'part': chi_partID,
+                    'part_parent': par_partID,
+                }
+            allowed_slot = False
+            occupied_slot = False
+            confirmed = ''
+            try:
+                # allowed: chosen FT matches the generation and category that the slot requires
+                gen = self.ft_filter.split('+')[0].split('/') # multiple generations
+                cat = self.ft_filter[-2:] # the last two chars make the category
+                if any(gen_ in chi for gen_ in gen) and int(chi[9:11]) == int(cat):
+                    allowed_slot = True
+                    children_of_targetSlot, self.last_responseText = util.get_children(par_partID, ofKind = 'FT')
+                    FT_already_occupying_target_position = ''
+                    Slot_FT_relation_to_delete = ''
+                    matching_relation = []
+                    for c in children_of_targetSlot:
+                        occupied_slot = True
+                        FT_already_occupying_target_position = c['part']['serial_number']
+                        Slot_FT_relation_to_delete = c['record_id']
+                        matching_relation = c
+                        break
+                    if occupied_slot:
+                        confirmed = ''
+                        dialog = customtkinter.CTkInputDialog(text=f"This Slot is already occupied by the FT {FT_already_occupying_target_position}.\n" +
+                                "Confirm by typing a confirmation: OVERWRITE to overwrite it with your selected FT:", title="Confirm dialog")
+                        confirmed = dialog.get_input()
+                        if debug:
+                            print("Typed in confirmation from confirm dialog:", confirmed)
+                        if confirmed == 'OVERWRITE':
+                            # DELETION OF PREVIOUS STUFF
+
+                            # delete Slot -> FT relation for the FT that already occupies that Slot
+                            self.last_responseText = api.delete_information(f'/partstreedelete/{Slot_FT_relation_to_delete}/')
+
+                            # POSTING NEW STUFF
+
+                            # connect new FT there by creating a new Slot -> FT relation
+                            self.last_responseText = api.post_information('/partstreelist', part_tree)
+                    else:
+                        self.last_responseText = api.post_information('/partstreelist', part_tree)
+                        
+                else:
+                    info_text = wrapped_text.fill(f'Error: You can not connect this FT to the selected slot.\nCheck the FT generation and FT category requirements!')
+                    print(f'>>> {info_text}')
+                    self.info_label.configure(text=info_text)
+
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                self.last_responseText = str(e)
+            except ValueError as e:
+                self.last_responseText = str(e)
+
+            if self.last_responseText[:2] != '20':
+                self.api_status = 0
+                self.progressbar.configure(progress_color="#ff0000")
+                info_text = wrapped_text.fill(f'Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}')
+                print(f'>>> {info_text}')
+                self.info_label.configure(text=info_text)
+            else:
+                self.api_status = 1
+                self.progressbar.configure(progress_color="#007711")
 
     def button_add_event_click(self, debug = False):
         chi = self.combobox_child.get()
@@ -819,7 +912,7 @@ class App(customtkinter.CTk):
                                             if confirmed == pos:
                                                 # DELETION OF PREVIOUS STUFF
     
-                                                # delete Det -> PEB relation for the DU that already occupies that VLQ
+                                                # delete Det -> PEB relation for the PEB that already occupies that VLQ
                                                 self.last_responseText = api.delete_information(f'/partstreedelete/{Det_PEB_relation_to_delete}/')
     
                                                 # POSTING NEW STUFF
@@ -900,6 +993,29 @@ class App(customtkinter.CTk):
         self.combobox_chi_type_paginationFrame_label.configure(text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}")
         self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[self.cbx_ctype_shown_page - 1])
 
+    def button_delete_connected_ft_event_click(self):
+        if len(self.this_FT_relations_SLOT) > 0:
+            try:
+                for k in self.this_FT_relations_SLOT:
+                    self.last_responseText = util.delete_parents(k['part']['part_id'])
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                self.last_responseText = str(e)
+            except ValueError as e:
+                self.last_responseText = str(e)
+
+            if self.last_responseText[:2] != '20':
+                self.api_status = 0
+                self.progressbar.configure(progress_color="#ff0000")
+                info_text = wrapped_text.fill(f'Error: Existing FT relation could not be deleted (disconnected from slot) with ProdDB API.\n{self.last_responseText}')
+                print(f'>>> {info_text}')
+                self.info_label.configure(text=info_text)
+            else:
+                self.api_status = 1
+                self.progressbar.configure(progress_color="#007711")
+                self.info_label.configure(text=' ')
+                self.this_FT_relations_SLOT = []
+                self.delete_connected_ft_button.configure(state='disabled')
+        
     def button_delete_clicked_event_click(self):
         if len(self.clicked_module) > 0:
             try:
@@ -949,11 +1065,11 @@ class App(customtkinter.CTk):
         m = self.slot_glob_mod_entry.get()
         self.ft_filter = ''
 
-        combined_slot = f'V{v}:L{l}:Q{q}:R{r}:M{m}'
+        self.combined_slot = f'V{v}:L{l}:Q{q}:R{r}:M{m}'
         self.this_SLOT_relations_FT = []
 
         for s in self.slots:
-            if s['part_serial_number'] == combined_slot:
+            if s['part_serial_number'] == self.combined_slot:
                 self.slot_loc_DUtype_variable.set(s['SU_type'])
                 self.slot_loc_row_variable.set(s['SU_Row'])
                 self.slot_loc_mod_variable.set(s['SU_Module'])
@@ -991,6 +1107,19 @@ class App(customtkinter.CTk):
             par_partID = self.possible_parents_partIDs[self.possible_parents_SNs.index(parentSNIn)]
             util.open_webbrowser_with_url(f'/viewparts/{par_partID}')
 
+    def button_inspect_slot_event_click(self):
+        if len(self.combined_slot) > 0:
+            self.info_label.configure(text=' ')
+            for s in self.slots:
+                if s['part_serial_number'] == self.combined_slot:
+                    par_partID = s['part_id']
+                    break
+            util.open_webbrowser_with_url(f'/viewparts/{par_partID}')
+        else:
+            info_text = wrapped_text.fill(f'Error: You first need to find the slot in the slot table to inspect its properties.')
+            print(f'>>> {info_text}')
+            self.info_label.configure(text=info_text)
+            
     def button_inspect_ft_event_click(self):
         childSNIn = self.combobox_ft.get()
         if childSNIn != '- Select -':
@@ -1608,8 +1737,7 @@ class App(customtkinter.CTk):
             print(FT_partID)
             print(self.possible_ft)
         self.info_label.configure(text=' ')
-        info_text = ' '
-        self.info_label.configure(text=info_text)
+        self.delete_connected_ft_button.configure(state='disabled')
         try:
             ft_par, self.last_responseText = util.get_parents(FT_partID, ofKind = 'Slot')
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
@@ -1639,6 +1767,7 @@ class App(customtkinter.CTk):
                     print(f'>>> {info_text}')
                     self.info_label.configure(text=info_text)
                     self.this_FT_relations_SLOT.append(r)
+                    self.delete_connected_ft_button.configure(state='enabled')                
         
     def fetch_loaded_PEB(self, childSNIn, parentSNIn, debug = False):
         PEB_SN = childSNIn
