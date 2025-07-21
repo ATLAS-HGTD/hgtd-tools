@@ -443,13 +443,19 @@ class App(customtkinter.CTk):
         self.ft_type_label_output.grid(row=2, column=1, padx=20, pady=10, sticky="nsew")
 
         #
-        # === 4th line ===
+        # === 4/5th line ===
         #
         self.combobox_ft_label = customtkinter.CTkLabel(self.ft_rel_frame, text="FTs matching selection criteria:")
-        self.combobox_ft_label.grid(row=3, column=0, padx=20, pady=10, sticky="nsew")
+        self.combobox_ft_label.grid(row=4, column=0, padx=20, pady=10, sticky="nsew")
+
+        self.ft_conn_optionmenu = customtkinter.CTkOptionMenu(self.ft_rel_frame, values=["Not yet connected FTs", "All FTs"],
+                                                                       command=self.change_ft_conn_event, width=250)
+        self.ft_conn_optionmenu.grid(row=3, column=0, padx=20, pady=10)
+        self.ft_conn_optionmenu.set("All FTs")
+        
 
         self.combobox_ft_paginationFrame = customtkinter.CTkFrame(self.ft_rel_frame)
-        self.combobox_ft_paginationFrame.grid(row=3, column=1, padx=20, pady=10, sticky="nsew")
+        self.combobox_ft_paginationFrame.grid(row=4, column=1, padx=20, pady=10, sticky="nsew")
         self.combobox_ft_paginationFrame_label = customtkinter.CTkLabel(self.combobox_ft_paginationFrame, text="0/0")
         self.combobox_ft_paginationFrame_label.grid(row=0, column=0, padx=(10,5), pady=5, sticky="nsew")
         self.combobox_ft_paginationButtonLeft = customtkinter.CTkButton(self.combobox_ft_paginationFrame,
@@ -468,13 +474,13 @@ class App(customtkinter.CTk):
         self.combobox_ft_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
 
 
-        self.inspect_ft_button = customtkinter.CTkButton(self.ft_rel_frame, text="INSPECT CHILD",
+        self.inspect_ft_button = customtkinter.CTkButton(self.ft_rel_frame, text="INSPECT FT",
             command=self.button_inspect_ft_event_click)
-        self.inspect_ft_button.grid(row=3, column=2, padx=20, pady=10)
+        self.inspect_ft_button.grid(row=4, column=2, padx=20, pady=10)
         
         self.add_ft_button = customtkinter.CTkButton(self.ft_rel_frame, text="ADD PARTS TREE",
             command=self.button_add_ft_event_click)
-        self.add_ft_button.grid(row=4, column=2, padx=20, pady=10)
+        self.add_ft_button.grid(row=5, column=2, padx=20, pady=10)
 
         # footer: info for user (e.g. Warning, Error)
         self.info_label = customtkinter.CTkLabel(self.main_frame, text=" ", font=customtkinter.CTkFont(size=16, weight="bold"))
@@ -513,6 +519,7 @@ class App(customtkinter.CTk):
         self.chi_type = None
         self.chi_conn = None
         self.chi_manu = None
+        self.ft_conn = None
 
         self.user = 'None'
         self.users = ['None', 'new...']
@@ -943,6 +950,7 @@ class App(customtkinter.CTk):
         self.ft_filter = ''
 
         combined_slot = f'V{v}:L{l}:Q{q}:R{r}:M{m}'
+        self.this_SLOT_relations_FT = []
 
         for s in self.slots:
             if s['part_serial_number'] == combined_slot:
@@ -956,7 +964,7 @@ class App(customtkinter.CTk):
                     self.ft_gen_label_output.configure(text='20WFTCM1F/20WFTSM1F/20WFTGM1F (future cat 01--62)')
                     self.ft_filter = f'20WFTCM1F/20WFTSM1F/20WFTGM1F+{s['FT_length_category']}'
                 self.ft_type_label_output.configure(text=f'{s['FT_length_category']} ({s['FT_Length_mm']} mm)')
-
+                
                 # find all FTs that match this generation/category
                 self.loading_wheel = threading.Thread(target=self.fetch_ft)
                 self.loading_wheel.start()
@@ -1016,6 +1024,8 @@ class App(customtkinter.CTk):
         self.combobox_chi_type.set("- Select -")
         self.chi_conn = None
         self.child_conn_optionmenu.set("All children")
+        self.ft_conn = None
+        self.ft_conn_optionmenu.set("All children")
         self.chi_manu = None
         self.combobox_child_manu.set("All manufacturers")
 
@@ -1272,6 +1282,14 @@ class App(customtkinter.CTk):
     def change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
 
+    def change_ft_conn_event(self, ft_conn):
+        self.ft_conn = self.ft_conn_optionmenu.get()
+        self.combobox_ft.set("- Select -")
+
+        self.loading_wheel = threading.Thread(target=self.fetch_ft)
+        self.loading_wheel.start()
+        self.update_progressbar(self.loading_wheel)
+            
     def change_child_conn_event(self, child_conn):
         self.chi_conn = self.child_conn_optionmenu.get()
         self.combobox_child.set("- Select -")
@@ -1349,7 +1367,11 @@ class App(customtkinter.CTk):
 
     def combobox_ft_event_select(self, unused_var_to_please_python):
         self.this_FT_relations_SLOT = []
-        self.this_SLOT_relations_FT = []
+        ftSNIn = self.combobox_ft.get()
+        if ftSNIn != '- Select -':
+            self.loading_wheel = threading.Thread(target=self.fetch_loaded_FT, args=(ftSNIn,))
+            self.loading_wheel.start()
+            self.update_progressbar(self.loading_wheel)
 
     def combobox_p_c_event_select(self, unused_var_to_please_python):
         self.displayedDUtype = "None"
@@ -1428,10 +1450,7 @@ class App(customtkinter.CTk):
                     attribute_SU_r = entry['position'].split('R').pop().split('M')[0]
                     attribute_SU_m = entry['position'].split('M').pop()
                     for sl in self.slots:
-                        # ToDo: replace the ['part_serial_number'][1] with ['Vessel'] in the (a bit far?) future
-                        # (requires re-upload of good slot table, only comes after fixing flex tail lengths
-                        # -> this should include replacement of Vessel C/A to 1/2 for attributes!!!
-                        if (sl['part_serial_number'][1] == V \
+                        if (sl['Vessel'] == V \
                             and sl['Layer'] == L \
                             and sl['Quadrant'] == Q \
                             and sl['SU_type'] == self.displayedDUtype \
@@ -1582,6 +1601,45 @@ class App(customtkinter.CTk):
             print(f'>>> {info_text}')
             self.info_label.configure(text=info_text)
 
+    def fetch_loaded_FT(self, ftSNIn, debug = False):
+        FT_partID = self.possible_ft_partIDs[self.possible_ft_SNs.index(ftSNIn)]
+        if debug:
+            print(ftSNIn)
+            print(FT_partID)
+            print(self.possible_ft)
+        self.info_label.configure(text=' ')
+        info_text = ' '
+        self.info_label.configure(text=info_text)
+        try:
+            ft_par, self.last_responseText = util.get_parents(FT_partID, ofKind = 'Slot')
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+            ft_par = []
+            self.last_responseText = str(e)
+        except ValueError as e:
+            ft_par = []
+            self.last_responseText = str(e)
+
+        if self.last_responseText[:3] != '200':
+            self.api_status = 0
+            self.progressbar.configure(progress_color="#ff0000")
+            info_text = wrapped_text.fill(f'Error: FT relations could not be loaded from ProdDB API.\n{self.last_responseText}')
+            print(f'>>> {info_text}')
+            self.info_label.configure(text=info_text)
+            self.this_FT_relations_SLOT = []
+        else:
+            self.api_status = 1
+            self.progressbar.configure(progress_color="#007711")
+
+            if ft_par != []:
+                # this FT is already connected to some slot!!
+                for r in ft_par:
+                    if debug:
+                        print(r)
+                    info_text = f'Info: This FT is already connected to a slot: {r['part_parent']['serial_number']}.'
+                    print(f'>>> {info_text}')
+                    self.info_label.configure(text=info_text)
+                    self.this_FT_relations_SLOT.append(r)
+        
     def fetch_loaded_PEB(self, childSNIn, parentSNIn, debug = False):
         PEB_SN = childSNIn
         PEB_partID = self.possible_children_partIDs[self.possible_children_SNs.index(PEB_SN)]
@@ -1633,15 +1691,12 @@ class App(customtkinter.CTk):
 
     def fetch_ft(self):
         try:
-            #self.possible_parents, self.last_responseText = util.get_relevant_parts(p)
             self.fetch_slots()
             self.possible_ft, self.last_responseText = util.get_relevant_parts('FT')
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-            #self.possible_parents = []
             self.possible_ft = []
             self.last_responseText = str(e)
         except ValueError as e:
-            #self.possible_parents = []
             self.possible_ft = []
             self.last_responseText = str(e)
 
@@ -1660,6 +1715,11 @@ class App(customtkinter.CTk):
                 cat = self.ft_filter[-2:] # the last two chars make the category
 
                 self.possible_ft = [pft for pft in self.possible_ft if any(gen_ in pft['serial_number'] for gen_ in gen) and int(pft['serial_number'][9:11]) == int(cat)]
+
+            # do the most expensive part last (when easy filters on existing data have already been applied)
+            # expensive meaning need to make calls to the API for each part in the list that survived the previous cuts
+            if self.ft_conn != None and self.ft_conn != 'All children':
+                self.possible_ft = [pp for pp in self.possible_ft if (len(util.get_parents(pp['part_id'], ofKind = 'Slot')[0])) == 0]
 
             self.possible_ft_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_ft)
             self.possible_ft_SNs = [entry[0] for entry in self.possible_ft_SNs_and_partIDs]

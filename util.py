@@ -135,14 +135,15 @@ def get_relevant_parts(partKoP_shortname, onlyNonDeleted = True, getFullAttribut
     except ValueError as e:
         raise e
 
-def get_parents(chi_partID, onlyNonDeleted = True):
+def get_parents(chi_partID, onlyNonDeleted = True, ofKind = 'all'):
     try:
         partstree, responseText = api.fetch_information(f'/parentslist/{chi_partID}/')
         if onlyNonDeleted:
             interesting_partstree = []
             for p in partstree:
                 if p['is_record_deleted'] == 'F':
-                    interesting_partstree.append(p)
+                    if ofKind == 'all' or str(data.KoPID_from_partKoPName[ofKind]) == str(p['part_parent']['kind_of_part']['kind_of_part_id']):
+                        interesting_partstree.append(p)
             return interesting_partstree, responseText
         else:
             return partstree, responseText
@@ -152,14 +153,15 @@ def get_parents(chi_partID, onlyNonDeleted = True):
         raise e
 
 # this is quicker (a bit) because it only reads the children of the given parent
-def get_children(par_partID, onlyNonDeleted = True):
+def get_children(par_partID, onlyNonDeleted = True, ofKind = 'all'):
     try:
         partstree, responseText = api.fetch_information(f'/childslist/{par_partID}/')
         if onlyNonDeleted:
             interesting_partstree = []
             for p in partstree:
                 if p['is_record_deleted'] == 'F':
-                    interesting_partstree.append(p)
+                    if ofKind == 'all' or str(data.KoPID_from_partKoPName[ofKind]) == str(p['part']['kind_of_part']['kind_of_part_id']):
+                        interesting_partstree.append(p)
             return interesting_partstree, responseText
         else:
             return partstree, responseText
