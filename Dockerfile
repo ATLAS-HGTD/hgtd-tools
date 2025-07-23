@@ -1,0 +1,23 @@
+FROM ubuntu:20.04 as builder
+
+FROM python:3.12
+
+# Set the working directory for the container
+WORKDIR /home/docker
+COPY . .
+
+# Install PIL and tk dependencies
+RUN apt-get update && apt-get install -y \
+    libxrender-dev libx11-6 libxext-dev libxinerama-dev libxi-dev libxrandr-dev libxcursor-dev libxtst-dev tk-dev \
+    python3-pil python3-tk python3-pil.imagetk libxft2 && rm -rf /var/lib/apt/lists/*
+
+## Install the python dependencies
+RUN pip install --upgrade pip; \
+    pip3 install -r requirements.txt
+
+# Demonstrate the environment is activated:
+RUN echo "Make sure packages are installed:"
+RUN python -c "import numpy"
+RUN python -c "import customtkinter"
+
+CMD ["python", "main.py"]

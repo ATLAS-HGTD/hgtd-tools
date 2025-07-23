@@ -7,7 +7,7 @@
 
 <div align="center">
 
-![Static Badge](https://img.shields.io/badge/python-3.12-blue) ![Static Badge](https://img.shields.io/badge/hgtd--tools-1.3.0-blue) <br>
+![Static Badge](https://img.shields.io/badge/python-3.12-blue) ![Static Badge](https://img.shields.io/badge/hgtd--tools-1.4.0-blue) <br>
 
 ![Static Badge](https://img.shields.io/badge/tested_on-Linux_|_MacOS_|_Windows-green)
 </div>
@@ -26,7 +26,9 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
   - buttons to inspect affected parts
 - Modes
   - Module Loading (DU -> MODULE)
-  - Detector Assembly (CERN) (DETECTOR -> DU & SLOT -> MODULE)
+  - Detector Assembly (CERN): DU (DETECTOR -> DU & multiple SLOT -> MODULE)
+  - Detector Assembly (CERN): PEB (DETECTOR -> PEB)
+  - Detector Assembly (CERN): FT (SLOT -> FT; includes global to local coordinate conversion via Slot table)
 - Logic
   - new relations can overwrite old ones, if user agrees to do so (implementing replacement of existing relations)
   - user can not load / assemble parts that are not allowed to take that spot (implementing constraints for already used positions, and parts not matching the target position by type)
@@ -123,6 +125,17 @@ POST: sends a payload (dictionary as json)
 DELETE: without payload, remove some record
 
 Those three variants are implemented as `api.fetch_information`, `api.post_information`, `api.delete_information` handling the endpoint, headers etc. for you so you don't have to worry about anything besides the actual information received, posted or deleted.
+
+## Developer corner: dockerization
+A deployment of this app to CERN OKD using docker is in preparation. The `docker.sh` can be executed (tested on Mac with Docker already installed and running in the background, and executing the command `bash docker.sh` in XQuartz) to build and run a container that contains all the required packages and starts up the `main.py`. There is another variant, `docker-linux.sh` which has not been tested so far but should work according to the [source](https://gist.github.com/Moosems/138cfea6fc4e1967e4eae52bd96618ff). A first version of the `Dockerfile` uses `ubuntu:20.04`, python 3.12 and packages are installed via pip.
+
+Further, to upload the image somewhere:
+
+`docker login gitlab-registry.cern.ch`
+
+`docker build -t gitlab-registry.cern.ch/anstein/hgtd-tools .`
+
+`docker push gitlab-registry.cern.ch/anstein/hgtd-tools`
 
 ## Acknowledgements
 Thanks to an unknown reddit user who gave me hope when the PyQt6 installation wouldn't want to work with my setup / machine. This [link](https://www.reddit.com/r/Tkinter/comments/snrb1f/comment/hw4bylf/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button) brought me to [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) and the GUI is built on top of the tutorial.
