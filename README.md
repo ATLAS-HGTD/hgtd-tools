@@ -115,7 +115,8 @@ HGTD Tools asks the user for confirmation, if a VesselLayerQuadrant combination 
 
 ![](docs/showcase_v1p2p0_detector_assembly_occupiedVLQ.png)
 
-## Reusing the included API module
+## Developer corner
+### Reusing the included API module
 The `api.py` module can be used standalone as well to make API requests to the HGTD Production Database. Note that the included functions also return the response `status_code` and `reason` and handle a variety of possible errors.
 
 The basic types of requests are:
@@ -126,16 +127,30 @@ DELETE: without payload, remove some record
 
 Those three variants are implemented as `api.fetch_information`, `api.post_information`, `api.delete_information` handling the endpoint, headers etc. for you so you don't have to worry about anything besides the actual information received, posted or deleted.
 
-## Developer corner: dockerization
+### Dockerization
 A deployment of this app to CERN OKD using docker is in preparation. The `docker.sh` can be executed (tested on Mac with Docker already installed and running in the background, and executing the command `bash docker.sh` in XQuartz) to build and run a container that contains all the required packages and starts up the `main.py`. There is another variant, `docker-linux.sh` which has not been tested so far but should work according to the [source](https://gist.github.com/Moosems/138cfea6fc4e1967e4eae52bd96618ff). A first version of the `Dockerfile` uses `ubuntu:20.04`, python 3.12 and packages are installed via pip.
 
-Further, to upload the image somewhere:
+Further, to upload the image somewhere (you need a PAT from gitlab to perform this action, use it as password):
 
-`docker login gitlab-registry.cern.ch`
+```
+docker login gitlab-registry.cern.ch
 
-`docker build -t gitlab-registry.cern.ch/anstein/hgtd-tools .`
+docker build -t gitlab-registry.cern.ch/anstein/hgtd-tools .
 
-`docker push gitlab-registry.cern.ch/anstein/hgtd-tools`
+docker push gitlab-registry.cern.ch/anstein/hgtd-tools
+```
+
+Alternative push to harbor (see instructions https://atlassoftwaredocs.web.cern.ch/analysis-software/ASWTutorial/softwareEssentials/building_containers/). The secret token can be found from top right click user profile and serves as the password when loggin in.
+
+```
+docker login registry.cern.ch
+
+docker tag gitlab-registry.cern.ch/anstein/hgtd-tools registry.cern.ch/hgtd/hgtd-tools:latest
+docker tag gitlab-registry.cern.ch/anstein/hgtd-tools registry.cern.ch/hgtd/hgtd-tools:1.4.0
+
+docker push registry.cern.ch/hgtd/hgtd-tools:latest
+docker push registry.cern.ch/hgtd/hgtd-tools:1.4.0
+```
 
 ## Acknowledgements
 Thanks to an unknown reddit user who gave me hope when the PyQt6 installation wouldn't want to work with my setup / machine. This [link](https://www.reddit.com/r/Tkinter/comments/snrb1f/comment/hw4bylf/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button) brought me to [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) and the GUI is built on top of the tutorial.

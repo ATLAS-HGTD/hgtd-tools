@@ -381,7 +381,7 @@ class App(customtkinter.CTk):
         self.slot_sel_frame.grid_columnconfigure((0,1,2,3,4), weight=1)
         self.slot_sel_frame.grid_rowconfigure((0,1,2), weight=1)
 
-        self.slot_vessel_optionmenu = customtkinter.CTkOptionMenu(self.slot_sel_frame, values=["Vessel: 1", "Vessel: 2", "Vessel: D"],
+        self.slot_vessel_optionmenu = customtkinter.CTkOptionMenu(self.slot_sel_frame, values=["Vessel: 1", "Vessel: 2", "Vessel: M", "Vessel: D"],
                                                                        command=self.change_child_conn_event, width=200)
         self.slot_vessel_optionmenu.grid(row=0, column=0, padx=5, pady=10)
         self.slot_vessel_optionmenu.set("Vessel: 1")

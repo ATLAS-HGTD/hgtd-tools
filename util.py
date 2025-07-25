@@ -125,9 +125,9 @@ def get_relevant_parts(partKoP_shortname, onlyNonDeleted = True, getFullAttribut
 
             # the following two files result from manually downloading, exporting and converting them
             # this was done because the API endpoint above results in OOMKilled errors!
-            with open('./local/Slot_Table_fullJune2025_demo54mod.json') as allSlotsJson:
+            with open('./local/Slot_Table_fullJune2025_demoV1V2_module0.json') as allSlotsJson:
                 these_parts, responseText = json.load(allSlotsJson), '200: Local File'
-            with open('./local/Slot_fullJune2025_demo54mod.json') as slotsJson:
+            with open('./local/Slot_fullJune2025_demoV1V2_module0.json') as slotsJson:
                 slots, responseText = json.load(slotsJson), '200: Local File'
                 
             for alSl in these_parts:
