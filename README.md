@@ -146,10 +146,10 @@ Alternative push to harbor (see instructions https://atlassoftwaredocs.web.cern.
 docker login registry.cern.ch
 
 docker tag gitlab-registry.cern.ch/anstein/hgtd-tools registry.cern.ch/hgtd/hgtd-tools:latest
-docker tag gitlab-registry.cern.ch/anstein/hgtd-tools registry.cern.ch/hgtd/hgtd-tools:1.4.0
+docker tag gitlab-registry.cern.ch/anstein/hgtd-tools registry.cern.ch/hgtd/hgtd-tools:1.4.2
 
 docker push registry.cern.ch/hgtd/hgtd-tools:latest
-docker push registry.cern.ch/hgtd/hgtd-tools:1.4.0
+docker push registry.cern.ch/hgtd/hgtd-tools:1.4.2
 ```
 
 ## Acknowledgements
