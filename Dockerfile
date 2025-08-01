@@ -1,6 +1,3 @@
-#FROM ubuntu:20.04 as build
-#FROM gitlab-registry.cern.ch/linuxsupport/alma9-base as build
-
 FROM python:3.12
 
 # Set the working directory for the container

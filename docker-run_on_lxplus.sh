@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# Build the image
-#docker build -t hgtd_container .
+# Run a docker container from the registry on lxplus
 
 # Get IP address of the host
 IP=$(hostname -I | awk '{print $1}')
