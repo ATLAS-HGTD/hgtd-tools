@@ -736,6 +736,12 @@ class App(customtkinter.CTk):
                 self.api_status = 1
                 self.progressbar.configure(progress_color="#007711")
 
+                self.combobox_ft.set("- Select -")
+                self.this_FT_relations_SLOT = []
+                self.loading_wheel = threading.Thread(target=self.fetch_ft)
+                self.loading_wheel.start()
+                self.update_progressbar(self.loading_wheel)
+
     def button_add_event_click(self, debug = False):
         chi = self.combobox_child.get()
         par = self.combobox_parent.get()
@@ -1170,7 +1176,7 @@ class App(customtkinter.CTk):
         self.chi_conn = None
         self.child_conn_optionmenu.set("All children")
         self.ft_conn = None
-        self.ft_conn_optionmenu.set("All children")
+        self.ft_conn_optionmenu.set("All FTs")
         self.chi_manu = None
         self.combobox_child_manu.set("All manufacturers")
 
@@ -1863,9 +1869,8 @@ class App(customtkinter.CTk):
 
             # do the most expensive part last (when easy filters on existing data have already been applied)
             # expensive meaning need to make calls to the API for each part in the list that survived the previous cuts
-            if self.ft_conn != None and self.ft_conn != 'All children':
+            if self.ft_conn != None and self.ft_conn != 'All FTs':
                 self.possible_ft = [pp for pp in self.possible_ft if (len(util.get_parents(pp['part_id'], ofKind = 'Slot')[0])) == 0]
-
             self.possible_ft_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_ft)
             self.possible_ft_SNs = [entry[0] for entry in self.possible_ft_SNs_and_partIDs]
             self.possible_ft_SNs_chunked = [self.possible_ft_SNs[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_ft_SNs), self.n_items_to_show_in_cbx)]
