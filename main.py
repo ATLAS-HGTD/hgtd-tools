@@ -376,7 +376,13 @@ class App(customtkinter.CTk):
 
         self.ma_frame = customtkinter.CTkFrame(self.main_frame, width = 600)
         self.ma_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew", rowspan=2, columnspan=2)
-        
+
+
+
+        self.module_image = customtkinter.CTkImage(Image.open('Module.png'), size=(1920/3,1080/3))
+        self.module_image_in_label = customtkinter.CTkLabel(self.ma_frame, text="", image=self.module_image)
+        self.module_image_in_label.grid(row=1, column=2, padx=10, pady=10, sticky="nsew")
+
         # ******************************************
         #
         # === Slot global/local for FT selection ===
