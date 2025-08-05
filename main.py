@@ -116,26 +116,30 @@ class App(customtkinter.CTk):
         self.operation_mode_frame = customtkinter.CTkFrame(self.sidebar_frame_left)
         self.operation_mode_frame.grid(row=4, column=0, padx=5, pady=(20,5), sticky="nsew", columnspan=2)
         self.operation_mode_frame.grid_columnconfigure((0,1), weight=1)
-        self.operation_mode = 'Module Loading'
+        self.operation_mode = 'Module Assembly'
 
         self.operation_mode_label = customtkinter.CTkLabel(self.operation_mode_frame, text="Operation Mode", font=customtkinter.CTkFont(size=16, weight="bold"))
         self.operation_mode_label.grid(row=0, column=0, padx=20, pady=10, columnspan=2)
 
+        self.operation_mode_MA_button = customtkinter.CTkButton(self.operation_mode_frame, text="Module Assembly",
+            command=lambda: self.button_mode_event_click('Module Assembly'), fg_color="#339941", hover_color="#228831")
+        self.operation_mode_MA_button.grid(row=1, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
+
         self.operation_mode_ML_button = customtkinter.CTkButton(self.operation_mode_frame, text="Module Loading",
-            command=lambda: self.button_mode_event_click('Module Loading'), fg_color="#339941", hover_color="#228831")
-        self.operation_mode_ML_button.grid(row=1, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
+            command=lambda: self.button_mode_event_click('Module Loading'), fg_color="#555555", hover_color="#444444")
+        self.operation_mode_ML_button.grid(row=2, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
 
         self.operation_mode_DA_DU_button = customtkinter.CTkButton(self.operation_mode_frame, text="Detector Assembly (CERN): DU",
             command=lambda: self.button_mode_event_click('Detector Assembly (CERN): DU'), fg_color="#555555", hover_color="#444444")
-        self.operation_mode_DA_DU_button.grid(row=2, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
+        self.operation_mode_DA_DU_button.grid(row=3, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
 
         self.operation_mode_DA_PEB_button = customtkinter.CTkButton(self.operation_mode_frame, text="Detector Assembly (CERN): PEB",
             command=lambda: self.button_mode_event_click('Detector Assembly (CERN): PEB'), fg_color="#555555", hover_color="#444444")
-        self.operation_mode_DA_PEB_button.grid(row=3, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
+        self.operation_mode_DA_PEB_button.grid(row=4, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
 
         self.operation_mode_DA_FT_button = customtkinter.CTkButton(self.operation_mode_frame, text="Detector Assembly (CERN): FT",
             command=lambda: self.button_mode_event_click('Detector Assembly (CERN): FT'), fg_color="#555555", hover_color="#444444")
-        self.operation_mode_DA_FT_button.grid(row=4, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
+        self.operation_mode_DA_FT_button.grid(row=5, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
 
         # buttons to go to external useful pages
         self.useful_links_frame = customtkinter.CTkFrame(self.sidebar_frame_left)
@@ -197,6 +201,7 @@ class App(customtkinter.CTk):
         self.combobox_frame = customtkinter.CTkFrame(self.main_frame, width = 600)
         self.combobox_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew", rowspan=2)
         self.combobox_frame.grid_columnconfigure((0,1), weight=1)
+        self.combobox_frame.grid_remove() # The initial frame shown will now be Module Assembly
 
         # parent
         self.parent_frame = customtkinter.CTkFrame(self.combobox_frame)
@@ -363,6 +368,15 @@ class App(customtkinter.CTk):
         self.canvas.bind('<Button-1>', self.canvas_event_click)
         self.displayedDUtype = "None"
 
+        # *******************************************
+        #
+        # === Module Assembly with MF, Hybrid L/R ===
+        #
+        # *******************************************
+
+        self.ma_frame = customtkinter.CTkFrame(self.main_frame, width = 600)
+        self.ma_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew", rowspan=2, columnspan=2)
+        
         # ******************************************
         #
         # === Slot global/local for FT selection ===
@@ -1183,12 +1197,28 @@ class App(customtkinter.CTk):
         self.progressbar.set(0)
         self.info_label.configure(text=' ')
         self.canvas.delete("all")
-        if self.operation_mode  == "Module Loading":
+        if self.operation_mode == "Module Assembly":
+            self.operation_mode_MA_button.configure(fg_color="#339941", hover_color="#228831")
+            self.operation_mode_ML_button.configure(fg_color="#555555", hover_color="#444444")
+            self.operation_mode_DA_DU_button.configure(fg_color="#555555", hover_color="#444444")
+            self.operation_mode_DA_PEB_button.configure(fg_color="#555555", hover_color="#444444")
+            self.operation_mode_DA_FT_button.configure(fg_color="#555555", hover_color="#444444")
+            
+            self.ma_frame.grid()
+            self.combobox_frame.grid_remove()
+            self.canvas_label.grid_remove()
+            self.canvas.grid_remove()
+            self.info_label.grid()
+            self.ft_rel_frame.grid_remove()
+            
+        elif self.operation_mode  == "Module Loading":
+            self.operation_mode_MA_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_ML_button.configure(fg_color="#339941", hover_color="#228831")
             self.operation_mode_DA_DU_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_DA_PEB_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_DA_FT_button.configure(fg_color="#555555", hover_color="#444444")
 
+            self.ma_frame.grid_remove()
             self.combobox_frame.grid()
             self.canvas_label.grid()
             self.canvas.grid()
@@ -1216,11 +1246,13 @@ class App(customtkinter.CTk):
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
         elif self.operation_mode  == "Detector Assembly (CERN): DU":
+            self.operation_mode_MA_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_ML_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_DA_DU_button.configure(fg_color="#339941", hover_color="#228831")
             self.operation_mode_DA_PEB_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_DA_FT_button.configure(fg_color="#555555", hover_color="#444444")
 
+            self.ma_frame.grid_remove()
             self.combobox_frame.grid()
             self.canvas_label.grid()
             self.canvas.grid()
@@ -1255,11 +1287,13 @@ class App(customtkinter.CTk):
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
         elif self.operation_mode  == "Detector Assembly (CERN): PEB":
+            self.operation_mode_MA_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_ML_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_DA_DU_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_DA_PEB_button.configure(fg_color="#339941", hover_color="#228831")
             self.operation_mode_DA_FT_button.configure(fg_color="#555555", hover_color="#444444")
 
+            self.ma_frame.grid_remove()
             self.combobox_frame.grid()
             self.canvas_label.grid_remove()
             self.canvas.grid_remove()
@@ -1294,11 +1328,13 @@ class App(customtkinter.CTk):
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
         elif self.operation_mode  == "Detector Assembly (CERN): FT":
+            self.operation_mode_MA_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_ML_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_DA_DU_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_DA_PEB_button.configure(fg_color="#555555", hover_color="#444444")
             self.operation_mode_DA_FT_button.configure(fg_color="#339941", hover_color="#228831")
 
+            self.ma_frame.grid_remove()
             self.combobox_frame.grid_remove()
             self.canvas_label.grid_remove()
             self.canvas.grid_remove()
@@ -1767,6 +1803,7 @@ class App(customtkinter.CTk):
             self.last_responseText = str(e)
         except ValueError as e:
             ft_par = []
+            
             self.last_responseText = str(e)
 
         if self.last_responseText[:3] != '200':
