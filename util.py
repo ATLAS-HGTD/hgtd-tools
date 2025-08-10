@@ -48,7 +48,7 @@ def open_webbrowser_with_url(url, debug = False, noExtraPrefix = False):
             print(f'>>> Opening {api.frontendUrlPrefix + url} in webbrowser...')
         webbrowser.open_new_tab(api.frontendUrlPrefix + url)
 
-def delete_children(par_partID, onlyNonDeleted = True, ofKind = 'all'):
+def delete_children(par_partID, onlyNonDeleted = True, ofKind = 'all', dryrun = False):
     try:
         partstree, responseText = api.fetch_information(f'/childrenlist/{par_partID}/')
         if onlyNonDeleted:
@@ -61,14 +61,14 @@ def delete_children(par_partID, onlyNonDeleted = True, ofKind = 'all'):
             interesting_partstree = partstree
             del partstree
         for ip in interesting_partstree:
-            responseText = api.delete_information(f'/partstreedelete/{ip['record_id']}/', dryrun = False)
+            responseText = api.delete_information(f'/partstreedelete/{ip['record_id']}/', dryrun = dryrun)
         return responseText
     except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
         raise e
     except ValueError as e:
         raise e
 
-def delete_parents(chi_partID, onlyNonDeleted = True, ofKind = 'all'):
+def delete_parents(chi_partID, onlyNonDeleted = True, ofKind = 'all', dryrun = False):
     try:
         partstree, responseText = api.fetch_information(f'/parentslist/{chi_partID}/')
         if onlyNonDeleted:
@@ -81,7 +81,7 @@ def delete_parents(chi_partID, onlyNonDeleted = True, ofKind = 'all'):
             interesting_partstree = partstree
             del partstree
         for ip in interesting_partstree:
-            responseText = api.delete_information(f'/partstreedelete/{ip['record_id']}/', dryrun = False)
+            responseText = api.delete_information(f'/partstreedelete/{ip['record_id']}/', dryrun = dryrun)
         return responseText
     except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
         raise e

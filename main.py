@@ -189,15 +189,22 @@ class App(customtkinter.CTk):
                                                                        command=self.change_appearance_mode_event, width=60)
         self.optionmenu_appearance_mode.grid(row=8, column=1, padx=5, pady=10)
         self.optionmenu_appearance_mode.set("System")
+        
+        self.label_scaling = customtkinter.CTkLabel(self.frame_sidebar_left, text="UI Scaling:", anchor="e")
+        self.label_scaling.grid(row=9, column=0, padx=5, pady=10)
+        self.optionmenu_scaling = customtkinter.CTkOptionMenu(self.frame_sidebar_left, values=["80%", "90%", "100%", "110%", "120%"],
+                                                               command=self.change_scaling_event, width=60)
+        self.optionmenu_scaling.grid(row=9, column=1, padx=5, pady=10)
+        self.optionmenu_scaling.set("100%")
 
         self.help_image = customtkinter.CTkImage(Image.open("circle-question.png"), size=(20,20))
         self.btnHelp = customtkinter.CTkButton(self.frame_sidebar_left, image=self.help_image, text="Help", compound='left', fg_color="#339941", hover_color="#228831", command=self.help, width=60)
-        self.btnHelp.grid(row=9, column=0, pady=10, padx=5, columnspan=2)
+        self.btnHelp.grid(row=10, column=0, pady=10, padx=5, columnspan=2)
         self.help_window = None
 
         self.exit_image = customtkinter.CTkImage(Image.open("right-from-bracket-solid.png"), size=(20,20))
         self.btnLogout = customtkinter.CTkButton(self.frame_sidebar_left, image=self.exit_image, text="Close", compound='left', fg_color="#cf352e", hover_color="#B02B25", command=self.exit, width=60)
-        self.btnLogout.grid(row=10, column=0, pady=20, padx=5, columnspan=2)
+        self.btnLogout.grid(row=11, column=0, pady=20, padx=5, columnspan=2)
 
         # work in main widget (column w.r.t. root >= 1)
 
@@ -2043,6 +2050,11 @@ class App(customtkinter.CTk):
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
+
+    def change_scaling_event(self, new_scaling: str):
+        new_scaling_float = int(new_scaling.replace("%", "")) / 100
+        customtkinter.set_widget_scaling(new_scaling_float)
+        self.button_mode_event_click(self.operation_mode)
 
     def change_ft_conn_event(self, ft_conn):
         self.ft_conn = self.optionmenu_ft_conn.get()
