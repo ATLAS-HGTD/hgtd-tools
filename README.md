@@ -64,9 +64,32 @@ Windows:
 
 If you don't like conda (☹️ how? 🤨) or you want to minimize the packages to be installed, make sure to run the tools with a recent python3 environment containing `customtkinter`, `requests`, which can be installed with `pip`. Other used packages of hgtd-tools are already part of the regular python3 lib. Only the provided yml files are tested to stay compatible though.
 
+### Updating your local hgtd-tools if this is not your first time installing:
+
+Make sure you get the most recent version, including new features and bugfixes.
+
+If you opted to get hgtd-tools via `git clone` of the repository, you can go ahead by grabbing the changes from here with commands like the following:
+```
+git switch master
+git fetch origin
+git pull origin master
+```
+
+If you only downloaded a certain version without any git commands, simply download the [latest version](https://gitlab.cern.ch/anstein/hgtd-tools/-/releases) that replaces your local version.
+
+Note: if you had already cloned and installed all dependencies for hgtd-tools and now want to update your conda-environment, you can do
+```
+conda env update --file env-312.yml  --prune
+```
+or
+```
+conda env update --file env-312-minimalLinux.yml  --prune
+```
+depending on your system.
+
 ## Usage
 
-To open the main window with GUI, execute the following (using either Anaconda Prompt or your preferred shell with which you installed miniconda):
+To open the main window with GUI, execute the following from the hgtd-tools directory (using either Anaconda Prompt or your preferred shell with which you installed miniconda):
 
 ```shell
 conda activate hgtd
