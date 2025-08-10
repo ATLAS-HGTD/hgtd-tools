@@ -48,14 +48,35 @@ def open_webbrowser_with_url(url, debug = False, noExtraPrefix = False):
             print(f'>>> Opening {api.frontendUrlPrefix + url} in webbrowser...')
         webbrowser.open_new_tab(api.frontendUrlPrefix + url)
 
-def delete_parents(chi_partID, onlyNonDeleted = True):
+def delete_children(par_partID, onlyNonDeleted = True, ofKind = 'all'):
+    try:
+        partstree, responseText = api.fetch_information(f'/childrenlist/{par_partID}/')
+        if onlyNonDeleted:
+            interesting_partstree = []
+            for p in partstree:
+                if p['is_record_deleted'] == 'F':
+                    if ofKind == 'all' or str(data.KoPID_from_partKoPName[ofKind]) == str(p['part_parent']['kind_of_part']['kind_of_part_id']):
+                        interesting_partstree.append(p)
+        else:
+            interesting_partstree = partstree
+            del partstree
+        for ip in interesting_partstree:
+            responseText = api.delete_information(f'/partstreedelete/{ip['record_id']}/')
+        return responseText
+    except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+        raise e
+    except ValueError as e:
+        raise e
+
+def delete_parents(chi_partID, onlyNonDeleted = True, ofKind = 'all'):
     try:
         partstree, responseText = api.fetch_information(f'/parentslist/{chi_partID}/')
         if onlyNonDeleted:
             interesting_partstree = []
             for p in partstree:
                 if p['is_record_deleted'] == 'F':
-                    interesting_partstree.append(p)
+                    if ofKind == 'all' or str(data.KoPID_from_partKoPName[ofKind]) == str(p['part_parent']['kind_of_part']['kind_of_part_id']):
+                        interesting_partstree.append(p)
         else:
             interesting_partstree = partstree
             del partstree

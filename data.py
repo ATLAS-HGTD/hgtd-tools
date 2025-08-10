@@ -4,7 +4,9 @@ KoPID_from_partKoPName = {
     'Module' : 1005,
     'Slot' : 2412,
     'PEB' : 2410,
-    'FT' : 2409
+    'Flex Tail' : 2409,
+    'Hybrid' : 1003,
+    'Module Flex' : 1004
 }
 
 # hardcoded part ids for testing parts (HGTD Database test)
