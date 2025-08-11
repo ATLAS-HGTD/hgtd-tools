@@ -7,7 +7,7 @@
 
 <div align="center">
 
-![Static Badge](https://img.shields.io/badge/python-3.12-blue) ![Static Badge](https://img.shields.io/badge/hgtd--tools-1.4.0-blue) <br>
+![Static Badge](https://img.shields.io/badge/python-3.12-blue) ![Static Badge](https://img.shields.io/badge/hgtd--tools-1.5.0-blue) <br>
 
 ![Static Badge](https://img.shields.io/badge/tested_on-Linux_|_MacOS_|_Windows-green)
 </div>
@@ -25,12 +25,14 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
   - clickable canvas to get local coordinates easily, conversion to global coordinates done internally where needed
   - buttons to inspect affected parts
 - Modes
+  - Module Assembly (MODULE -> MODULE FLEX, MODULE -> HYBRIDs on HV-side / LV-side)
   - Module Loading (DU -> MODULE)
   - Detector Assembly (CERN): DU (DETECTOR -> DU & multiple SLOT -> MODULE)
   - Detector Assembly (CERN): PEB (DETECTOR -> PEB)
   - Detector Assembly (CERN): FT (SLOT -> FT; includes global to local coordinate conversion via Slot table)
 - Logic
   - new relations can overwrite old ones, if user agrees to do so (implementing replacement of existing relations)
+    - for Module Assembly, the above also takes care of two hybrids being allowed per module, separating the side
   - user can not load / assemble parts that are not allowed to take that spot (implementing constraints for already used positions, and parts not matching the target position by type)
   - if operation requires subsequent operations (e.g. connecting modules to slots when placing a DU on the detector), perform those subsequent operations in one go
   - query selection before choosing parent / child from full list (e.g. DU type, module manufacturer, child not yet connected or all possible children)

@@ -103,7 +103,7 @@ class App(customtkinter.CTk):
         # fill sidebar
         self.label_logo = customtkinter.CTkLabel(self.frame_sidebar_left, text="HGTD Tools", font=customtkinter.CTkFont(size=20, weight="bold"))
         self.label_logo.grid(row=0, column=0, padx=20, pady=(20, 10), columnspan=2)
-        self.label_credits = customtkinter.CTkLabel(self.frame_sidebar_left, text="v1.5.0dev - August 2025\nAnnika Stein (JGU Mainz)")
+        self.label_credits = customtkinter.CTkLabel(self.frame_sidebar_left, text="v1.5.0 - August 2025\nAnnika Stein (JGU Mainz)")
         self.label_credits.grid(row=1, column=0, padx=20, pady=10, columnspan=2)
 
         self.label_progress = customtkinter.CTkLabel(self.frame_sidebar_left, text="API Request Status")
