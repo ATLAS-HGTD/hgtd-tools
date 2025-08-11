@@ -1,6 +1,9 @@
 # Which registry to push to. First version pushes to gitlab-registry, the second one to harbor
 #export reg="gitlab-"
 export reg=""
+# Similar to the above, gitlab has anstein as owner, while the harbor is under hgtd
+#export userproject="anstein"
+export userproject="hgtd"
 
 # Find the latest tagged software version in the git repo and only proceed if this is an actual tagged version (not just the regular master branch)
 branch=`git describe --all`
@@ -29,11 +32,10 @@ else
 
   # Build and push the image for CERN registry (harbor), push requires login
   if [ "${docker_tag_change}" = true ] ; then
-    docker buildx build --push --platform linux/amd64 -t ${reg}registry.cern.ch/hgtd/hgtd-tools:x86_64_${tools_branch} \
-    -t ${reg}registry.cern.ch/hgtd/hgtd-tools:latest .
+    docker buildx build --push --platform linux/amd64 -t ${reg}registry.cern.ch/${userproject}/hgtd-tools:x86_64_${tools_branch} \
+    -t ${reg}registry.cern.ch/${userproject}/hgtd-tools:latest .
     if [ $? -eq 0 ]; then
       echo "${tools_branch}" > docker_tag.txt
     fi
   fi
 fi
-
