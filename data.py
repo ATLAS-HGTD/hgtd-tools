@@ -176,6 +176,7 @@ allDUkeysStr = ''
 for key in allDUs.keys():
     allDUkeysStr += f"{key},";
     totalNModules += len(allDUs[key])
+allDUkeysList = list(allDUs.keys())
 
 allPEBs = ['1F', '1B', '2F', '2B', '3F', '3B']
 F_PEBs = ['1F', '1B', '2F', '2B', '3F']

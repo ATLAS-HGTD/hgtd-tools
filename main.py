@@ -61,8 +61,8 @@ class AuthenticateWindow(customtkinter.CTkToplevel):
         self.label_totp = customtkinter.CTkLabel(self.frame_entries, text="2FA 6-digit code, if configured (leave empty if you are not using 2FA yet)")
         self.label_totp.grid(row=2, column=2, padx=10, pady=10)
 
-        self.auth_button = customtkinter.CTkButton(self.frame_entries, text="Authenticate me!", command=self.auth)
-        self.auth_button.grid(row=3, column=1, padx=10, pady=10)
+        self.button_auth = customtkinter.CTkButton(self.frame_entries, text="Authenticate me!", command=self.auth)
+        self.button_auth.grid(row=3, column=1, padx=10, pady=10)
 
         self.auth_user, self.last_responseText = None, None
 
@@ -121,25 +121,25 @@ class App(customtkinter.CTk):
         self.label_operation_mode = customtkinter.CTkLabel(self.frame_operation_mode, text="Operation Mode", font=customtkinter.CTkFont(size=16, weight="bold"))
         self.label_operation_mode.grid(row=0, column=0, padx=20, pady=10, columnspan=2)
 
-        self.operation_mode_MA_button = customtkinter.CTkButton(self.frame_operation_mode, text="Module Assembly",
+        self.button_operation_mode_MA = customtkinter.CTkButton(self.frame_operation_mode, text="Module Assembly",
             command=lambda: self.button_mode_event_click('Module Assembly'), fg_color="#339941", hover_color="#228831")
-        self.operation_mode_MA_button.grid(row=1, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
+        self.button_operation_mode_MA.grid(row=1, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
 
-        self.operation_mode_ML_button = customtkinter.CTkButton(self.frame_operation_mode, text="Module Loading",
+        self.button_operation_mode_ML = customtkinter.CTkButton(self.frame_operation_mode, text="Module Loading",
             command=lambda: self.button_mode_event_click('Module Loading'), fg_color="#555555", hover_color="#444444")
-        self.operation_mode_ML_button.grid(row=2, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
+        self.button_operation_mode_ML.grid(row=2, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
 
-        self.operation_mode_DA_DU_button = customtkinter.CTkButton(self.frame_operation_mode, text="Detector Assembly (CERN): DU",
+        self.button_operation_mode_DA_DU = customtkinter.CTkButton(self.frame_operation_mode, text="Detector Assembly (CERN): DU",
             command=lambda: self.button_mode_event_click('Detector Assembly (CERN): DU'), fg_color="#555555", hover_color="#444444")
-        self.operation_mode_DA_DU_button.grid(row=3, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
+        self.button_operation_mode_DA_DU.grid(row=3, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
 
-        self.operation_mode_DA_PEB_button = customtkinter.CTkButton(self.frame_operation_mode, text="Detector Assembly (CERN): PEB",
+        self.button_operation_mode_DA_PEB = customtkinter.CTkButton(self.frame_operation_mode, text="Detector Assembly (CERN): PEB",
             command=lambda: self.button_mode_event_click('Detector Assembly (CERN): PEB'), fg_color="#555555", hover_color="#444444")
-        self.operation_mode_DA_PEB_button.grid(row=4, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
+        self.button_operation_mode_DA_PEB.grid(row=4, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
 
-        self.operation_mode_DA_FT_button = customtkinter.CTkButton(self.frame_operation_mode, text="Detector Assembly (CERN): FT",
+        self.button_operation_mode_DA_FT = customtkinter.CTkButton(self.frame_operation_mode, text="Detector Assembly (CERN): FT",
             command=lambda: self.button_mode_event_click('Detector Assembly (CERN): FT'), fg_color="#555555", hover_color="#444444")
-        self.operation_mode_DA_FT_button.grid(row=5, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
+        self.button_operation_mode_DA_FT.grid(row=5, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
 
         # buttons to go to external useful pages
         self.frame_useful_links = customtkinter.CTkFrame(self.frame_sidebar_left)
@@ -149,29 +149,29 @@ class App(customtkinter.CTk):
         self.label_useful_links = customtkinter.CTkLabel(self.frame_useful_links, text="Useful Links", font=customtkinter.CTkFont(size=16, weight="bold"))
         self.label_useful_links.grid(row=0, column=0, padx=20, pady=10, columnspan=2)
 
-        self.useful_links_Frontend_button = customtkinter.CTkButton(self.frame_useful_links, text="DB Frontend",
+        self.button_useful_links_Frontend = customtkinter.CTkButton(self.frame_useful_links, text="DB Frontend",
             command=lambda: util.open_webbrowser_with_url(api.frontendUrlPrefix, noExtraPrefix = True), fg_color="#555555", hover_color="#444444")
-        self.useful_links_Frontend_button.grid(row=1, column=0, padx=5, pady=(5,0), sticky="nsew", columnspan=2)
+        self.button_useful_links_Frontend.grid(row=1, column=0, padx=5, pady=(5,0), sticky="nsew", columnspan=2)
 
-        self.useful_links_Mockup_button = customtkinter.CTkButton(self.frame_useful_links, text="SN Decoder/Encoder",
+        self.button_useful_links_Mockup = customtkinter.CTkButton(self.frame_useful_links, text="SN Decoder/Encoder",
             command=lambda: util.open_webbrowser_with_url('https://annika-stein.web.cern.ch/module_mockup/serialnumber.html', noExtraPrefix = True), fg_color="#555555", hover_color="#444444")
-        self.useful_links_Mockup_button.grid(row=2, column=0, padx=5, pady=(5,0), sticky="nsew", columnspan=2)
+        self.button_useful_links_Mockup.grid(row=2, column=0, padx=5, pady=(5,0), sticky="nsew", columnspan=2)
 
-        self.useful_links_Docs_button = customtkinter.CTkButton(self.frame_useful_links, text="ProdDB Documentation",
+        self.button_useful_links_Docs = customtkinter.CTkButton(self.frame_useful_links, text="ProdDB Documentation",
             command=lambda: util.open_webbrowser_with_url('https://hgtd-database.docs.cern.ch/', noExtraPrefix = True), fg_color="#555555", hover_color="#444444")
-        self.useful_links_Docs_button.grid(row=3, column=0, padx=5, pady=(5,0), sticky="nsew", columnspan=2)
+        self.button_useful_links_Docs.grid(row=3, column=0, padx=5, pady=(5,0), sticky="nsew", columnspan=2)
 
-        self.useful_links_MM_button = customtkinter.CTkButton(self.frame_useful_links, text="ProdDB Mattermost",
+        self.button_useful_links_MM = customtkinter.CTkButton(self.frame_useful_links, text="ProdDB Mattermost",
             command=lambda: util.open_webbrowser_with_url('https://mattermost.web.cern.ch/atlas/channels/hgtd-production-database', noExtraPrefix = True), fg_color="#555555", hover_color="#444444")
-        self.useful_links_MM_button.grid(row=4, column=0, padx=5, pady=(5,0), sticky="nsew", columnspan=2)
+        self.button_useful_links_MM.grid(row=4, column=0, padx=5, pady=(5,0), sticky="nsew", columnspan=2)
 
-        self.useful_links_meetings_button = customtkinter.CTkButton(self.frame_useful_links, text="ProdDB Meetings",
+        self.button_useful_links_meetings = customtkinter.CTkButton(self.frame_useful_links, text="ProdDB Meetings",
             command=lambda: util.open_webbrowser_with_url('https://indico.cern.ch/category/9458/', noExtraPrefix = True), fg_color="#555555", hover_color="#444444")
-        self.useful_links_meetings_button.grid(row=5, column=0, padx=5, pady=(5,0), sticky="nsew", columnspan=2)
+        self.button_useful_links_meetings.grid(row=5, column=0, padx=5, pady=(5,0), sticky="nsew", columnspan=2)
 
-        self.useful_links_GL_repo_button = customtkinter.CTkButton(self.frame_useful_links, text="hgtd-tools gitlab",
+        self.button_useful_links_GL_repo = customtkinter.CTkButton(self.frame_useful_links, text="hgtd-tools gitlab",
             command=lambda: util.open_webbrowser_with_url('https://gitlab.cern.ch/anstein/hgtd-tools', noExtraPrefix = True), fg_color="#555555", hover_color="#444444")
-        self.useful_links_GL_repo_button.grid(row=6, column=0, padx=5, pady=(5,0), sticky="nsew", columnspan=2)
+        self.button_useful_links_GL_repo.grid(row=6, column=0, padx=5, pady=(5,0), sticky="nsew", columnspan=2)
 
 
         self.label_user = customtkinter.CTkLabel(self.frame_sidebar_left, text="User:", anchor="e")
@@ -243,8 +243,12 @@ class App(customtkinter.CTk):
         self.label_combobox_par_type_paginationFrame = customtkinter.CTkLabel(self.combobox_par_type_paginationFrame, text="page 0/0")
         self.label_combobox_par_type_paginationFrame.grid(row=0, column=0, padx=(10,5), pady=5, sticky="nsew")
         self.combobox_par_type_paginationButtonLeft = customtkinter.CTkButton(self.combobox_par_type_paginationFrame,
-                                                                           text="<", width=30,
-                                                   command=self.button_combobox_par_type_paginationButtonLeft_click)
+                                                                            text=">", width=30,
+                                                                            command=lambda: self.button_combobox_paginationButton_click(
+                                                                                'DA-par-type',
+                                                                                'L'
+                                                                                )
+                                                                            )
         self.combobox_par_type_paginationButtonLeft.grid(row=0, column=1, padx=5, pady=5)
         self.combobox_par_type = customtkinter.CTkComboBox(self.combobox_par_type_paginationFrame,
                                                     values=["All DU types"],
@@ -253,8 +257,12 @@ class App(customtkinter.CTk):
         self.combobox_par_type.grid(row=0, column=2, padx=0, pady=5, sticky="nsew")
         self.combobox_par_type.set("- Select -")
         self.combobox_par_type_paginationButtonRight = customtkinter.CTkButton(self.combobox_par_type_paginationFrame,
-                                                                           text=">", width=30,
-                                                   command=self.button_combobox_par_type_paginationButtonRight_click)
+                                                                            text=">", width=30,
+                                                                            command=lambda: self.button_combobox_paginationButton_click(
+                                                                                'DA-par-type',
+                                                                                'R'
+                                                                                )
+                                                                            )
         self.combobox_par_type_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
 
 
@@ -266,8 +274,12 @@ class App(customtkinter.CTk):
         self.label_combobox_parent_paginationFrame = customtkinter.CTkLabel(self.combobox_parent_paginationFrame, text="page 0/0")
         self.label_combobox_parent_paginationFrame.grid(row=0, column=0, padx=(10,5), pady=5, sticky="nsew")
         self.combobox_parent_paginationButtonLeft = customtkinter.CTkButton(self.combobox_parent_paginationFrame,
-                                                                           text="<", width=30,
-                                                   command=self.button_combobox_parent_paginationButtonLeft_click)
+                                                                            text="<", width=30,
+                                                                            command=lambda: self.button_combobox_paginationButton_click(
+                                                                                'DA-par-SN',
+                                                                                'L'
+                                                                                )
+                                                                            )
         self.combobox_parent_paginationButtonLeft.grid(row=0, column=1, padx=5, pady=5)
         self.combobox_parent = customtkinter.CTkComboBox(self.combobox_parent_paginationFrame,
                                                     values=["Detector Unit", "Detector"],
@@ -276,14 +288,18 @@ class App(customtkinter.CTk):
         self.combobox_parent.grid(row=0, column=2, padx=0, pady=5, sticky="nsew")
         self.combobox_parent.set("- Select -")
         self.combobox_parent_paginationButtonRight = customtkinter.CTkButton(self.combobox_parent_paginationFrame,
-                                                                           text=">", width=30,
-                                                   command=self.button_combobox_parent_paginationButtonRight_click)
+                                                                            text=">", width=30,
+                                                                            command=lambda: self.button_combobox_paginationButton_click(
+                                                                                'DA-par-SN',
+                                                                                'R'
+                                                                                )
+                                                                            )
         self.combobox_parent_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
 
 
-        self.inspect_parent_button = customtkinter.CTkButton(self.frame_parent, text="INSPECT PARENT",
+        self.button_inspect_parent = customtkinter.CTkButton(self.frame_parent, text="INSPECT PARENT",
                                                    command=self.button_inspect_parent_event_click)
-        self.inspect_parent_button.grid(row=3, column=1, padx=20, pady=(10, 10))
+        self.button_inspect_parent.grid(row=3, column=1, padx=20, pady=(10, 10))
 
         # child
         self.frame_child = customtkinter.CTkFrame(self.frame_combobox)
@@ -310,8 +326,12 @@ class App(customtkinter.CTk):
         self.label_combobox_chi_type_paginationFrame = customtkinter.CTkLabel(self.combobox_chi_type_paginationFrame, text="page 0/0")
         self.label_combobox_chi_type_paginationFrame.grid(row=0, column=0, padx=(10,5), pady=5, sticky="nsew")
         self.combobox_chi_type_paginationButtonLeft = customtkinter.CTkButton(self.combobox_chi_type_paginationFrame,
-                                                                           text="<", width=30,
-                                                   command=self.button_combobox_chi_type_paginationButtonLeft_click)
+                                                                            text="<", width=30,
+                                                                            command=lambda: self.button_combobox_paginationButton_click(
+                                                                                'DA-chi-type',
+                                                                                'L'
+                                                                                )
+                                                                            )
         self.combobox_chi_type_paginationButtonLeft.grid(row=0, column=1, padx=5, pady=5)
         self.combobox_chi_type = customtkinter.CTkComboBox(self.combobox_chi_type_paginationFrame,
                                                     values=["All DU types"],
@@ -320,8 +340,12 @@ class App(customtkinter.CTk):
         self.combobox_chi_type.grid(row=0, column=2, padx=0, pady=5, sticky="nsew")
         self.combobox_chi_type.set("- Select -")
         self.combobox_chi_type_paginationButtonRight = customtkinter.CTkButton(self.combobox_chi_type_paginationFrame,
-                                                                           text=">", width=30,
-                                                   command=self.button_combobox_chi_type_paginationButtonRight_click)
+                                                                            text=">", width=30,
+                                                                            command=lambda: self.button_combobox_paginationButton_click(
+                                                                                'DA-chi-type',
+                                                                                'R'
+                                                                                )
+                                                                            )
         self.combobox_chi_type_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
         self.combobox_chi_type_paginationFrame.grid_remove()
 
@@ -335,8 +359,12 @@ class App(customtkinter.CTk):
         self.label_combobox_child_paginationFrame = customtkinter.CTkLabel(self.combobox_child_paginationFrame, text="page 0/0")
         self.label_combobox_child_paginationFrame.grid(row=0, column=0, padx=(10,5), pady=5, sticky="nsew")
         self.combobox_child_paginationButtonLeft = customtkinter.CTkButton(self.combobox_child_paginationFrame,
-                                                                           text="<", width=30,
-                                                   command=self.button_combobox_child_paginationButtonLeft_click)
+                                                                            text="<", width=30,
+                                                                            command=lambda: self.button_combobox_paginationButton_click(
+                                                                                'DA-chi-SN',
+                                                                                'L'
+                                                                                )
+                                                                            )
         self.combobox_child_paginationButtonLeft.grid(row=0, column=1, padx=5, pady=5)
         self.combobox_child = customtkinter.CTkComboBox(self.combobox_child_paginationFrame,
                                                     values=["Module", "Detector Unit"],
@@ -345,13 +373,17 @@ class App(customtkinter.CTk):
         self.combobox_child.grid(row=0, column=2, padx=0, pady=5, sticky="nsew")
         self.combobox_child.set("- Select -")
         self.combobox_child_paginationButtonRight = customtkinter.CTkButton(self.combobox_child_paginationFrame,
-                                                                           text=">", width=30,
-                                                   command=self.button_combobox_child_paginationButtonRight_click)
+                                                                            text=">", width=30,
+                                                                            command=lambda: self.button_combobox_paginationButton_click(
+                                                                                'DA-chi-SN',
+                                                                                'R'
+                                                                                )
+                                                                            )
         self.combobox_child_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
 
-        self.inspect_child_button = customtkinter.CTkButton(self.frame_child, text="INSPECT CHILD",
+        self.button_inspect_child = customtkinter.CTkButton(self.frame_child, text="INSPECT CHILD",
             command=self.button_inspect_child_event_click)
-        self.inspect_child_button.grid(row=3, column=1, padx=20, pady=(10, 10))
+        self.button_inspect_child.grid(row=3, column=1, padx=20, pady=(10, 10))
 
         # position / click
         self.frame_position = customtkinter.CTkFrame(self.frame_combobox)
@@ -365,21 +397,21 @@ class App(customtkinter.CTk):
         self.position_entry = customtkinter.CTkEntry(self.frame_position, textvariable=self.position_variable, state='disabled')
         self.position_entry.grid(row=6, column=1, padx=20, pady=(20, 10), sticky="nsew")
 
-        self.add_button = customtkinter.CTkButton(self.frame_position, text="ADD PARTS TREE",
+        self.button_add = customtkinter.CTkButton(self.frame_position, text="ADD PARTS TREE",
             command=self.button_add_event_click)
-        self.add_button.grid(row=7, column=1, padx=20, pady=(20, 10))
+        self.button_add.grid(row=7, column=1, padx=20, pady=(20, 10))
 
         self.frame_clicked_position = customtkinter.CTkFrame(self.frame_position)
         self.frame_clicked_position.grid(row=9, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
         self.frame_clicked_position.grid_columnconfigure((0,1), weight=1)
 
-        self.inspect_clicked_button = customtkinter.CTkButton(self.frame_clicked_position, text="INSPECT CLICKED MODULE",
+        self.button_inspect_clicked = customtkinter.CTkButton(self.frame_clicked_position, text="INSPECT CLICKED MODULE",
             command=self.button_inspect_clicked_event_click, state='disabled')
-        self.inspect_clicked_button.grid(row=0, column=1, padx=20, pady=(20, 10))
+        self.button_inspect_clicked.grid(row=0, column=1, padx=20, pady=(20, 10))
 
-        self.delete_clicked_button = customtkinter.CTkButton(self.frame_clicked_position, text="UNLOAD CLICKED MODULE",
+        self.button_delete_clicked = customtkinter.CTkButton(self.frame_clicked_position, text="UNLOAD CLICKED MODULE",
             command=self.button_delete_clicked_event_click, state='disabled', fg_color="#cf352e", hover_color="#B02B25")
-        self.delete_clicked_button.grid(row=0, column=0, padx=20, pady=(20, 10))
+        self.button_delete_clicked.grid(row=0, column=0, padx=20, pady=(20, 10))
 
 
         # right sub widget: canvas containing DUs to click on
@@ -462,9 +494,9 @@ class App(customtkinter.CTk):
         self.combobox_MA_mod_par_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
 
         
-        self.inspect_parent_module_button = customtkinter.CTkButton(self.frame_module_parent_selection, text="INSPECT MODULE",
+        self.button_inspect_parent_module = customtkinter.CTkButton(self.frame_module_parent_selection, text="INSPECT MODULE",
             command=self.button_inspect_parent_module_event_click)
-        self.inspect_parent_module_button.grid(row=4, column=1, padx=20, pady=10)
+        self.button_inspect_parent_module.grid(row=4, column=1, padx=20, pady=10)
 
 
         self.module_image = customtkinter.CTkImage(Image.open('Module.png'), size=(1920/5, (1920/5)*1080/1920))
@@ -530,15 +562,15 @@ class App(customtkinter.CTk):
                                                                             )
         self.combobox_MA_MF_chi_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
         
-        self.inspect_child_module_flex_button = customtkinter.CTkButton(self.frame_module_flex_child, text="INSPECT MODULE FLEX",
+        self.button_inspect_child_module_flex = customtkinter.CTkButton(self.frame_module_flex_child, text="INSPECT MODULE FLEX",
             command=self.button_inspect_child_module_flex_event_click)
-        self.inspect_child_module_flex_button.grid(row=7, column=0, padx=5, pady=5, columnspan=2)
-        self.add_child_module_flex_button = customtkinter.CTkButton(self.frame_module_flex_child, text="CONNECT MODULE FLEX\nTO MODULE ABOVE",
+        self.button_inspect_child_module_flex.grid(row=7, column=0, padx=5, pady=5, columnspan=2)
+        self.button_add_child_module_flex = customtkinter.CTkButton(self.frame_module_flex_child, text="CONNECT MODULE FLEX\nTO MODULE ABOVE",
             command=self.button_add_child_module_flex_event_click, fg_color="#339941", hover_color="#228831")
-        self.add_child_module_flex_button.grid(row=8, column=0, padx=5, pady=5, columnspan=2)
-        self.delete_child_MF_button = customtkinter.CTkButton(self.frame_module_flex_child, text="DISCONNECT MODULE FLEX\nFROM ITS PARENT",
+        self.button_add_child_module_flex.grid(row=8, column=0, padx=5, pady=5, columnspan=2)
+        self.button_delete_child_MF = customtkinter.CTkButton(self.frame_module_flex_child, text="DISCONNECT MODULE FLEX\nFROM ITS PARENT",
             command=self.button_delete_child_module_flex_event_click, state='disabled', fg_color="#cf352e", hover_color="#B02B25")
-        self.delete_child_MF_button.grid(row=9, column=0, padx=5, pady=5, columnspan=2)
+        self.button_delete_child_MF.grid(row=9, column=0, padx=5, pady=5, columnspan=2)
 
         #
         # === Hybrid HV-side ===
@@ -596,15 +628,15 @@ class App(customtkinter.CTk):
                                                                             )
         self.combobox_HY_HV_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
         
-        self.inspect_child_HY_HV_button = customtkinter.CTkButton(self.frame_HY_HV_child, text="INSPECT HY HV-side",
+        self.button_inspect_child_HY_HV = customtkinter.CTkButton(self.frame_HY_HV_child, text="INSPECT HY HV-side",
             command=self.button_inspect_child_HY_HV_event_click)
-        self.inspect_child_HY_HV_button.grid(row=9, column=0, padx=5, pady=5, columnspan=2)
-        self.add_child_HY_HV_button = customtkinter.CTkButton(self.frame_HY_HV_child, text="CONNECT HY HV-side\nTO MODULE ABOVE",
+        self.button_inspect_child_HY_HV.grid(row=9, column=0, padx=5, pady=5, columnspan=2)
+        self.button_add_child_HY_HV = customtkinter.CTkButton(self.frame_HY_HV_child, text="CONNECT HY HV-side\nTO MODULE ABOVE",
             command=self.button_add_child_HY_HV_event_click, fg_color="#339941", hover_color="#228831")
-        self.add_child_HY_HV_button.grid(row=10, column=0, padx=5, pady=5, columnspan=2)
-        self.delete_child_HY_HV_button = customtkinter.CTkButton(self.frame_HY_HV_child, text="DISCONNECT HY HV-side\nFROM ITS PARENT",
+        self.button_add_child_HY_HV.grid(row=10, column=0, padx=5, pady=5, columnspan=2)
+        self.button_delete_child_HY_HV = customtkinter.CTkButton(self.frame_HY_HV_child, text="DISCONNECT HY HV-side\nFROM ITS PARENT",
             command=self.button_delete_child_HY_HV_event_click, state='disabled', fg_color="#cf352e", hover_color="#B02B25")
-        self.delete_child_HY_HV_button.grid(row=11, column=0, padx=5, pady=5, columnspan=2)
+        self.button_delete_child_HY_HV.grid(row=11, column=0, padx=5, pady=5, columnspan=2)
 
         #
         # === Hybrid LV-side ===
@@ -662,15 +694,15 @@ class App(customtkinter.CTk):
                                                                             )
         self.combobox_HY_LV_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
         
-        self.inspect_child_HY_LV_button = customtkinter.CTkButton(self.frame_HY_LV_child, text="INSPECT HY LV-side",
+        self.button_inspect_child_HY_LV = customtkinter.CTkButton(self.frame_HY_LV_child, text="INSPECT HY LV-side",
             command=self.button_inspect_child_HY_LV_event_click)
-        self.inspect_child_HY_LV_button.grid(row=9, column=0, padx=5, pady=5, columnspan=2)
-        self.add_child_HY_LV_button = customtkinter.CTkButton(self.frame_HY_LV_child, text="CONNECT HY LV-side\nTO MODULE ABOVE",
+        self.button_inspect_child_HY_LV.grid(row=9, column=0, padx=5, pady=5, columnspan=2)
+        self.button_add_child_HY_LV = customtkinter.CTkButton(self.frame_HY_LV_child, text="CONNECT HY LV-side\nTO MODULE ABOVE",
             command=self.button_add_child_HY_LV_event_click, fg_color="#339941", hover_color="#228831")
-        self.add_child_HY_LV_button.grid(row=10, column=0, padx=5, pady=5, columnspan=2)
-        self.delete_child_HY_LV_button = customtkinter.CTkButton(self.frame_HY_LV_child, text="DISCONNECT HY LV-side\nFROM ITS PARENT",
+        self.button_add_child_HY_LV.grid(row=10, column=0, padx=5, pady=5, columnspan=2)
+        self.button_delete_child_HY_LV = customtkinter.CTkButton(self.frame_HY_LV_child, text="DISCONNECT HY LV-side\nFROM ITS PARENT",
             command=self.button_delete_child_HY_LV_event_click, state='disabled', fg_color="#cf352e", hover_color="#B02B25")
-        self.delete_child_HY_LV_button.grid(row=11, column=0, padx=5, pady=5, columnspan=2)
+        self.button_delete_child_HY_LV.grid(row=11, column=0, padx=5, pady=5, columnspan=2)
 
         # ******************************************
         #
@@ -708,13 +740,13 @@ class App(customtkinter.CTk):
         self.label_slot_global = customtkinter.CTkLabel(self.frame_slot_sel, text="Global (type in):")
         self.label_slot_global.grid(row=0, column=1, padx=20, pady=10, sticky="nsew")
 
-        self.find_slot_button = customtkinter.CTkButton(self.frame_slot_sel, text="FIND IN SLOT TABLE",
+        self.button_find_slot = customtkinter.CTkButton(self.frame_slot_sel, text="FIND IN SLOT TABLE",
             command=self.button_find_slot_event_click)
-        self.find_slot_button.grid(row=1, column=1, padx=20, pady=10, sticky="nsew")
+        self.button_find_slot.grid(row=1, column=1, padx=20, pady=10, sticky="nsew")
 
-        self.inspect_slot_button = customtkinter.CTkButton(self.frame_slot_sel, text="INSPECT SLOT",
+        self.button_inspect_slot = customtkinter.CTkButton(self.frame_slot_sel, text="INSPECT SLOT",
             command=self.button_inspect_slot_event_click)
-        self.inspect_slot_button.grid(row=3, column=1, padx=20, pady=10)
+        self.button_inspect_slot.grid(row=3, column=1, padx=20, pady=10)
         
         self.label_slot_local = customtkinter.CTkLabel(self.frame_slot_sel, text="Local (derived):")
         self.label_slot_local.grid(row=2, column=1, padx=20, pady=10, sticky="nsew")
@@ -810,17 +842,17 @@ class App(customtkinter.CTk):
         self.combobox_ft_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
 
 
-        self.inspect_ft_button = customtkinter.CTkButton(self.frame_ft_rel, text="INSPECT FT",
+        self.button_inspect_ft = customtkinter.CTkButton(self.frame_ft_rel, text="INSPECT FT",
             command=self.button_inspect_ft_event_click)
-        self.inspect_ft_button.grid(row=4, column=2, padx=20, pady=10)
+        self.button_inspect_ft.grid(row=4, column=2, padx=20, pady=10)
 
-        self.delete_connected_ft_button = customtkinter.CTkButton(self.frame_ft_rel, text="DISCONNECT SELECTED FT",
+        self.button_delete_connected_ft = customtkinter.CTkButton(self.frame_ft_rel, text="DISCONNECT SELECTED FT",
             command=self.button_delete_connected_ft_event_click, state='disabled', fg_color="#cf352e", hover_color="#B02B25")
-        self.delete_connected_ft_button.grid(row=5, column=1, padx=20, pady=(20, 10))
+        self.button_delete_connected_ft.grid(row=5, column=1, padx=20, pady=(20, 10))
         
-        self.add_ft_button = customtkinter.CTkButton(self.frame_ft_rel, text="ADD PARTS TREE",
+        self.button_add_ft = customtkinter.CTkButton(self.frame_ft_rel, text="ADD PARTS TREE",
             command=self.button_add_ft_event_click)
-        self.add_ft_button.grid(row=5, column=2, padx=20, pady=10)
+        self.button_add_ft.grid(row=5, column=2, padx=20, pady=10)
 
         # footer: info for user (e.g. Warning, Error)
         self.label_info = customtkinter.CTkLabel(self.frame_main, text=" ", font=customtkinter.CTkFont(size=16, weight="bold"))
@@ -896,9 +928,9 @@ class App(customtkinter.CTk):
         self.users = ['None', 'new...']
 
         # these are not taken from the DB, but from conventions
-        self.possible_par_types = ["All DU types"]+list(data.allDUs.keys())
+        self.possible_par_types = ["All DU types"]+data.allDUkeysList
         self.possible_par_types_chunked = [self.possible_par_types[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_par_types), self.n_items_to_show_in_cbx)]
-        self.possible_chi_types = ["All DU types"]+list(data.allDUs.keys())
+        self.possible_chi_types = ["All DU types"]+data.allDUkeysList
         self.possible_chi_types_chunked = [self.possible_chi_types[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_chi_types), self.n_items_to_show_in_cbx)]
         self.cbx_ptype_n_pages = len(self.possible_par_types_chunked)
         self.cbx_ctype_n_pages = len(self.possible_chi_types_chunked)
@@ -1357,42 +1389,56 @@ class App(customtkinter.CTk):
     def button_combobox_paginationButton_click(self, affects, page_dir):
         if affects == 'MA-MO':
             affected_cbx_shown_page, affected_label_cbx_page, affected_cbx_n_pages, affected_cbx_part,\
-               affected_cbx_possible_SNs_chunked = self.cbx_MA_mod_par_shown_page,\
-                                                    self.label_combobox_MA_mod_par_paginationFrame,\
-                                                    self.cbx_MA_mod_par_n_pages,\
-                                                    self.combobox_MA_mod_par,\
+               affected_cbx_possible_SNs_chunked = self.cbx_MA_mod_par_shown_page, self.label_combobox_MA_mod_par_paginationFrame,\
+                                                    self.cbx_MA_mod_par_n_pages, self.combobox_MA_mod_par,\
                                                     self.possible_MA_mod_par_SNs_chunked
         elif affects == 'MA-MF':
             affected_cbx_shown_page, affected_label_cbx_page, affected_cbx_n_pages, affected_cbx_part,\
-               affected_cbx_possible_SNs_chunked = self.cbx_MF_shown_page,\
-                                                    self.label_combobox_MA_MF_chi_paginationFrame,\
-                                                    self.cbx_MF_n_pages,\
-                                                    self.combobox_MA_MF_chi,\
+               affected_cbx_possible_SNs_chunked = self.cbx_MF_shown_page, self.label_combobox_MA_MF_chi_paginationFrame,\
+                                                    self.cbx_MF_n_pages, self.combobox_MA_MF_chi,\
                                                     self.possible_MF_SNs_chunked
 
         elif affects == 'MA-Hybrid-HV':
             affected_cbx_shown_page, affected_label_cbx_page, affected_cbx_n_pages, affected_cbx_part,\
-               affected_cbx_possible_SNs_chunked = self.cbx_HY_HV_shown_page,\
-                                                    self.label_combobox_HY_HV_paginationFrame,\
-                                                    self.cbx_HY_HV_n_pages,\
-                                                    self.combobox_MA_HY_HV_chi,\
+               affected_cbx_possible_SNs_chunked = self.cbx_HY_HV_shown_page, self.label_combobox_HY_HV_paginationFrame,\
+                                                    self.cbx_HY_HV_n_pages, self.combobox_MA_HY_HV_chi,\
                                                     self.possible_HY_HV_SNs_chunked
 
         elif affects == 'MA-Hybrid-LV':
             affected_cbx_shown_page, affected_label_cbx_page, affected_cbx_n_pages, affected_cbx_part,\
-               affected_cbx_possible_SNs_chunked = self.cbx_HY_LV_shown_page,\
-                                                    self.label_combobox_HY_LV_paginationFrame,\
-                                                    self.cbx_HY_LV_n_pages,\
-                                                    self.combobox_MA_HY_LV_chi,\
+               affected_cbx_possible_SNs_chunked = self.cbx_HY_LV_shown_page, self.label_combobox_HY_LV_paginationFrame,\
+                                                    self.cbx_HY_LV_n_pages, self.combobox_MA_HY_LV_chi,\
                                                     self.possible_HY_LV_SNs_chunked
 
         elif affects == 'FT':
             affected_cbx_shown_page, affected_label_cbx_page, affected_cbx_n_pages, affected_cbx_part,\
-               affected_cbx_possible_SNs_chunked = self.cbx_ft_shown_page,\
-                                                    self.label_combobox_ft_paginationFrame,\
-                                                    self.cbx_ft_n_pages,\
-                                                    self.combobox_ft,\
+               affected_cbx_possible_SNs_chunked = self.cbx_ft_shown_page, self.label_combobox_ft_paginationFrame,\
+                                                    self.cbx_ft_n_pages, self.combobox_ft,\
                                                     self.possible_ft_SNs_chunked
+
+        elif affects == 'DA-chi-SN':
+            affected_cbx_shown_page, affected_label_cbx_page, affected_cbx_n_pages, affected_cbx_part,\
+               affected_cbx_possible_SNs_chunked = self.cbx_chi_shown_page, self.label_combobox_child_paginationFrame,\
+                                                    self.cbx_chi_n_pages, self.combobox_child,\
+                                                    self.possible_children_SNs_chunked
+
+        elif affects == 'DA-par-SN':
+            affected_cbx_shown_page, affected_label_cbx_page, affected_cbx_n_pages, affected_cbx_part,\
+               affected_cbx_possible_SNs_chunked = self.cbx_par_shown_page, self.label_combobox_parent_paginationFrame,\
+                                                    self.cbx_par_n_pages, self.combobox_parent,\
+                                                    self.possible_parents_SNs_chunked
+
+        elif affects == 'DA-chi-type':
+            affected_cbx_shown_page, affected_label_cbx_page, affected_cbx_n_pages, affected_cbx_part,\
+               affected_cbx_possible_SNs_chunked = self.cbx_ctype_shown_page, self.label_combobox_chi_type_paginationFrame,\
+                                                    self.cbx_ctype_n_pages, self.combobox_chi_type,\
+                                                    self.possible_chi_types_chunked
+
+        elif affects == 'DA-par-type':
+            affected_cbx_shown_page, affected_label_cbx_page, affected_cbx_n_pages, affected_cbx_part,\
+               affected_cbx_possible_SNs_chunked = self.cbx_ptype_shown_page, self.label_combobox_par_type_paginationFrame,\
+                                                    self.cbx_ptype_n_pages, self.combobox_par_type,\
+                                                    self.possible_par_types_chunked
         else:
             raise NotImplementedError("Pagination not refactored for this combobox!")
 
@@ -1415,56 +1461,20 @@ class App(customtkinter.CTk):
             self.cbx_HY_LV_shown_page = affected_cbx_shown_page
         elif affects == 'FT':
             self.cbx_ft_shown_page = affected_cbx_shown_page
+        elif affects == 'DA-chi-SN':
+            self.cbx_chi_shown_page = affected_cbx_shown_page
+        elif affects == 'DA-par-SN':
+            self.cbx_par_shown_page = affected_cbx_shown_page
+        elif affects == 'DA-chi-type':
+            self.cbx_ctype_shown_page = affected_cbx_shown_page
+        elif affects == 'DA-par-type':
+            self.cbx_ptype_shown_page = affected_cbx_shown_page
         affected_label_cbx_page.configure(text=f"page {affected_cbx_shown_page}/{affected_cbx_n_pages}")
         if affected_cbx_n_pages > 0:
             affected_cbx_part.configure(values=affected_cbx_possible_SNs_chunked[affected_cbx_shown_page - 1])
         else:
             affected_cbx_part.configure(values=[])
             affected_cbx_part.set("- Select -")
-    
-    # control for Det Assembly: Child SN combobox page selection
-    def button_combobox_child_paginationButtonLeft_click(self):
-        self.cbx_chi_shown_page = max(self.cbx_chi_shown_page - 1, 1)
-        self.label_combobox_child_paginationFrame.configure(text=f"page {self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
-        self.combobox_child.configure(values=self.possible_children_SNs_chunked[self.cbx_chi_shown_page - 1])
-
-    def button_combobox_child_paginationButtonRight_click(self):
-        self.cbx_chi_shown_page = min(self.cbx_chi_shown_page + 1, self.cbx_chi_n_pages)
-        self.label_combobox_child_paginationFrame.configure(text=f"page {self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}")
-        self.combobox_child.configure(values=self.possible_children_SNs_chunked[self.cbx_chi_shown_page - 1])
-
-    # control for Det Assembly: Parent SN combobox page selection
-    def button_combobox_parent_paginationButtonLeft_click(self):
-        self.cbx_par_shown_page = max(self.cbx_par_shown_page - 1, 1)
-        self.label_combobox_parent_paginationFrame.configure(text=f"page {self.cbx_par_shown_page}/{self.cbx_par_n_pages}")
-        self.combobox_parent.configure(values=self.possible_parents_SNs_chunked[self.cbx_par_shown_page - 1])
-
-    def button_combobox_parent_paginationButtonRight_click(self):
-        self.cbx_par_shown_page = min(self.cbx_par_shown_page + 1, self.cbx_par_n_pages)
-        self.label_combobox_parent_paginationFrame.configure(text=f"page {self.cbx_par_shown_page}/{self.cbx_par_n_pages}")
-        self.combobox_parent.configure(values=self.possible_parents_SNs_chunked[self.cbx_par_shown_page - 1])
-
-    # control for Det Assembly: Parent type combobox page selection
-    def button_combobox_par_type_paginationButtonLeft_click(self):
-        self.cbx_ptype_shown_page = max(self.cbx_ptype_shown_page - 1, 1)
-        self.label_combobox_par_type_paginationFrame.configure(text=f"page {self.cbx_ptype_shown_page}/{self.cbx_ptype_n_pages}")
-        self.combobox_par_type.configure(values=self.possible_par_types_chunked[self.cbx_ptype_shown_page - 1])
-
-    def button_combobox_par_type_paginationButtonRight_click(self):
-        self.cbx_ptype_shown_page = min(self.cbx_ptype_shown_page + 1, self.cbx_ptype_n_pages)
-        self.label_combobox_par_type_paginationFrame.configure(text=f"page {self.cbx_ptype_shown_page}/{self.cbx_ptype_n_pages}")
-        self.combobox_par_type.configure(values=self.possible_par_types_chunked[self.cbx_ptype_shown_page - 1])
-
-    # control for Det Assembly: Child type combobox page selection
-    def button_combobox_chi_type_paginationButtonLeft_click(self):
-        self.cbx_ctype_shown_page = max(self.cbx_ctype_shown_page - 1, 1)
-        self.label_combobox_chi_type_paginationFrame.configure(text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}")
-        self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[self.cbx_ctype_shown_page - 1])
-
-    def button_combobox_chi_type_paginationButtonRight_click(self):
-        self.cbx_ctype_shown_page = min(self.cbx_ctype_shown_page + 1, self.cbx_ctype_n_pages)
-        self.label_combobox_chi_type_paginationFrame.configure(text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}")
-        self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[self.cbx_ctype_shown_page - 1])
 
     def button_delete_connected_ft_event_click(self):
         if len(self.this_FT_relations_SLOT) > 0:
@@ -1487,7 +1497,7 @@ class App(customtkinter.CTk):
                 self.progressbar.configure(progress_color="#007711")
                 self.label_info.configure(text=' ')
                 self.this_FT_relations_SLOT = []
-                self.delete_connected_ft_button.configure(state='disabled')
+                self.button_delete_connected_ft.configure(state='disabled')
         
     def button_delete_clicked_event_click(self):
         if len(self.clicked_module) > 0:
@@ -1518,10 +1528,10 @@ class App(customtkinter.CTk):
                 self.slots = None
                 self.partstree = None
                 self.clicked_module = []
-                self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE')
-                self.inspect_clicked_button.configure(state='disabled')
-                self.delete_clicked_button.configure(text=f'UNLOAD CLICKED MODULE')
-                self.delete_clicked_button.configure(state='disabled')
+                self.button_inspect_clicked.configure(text=f'INSPECT CLICKED MODULE')
+                self.button_inspect_clicked.configure(state='disabled')
+                self.button_delete_clicked.configure(text=f'UNLOAD CLICKED MODULE')
+                self.button_delete_clicked.configure(state='disabled')
 
                 parentSNIn = self.combobox_parent.get()
                 childSNIn = self.combobox_child.get()
@@ -1550,7 +1560,7 @@ class App(customtkinter.CTk):
                 self.progressbar.configure(progress_color="#007711")
                 self.label_info.configure(text=' ')
                 self.this_MF_relations_MOD = []
-                self.delete_child_MF_button.configure(state='disabled')
+                self.button_delete_child_MF.configure(state='disabled')
 
     def button_delete_child_HY_HV_event_click(self):
         if len(self.this_HY_HV_relations_MOD) > 0:
@@ -1573,7 +1583,7 @@ class App(customtkinter.CTk):
                 self.progressbar.configure(progress_color="#007711")
                 self.label_info.configure(text=' ')
                 self.this_MF_relations_MOD = []
-                self.delete_child_HY_HV_button.configure(state='disabled')
+                self.button_delete_child_HY_HV.configure(state='disabled')
 
     def button_delete_child_HY_LV_event_click(self):
         if len(self.this_HY_LV_relations_MOD) > 0:
@@ -1596,7 +1606,7 @@ class App(customtkinter.CTk):
                 self.progressbar.configure(progress_color="#007711")
                 self.label_info.configure(text=' ')
                 self.this_MF_relations_MOD = []
-                self.delete_child_HY_LV_button.configure(state='disabled')
+                self.button_delete_child_HY_LV.configure(state='disabled')
         
     def button_find_slot_event_click(self):
         self.label_info.configure(text=' ')
@@ -1722,10 +1732,10 @@ class App(customtkinter.CTk):
         self.slots = None
         self.partstree = None
         self.clicked_module = []
-        self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE')
-        self.inspect_clicked_button.configure(state='disabled')
-        self.delete_clicked_button.configure(text=f'UNLOAD CLICKED MODULE')
-        self.delete_clicked_button.configure(state='disabled')
+        self.button_inspect_clicked.configure(text=f'INSPECT CLICKED MODULE')
+        self.button_inspect_clicked.configure(state='disabled')
+        self.button_delete_clicked.configure(text=f'UNLOAD CLICKED MODULE')
+        self.button_delete_clicked.configure(state='disabled')
 
         # Detector Assembly / Loading
         self.par_type = None
@@ -1763,19 +1773,19 @@ class App(customtkinter.CTk):
         self.HY_LV_child_cluster = None
         self.combobox_MA_HY_LV_child_cluster.set("All clusters")
 
-        self.delete_child_MF_button.configure(state='disabled')
-        self.delete_child_HY_HV_button.configure(state='disabled')
-        self.delete_child_HY_LV_button.configure(state='disabled')
+        self.button_delete_child_MF.configure(state='disabled')
+        self.button_delete_child_HY_HV.configure(state='disabled')
+        self.button_delete_child_HY_LV.configure(state='disabled')
 
         self.progressbar.set(0)
         self.label_info.configure(text=' ')
         self.canvas.delete("all")
         if self.operation_mode == "Module Assembly":
-            self.operation_mode_MA_button.configure(fg_color="#339941", hover_color="#228831")
-            self.operation_mode_ML_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_DA_DU_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_DA_PEB_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_DA_FT_button.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_MA.configure(fg_color="#339941", hover_color="#228831")
+            self.button_operation_mode_ML.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_DA_DU.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_DA_PEB.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_DA_FT.configure(fg_color="#555555", hover_color="#444444")
             
             self.frame_ma.grid()
             self.frame_combobox.grid_remove()
@@ -1794,11 +1804,11 @@ class App(customtkinter.CTk):
             self.update_progressbar(self.loading_wheel)
             
         elif self.operation_mode  == "Module Loading":
-            self.operation_mode_MA_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_ML_button.configure(fg_color="#339941", hover_color="#228831")
-            self.operation_mode_DA_DU_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_DA_PEB_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_DA_FT_button.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_MA.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_ML.configure(fg_color="#339941", hover_color="#228831")
+            self.button_operation_mode_DA_DU.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_DA_PEB.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_DA_FT.configure(fg_color="#555555", hover_color="#444444")
 
             self.frame_ma.grid_remove()
             self.frame_combobox.grid()
@@ -1828,11 +1838,11 @@ class App(customtkinter.CTk):
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
         elif self.operation_mode  == "Detector Assembly (CERN): DU":
-            self.operation_mode_MA_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_ML_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_DA_DU_button.configure(fg_color="#339941", hover_color="#228831")
-            self.operation_mode_DA_PEB_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_DA_FT_button.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_MA.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_ML.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_DA_DU.configure(fg_color="#339941", hover_color="#228831")
+            self.button_operation_mode_DA_PEB.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_DA_FT.configure(fg_color="#555555", hover_color="#444444")
 
             self.frame_ma.grid_remove()
             self.frame_combobox.grid()
@@ -1846,7 +1856,7 @@ class App(customtkinter.CTk):
 
             self.combobox_child_manu.grid_remove()
 
-            self.possible_chi_types = ["All DU types"]+list(data.allDUs.keys())
+            self.possible_chi_types = ["All DU types"]+data.allDUkeysList
             self.possible_chi_types_chunked = [self.possible_chi_types[i:i + self.n_items_to_show_in_cbx] for i in range(0, len(self.possible_chi_types), self.n_items_to_show_in_cbx)]
             self.cbx_ctype_n_pages = len(self.possible_chi_types_chunked)
             self.cbx_ctype_shown_page = 1
@@ -1869,11 +1879,11 @@ class App(customtkinter.CTk):
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
         elif self.operation_mode  == "Detector Assembly (CERN): PEB":
-            self.operation_mode_MA_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_ML_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_DA_DU_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_DA_PEB_button.configure(fg_color="#339941", hover_color="#228831")
-            self.operation_mode_DA_FT_button.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_MA.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_ML.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_DA_DU.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_DA_PEB.configure(fg_color="#339941", hover_color="#228831")
+            self.button_operation_mode_DA_FT.configure(fg_color="#555555", hover_color="#444444")
 
             self.frame_ma.grid_remove()
             self.frame_combobox.grid()
@@ -1910,11 +1920,11 @@ class App(customtkinter.CTk):
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
         elif self.operation_mode  == "Detector Assembly (CERN): FT":
-            self.operation_mode_MA_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_ML_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_DA_DU_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_DA_PEB_button.configure(fg_color="#555555", hover_color="#444444")
-            self.operation_mode_DA_FT_button.configure(fg_color="#339941", hover_color="#228831")
+            self.button_operation_mode_MA.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_ML.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_DA_DU.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_DA_PEB.configure(fg_color="#555555", hover_color="#444444")
+            self.button_operation_mode_DA_FT.configure(fg_color="#339941", hover_color="#228831")
 
             self.frame_ma.grid_remove()
             self.frame_combobox.grid_remove()
@@ -1938,10 +1948,10 @@ class App(customtkinter.CTk):
 
     def canvas_event_click(self, event, debug = False):
         self.clicked_module = []
-        self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE')
-        self.inspect_clicked_button.configure(state='disabled')
-        self.delete_clicked_button.configure(text=f'UNLOAD CLICKED MODULE')
-        self.delete_clicked_button.configure(state='disabled')
+        self.button_inspect_clicked.configure(text=f'INSPECT CLICKED MODULE')
+        self.button_inspect_clicked.configure(state='disabled')
+        self.button_delete_clicked.configure(text=f'UNLOAD CLICKED MODULE')
+        self.button_delete_clicked.configure(state='disabled')
         info_text = ' '
         if self.operation_mode == 'Module Loading':
             if self.displayedDUtype != 'None':
@@ -1964,10 +1974,10 @@ class App(customtkinter.CTk):
                         notAllowedSlot = False
                         if slot['slot'] in alreadyUsedSlots:
                             self.clicked_module = alreadyConnectedModules[alreadyUsedSlots.index(slot['slot'])]
-                            self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
-                            self.inspect_clicked_button.configure(state='normal')
-                            self.delete_clicked_button.configure(text=f'UNLOAD CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
-                            self.delete_clicked_button.configure(state='normal')
+                            self.button_inspect_clicked.configure(text=f'INSPECT CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
+                            self.button_inspect_clicked.configure(state='normal')
+                            self.button_delete_clicked.configure(text=f'UNLOAD CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
+                            self.button_delete_clicked.configure(state='normal')
                             notAllowedSlot = True
                             self.canvas_place_rounded_rectangle(slot['x'], slot['y'], slot['w'], slot['h'], fill = data.fillColor_AlreadyLoadedSlot)
                         else:
@@ -2015,10 +2025,10 @@ class App(customtkinter.CTk):
                         mouseInSomeMod = True
                         if slot['slot'] in alreadyUsedSlots:
                             self.clicked_module = alreadyConnectedModules[alreadyUsedSlots.index(slot['slot'])]
-                            self.inspect_clicked_button.configure(text=f'INSPECT CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
-                            self.inspect_clicked_button.configure(state='normal')
-                            self.delete_clicked_button.configure(text=f'UNLOAD CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
-                            self.delete_clicked_button.configure(state='normal')
+                            self.button_inspect_clicked.configure(text=f'INSPECT CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
+                            self.button_inspect_clicked.configure(state='normal')
+                            self.button_delete_clicked.configure(text=f'UNLOAD CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}')
+                            self.button_delete_clicked.configure(state='normal')
 
     # https://stackoverflow.com/a/44100075
     def canvas_place_rounded_rectangle(self, x1, y1, width, height, radius=25, **kwargs):
@@ -2459,7 +2469,7 @@ class App(customtkinter.CTk):
             print(FT_partID)
             print(self.possible_ft)
         self.label_info.configure(text=' ')
-        self.delete_connected_ft_button.configure(state='disabled')
+        self.button_delete_connected_ft.configure(state='disabled')
         try:
             ft_par, self.last_responseText = util.get_parents(FT_partID, ofKind = 'Slot')
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
@@ -2490,7 +2500,7 @@ class App(customtkinter.CTk):
                     print(f'>>> {info_text}')
                     self.label_info.configure(text=info_text)
                     self.this_FT_relations_SLOT.append(r)
-                    self.delete_connected_ft_button.configure(state='enabled')
+                    self.button_delete_connected_ft.configure(state='enabled')
 
     def fetch_loaded_PEB(self, childSNIn, parentSNIn, debug = False):
         PEB_SN = childSNIn
@@ -2799,7 +2809,7 @@ class App(customtkinter.CTk):
             print(partID)
             print(self.possible_MF)
         self.label_info.configure(text=' ')
-        self.delete_child_MF_button.configure(state='disabled')
+        self.button_delete_child_MF.configure(state='disabled')
         try:
             par, self.last_responseText = util.get_parents(partID, ofKind = 'Module')
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
@@ -2830,7 +2840,7 @@ class App(customtkinter.CTk):
                     print(f'>>> {info_text}')
                     self.label_info.configure(text=info_text)
                     self.this_MF_relations_MOD.append(r)
-                    self.delete_child_MF_button.configure(state='enabled')
+                    self.button_delete_child_MF.configure(state='enabled')
 
     def fetch_MA_HY_HV(self, SN, debug = False):
         # this happens when a child SN is selected
@@ -2840,7 +2850,7 @@ class App(customtkinter.CTk):
             print(partID)
             print(self.possible_HY_HV)
         self.label_info.configure(text=' ')
-        self.delete_child_HY_HV_button.configure(state='disabled')
+        self.button_delete_child_HY_HV.configure(state='disabled')
         try:
             par, self.last_responseText = util.get_parents(partID, ofKind = 'Module')
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
@@ -2871,7 +2881,7 @@ class App(customtkinter.CTk):
                     print(f'>>> {info_text}')
                     self.label_info.configure(text=info_text)
                     self.this_HY_HV_relations_MOD.append(r)
-                    self.delete_child_HY_HV_button.configure(state='enabled')
+                    self.button_delete_child_HY_HV.configure(state='enabled')
 
     def fetch_MA_HY_LV(self, SN, debug = False):
         # this happens when a child SN is selected
@@ -2881,7 +2891,7 @@ class App(customtkinter.CTk):
             print(partID)
             print(self.possible_HY_LV)
         self.label_info.configure(text=' ')
-        self.delete_child_HY_LV_button.configure(state='disabled')
+        self.button_delete_child_HY_LV.configure(state='disabled')
         try:
             par, self.last_responseText = util.get_parents(partID, ofKind = 'Module')
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
@@ -2912,7 +2922,7 @@ class App(customtkinter.CTk):
                     print(f'>>> {info_text}')
                     self.label_info.configure(text=info_text)
                     self.this_HY_LV_relations_MOD.append(r)
-                    self.delete_child_HY_LV_button.configure(state='enabled')
+                    self.button_delete_child_HY_LV.configure(state='enabled')
         
     def fetch_p_c(self, p, c):
         try:
