@@ -1060,7 +1060,89 @@ class App(customtkinter.CTk):
             self.user_window.focus()  # if window exists focus it
 
     def button_add_child_module_flex_event_click(self):
-        pass
+        chi = self.combobox_MA_MF_chi.get()
+        par = self.combobox_MA_mod_par.get()
+        pos = '' # A relation between MF and MO does not require a position.
+        if chi == '- Select -' or par == '- Select -':
+            info_text = 'Warning: Select a child & parent from the respective lists to proceed.'
+            print(f'>>> {info_text}')
+            self.label_info.configure(text=info_text)
+        else:
+            self.label_info.configure(text=' ')
+            chi_partID = self.possible_MF_partIDs[self.possible_MF_SNs.index(chi)]
+            par_partID = self.possible_MA_mod_par_partIDs[self.possible_MA_mod_par_SNs.index(par)]
+            if self.user != 'None' and self.user != 'new...':
+                part_tree = {
+                    'position': pos,
+                    'is_record_deleted': 'F',
+                    'part': chi_partID,
+                    'part_parent': par_partID,
+                    'record_insertion_user': self.user,
+                }
+            else:
+                part_tree = {
+                    'position': pos,
+                    'is_record_deleted': 'F',
+                    'part': chi_partID,
+                    'part_parent': par_partID,
+                }
+            occupied = False
+            confirmed = 'OVERWRITE'
+            try:
+                parents_of_target_MF, self.last_responseText = util.get_parents(chi_partID, ofKind = 'Module')
+                if len(parents_of_target_MF) == 0:
+                    children_of_targetMod, self.last_responseText = util.get_children(par_partID, ofKind = 'Module Flex')
+                    MF_already_occupying_target_position = ''
+                    Mod_MF_relation_to_delete = ''
+                    matching_relation = []
+                    for c in children_of_targetMod:
+                        occupied = True
+                        MF_already_occupying_target_position = c['part']['serial_number']
+                        Mod_MF_relation_to_delete = c['record_id']
+                    if occupied:
+                        confirmed = ''
+                        dialog = customtkinter.CTkInputDialog(text=f"This Module is already connected to the MF {MF_already_occupying_target_position}.\n" +
+                                    "Confirm by typing a confirmation: OVERWRITE to overwrite it with your selected MF:", title="Confirm dialog")
+                        confirmed = dialog.get_input()
+                        if debug:
+                            print("Typed in confirmation from confirm dialog:", confirmed)
+                        if confirmed == 'OVERWRITE':
+                            # DELETION OF PREVIOUS STUFF
+                            
+                            # delete Mod -> MF relation for the NF that already connects to that Mod
+                            self.last_responseText = api.delete_information(f'/partstreedelete/{Mod_MF_relation_to_delete}/')
+    
+                            # POSTING NEW STUFF
+    
+                            # connect new MF there by creating a new Mod -> MF relation
+                            self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                    else:
+                        self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                            
+                else:
+                    info_text = wrapped_text.fill(f'Error: You can not connect this MF to the selected module.\nFirst you need to delete its existing relation to a module!')
+                    print(f'>>> {info_text}')
+                    self.label_info.configure(text=info_text)
+
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                self.last_responseText = str(e)
+            except ValueError as e:
+                self.last_responseText = str(e)
+
+            if self.last_responseText[:2] != '20':
+                self.api_status = 0
+                self.progressbar.configure(progress_color="#ff0000")
+                info_text = wrapped_text.fill(f'Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}')
+                print(f'>>> {info_text}')
+                self.label_info.configure(text=info_text)
+            else:
+                self.api_status = 1
+                self.progressbar.configure(progress_color="#007711")
+
+                if len(parents_of_target_MF) == 0 and ((occupied == False) or (occupied == False and confirmed == 'OVERWRITE')):
+                    self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
+                    self.loading_wheel.start()
+                    self.update_progressbar(self.loading_wheel)
 
     def button_add_child_HY_HV_event_click(self):
         pass
@@ -1582,7 +1664,7 @@ class App(customtkinter.CTk):
                 self.api_status = 1
                 self.progressbar.configure(progress_color="#007711")
                 self.label_info.configure(text=' ')
-                self.this_MF_relations_MOD = []
+                self.this_HY_HV_relations_MOD = []
                 self.button_delete_child_HY_HV.configure(state='disabled')
 
     def button_delete_child_HY_LV_event_click(self):
@@ -1605,7 +1687,7 @@ class App(customtkinter.CTk):
                 self.api_status = 1
                 self.progressbar.configure(progress_color="#007711")
                 self.label_info.configure(text=' ')
-                self.this_MF_relations_MOD = []
+                self.this_HY_LV_relations_MOD = []
                 self.button_delete_child_HY_LV.configure(state='disabled')
         
     def button_find_slot_event_click(self):
@@ -2597,20 +2679,40 @@ class App(customtkinter.CTk):
 
     def fetch_MA_p_c(self, update = 'all'):
         # this happens when any filter is changed and at the beginning
+        self.progressbar.set(0)
+        self.label_info.configure(text=' ')
         try:
             if update == 'all' or update == 'Module':
                 self.possible_MA_mod_par, self.last_responseText = util.get_relevant_parts('Module')
+                self.combobox_MA_mod_par.set("- Select -")
+                self.this_MOD_relations_MF = []
+                self.this_MOD_relations_HY_HV = []
+                self.this_MOD_relations_HY_LV = []
+                self.this_MOD_relations_HY_unknownPosition = []
             if update == 'all' or update == 'Module Flex':
                 self.possible_MF, self.last_responseText = util.get_relevant_parts('Module Flex')
+                self.combobox_MA_MF_chi.set("- Select -")
+                self.this_MF_relations_MOD = []
             if update == 'all' or update == 'HY_HV' or update == 'HY_LV':
                 self.possible_HY_HV, self.last_responseText = util.get_relevant_parts('Hybrid')
+                self.combobox_MA_HY_HV_chi.set("- Select -")
+                self.this_HY_HV_relations_MOD = []
             if update == 'all' or update == 'HY_LV':
                 self.possible_HY_LV = self.possible_HY_HV
+                self.combobox_MA_HY_LV_chi.set("- Select -")
+                self.this_HY_LV_relations_MOD = []
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
             if update == 'all' or update == 'Module':
                 self.possible_MA_mod_par = []
+                self.combobox_MA_mod_par.set("- Select -")
+                self.this_MOD_relations_MF = []
+                self.this_MOD_relations_HY_HV = []
+                self.this_MOD_relations_HY_LV = []
+                self.this_MOD_relations_HY_unknownPosition = []
             if update == 'all' or update == 'Module Flex':
                 self.possible_MF = []
+                self.combobox_MA_MF_chi.set("- Select -")
+                self.this_MF_relations_MOD = []
             if update == 'all' or update == 'HY_HV' or update == 'HY_LV':
                 self.possible_HY_HV = []
             if update == 'all' or update == 'HY_LV':
@@ -2619,12 +2721,23 @@ class App(customtkinter.CTk):
         except ValueError as e:
             if update == 'all' or update == 'Module':
                 self.possible_MA_mod_par = []
+                self.combobox_MA_mod_par.set("- Select -")
+                self.this_MOD_relations_MF = []
+                self.this_MOD_relations_HY_HV = []
+                self.this_MOD_relations_HY_LV = []
+                self.this_MOD_relations_HY_unknownPosition = []
             if update == 'all' or update == 'Module Flex':
                 self.possible_MF = []
+                self.combobox_MA_MF_chi.set("- Select -")
+                self.this_MF_relations_MOD = []
             if update == 'all' or update == 'HY_HV' or update == 'HY_LV':
                 self.possible_HY_HV = []
+                self.combobox_MA_HY_HV_chi.set("- Select -")
+                self.this_HY_HV_relations_MOD = []
             if update == 'all' or update == 'HY_LV':
                 self.possible_HY_LV = []
+                self.combobox_MA_HY_LV_chi.set("- Select -")
+                self.this_HY_LV_relations_MOD = []
             self.last_responseText = str(e)
 
         if self.last_responseText[:3] != '200':
