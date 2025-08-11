@@ -1059,7 +1059,7 @@ class App(customtkinter.CTk):
         else:
             self.user_window.focus()  # if window exists focus it
 
-    def button_add_child_module_flex_event_click(self):
+    def button_add_child_module_flex_event_click(self, debug = False):
         chi = self.combobox_MA_MF_chi.get()
         par = self.combobox_MA_mod_par.get()
         pos = '' # A relation between MF and MO does not require a position.
@@ -1109,7 +1109,7 @@ class App(customtkinter.CTk):
                         if confirmed == 'OVERWRITE':
                             # DELETION OF PREVIOUS STUFF
                             
-                            # delete Mod -> MF relation for the NF that already connects to that Mod
+                            # delete Mod -> MF relation for the MF that already connects to that Mod
                             self.last_responseText = api.delete_information(f'/partstreedelete/{Mod_MF_relation_to_delete}/')
     
                             # POSTING NEW STUFF
@@ -1139,16 +1139,238 @@ class App(customtkinter.CTk):
                 self.api_status = 1
                 self.progressbar.configure(progress_color="#007711")
 
-                if len(parents_of_target_MF) == 0 and ((occupied == False) or (occupied == False and confirmed == 'OVERWRITE')):
+                if len(parents_of_target_MF) == 0 and ((occupied == False) or (occupied == True and confirmed == 'OVERWRITE')):
                     self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
                     self.loading_wheel.start()
                     self.update_progressbar(self.loading_wheel)
 
-    def button_add_child_HY_HV_event_click(self):
-        pass
+    def button_add_child_HY_HV_event_click(self, debug = False):
+        chi = self.combobox_MA_HY_HV_chi.get()
+        par = self.combobox_MA_mod_par.get()
+        pos = 'HV'
+        if chi == '- Select -' or par == '- Select -':
+            info_text = 'Warning: Select a child & parent from the respective lists to proceed.'
+            print(f'>>> {info_text}')
+            self.label_info.configure(text=info_text)
+        else:
+            self.label_info.configure(text=' ')        
+            chi_partID = self.possible_HY_HV_partIDs[self.possible_HY_HV_SNs.index(chi)]
+            par_partID = self.possible_MA_mod_par_partIDs[self.possible_MA_mod_par_SNs.index(par)]
+            if self.user != 'None' and self.user != 'new...':
+                part_tree = {
+                    'position': pos,
+                    'is_record_deleted': 'F',
+                    'part': chi_partID,
+                    'part_parent': par_partID,
+                    'record_insertion_user': self.user,
+                }
+            else:
+                part_tree = {
+                    'position': pos,
+                    'is_record_deleted': 'F',
+                    'part': chi_partID,
+                    'part_parent': par_partID,
+                }
+            occupied = False
+            confirmed = 'OVERWRITE'
+            posted_new_rel = False
+            try:
+                parents_of_target_HY, self.last_responseText = util.get_parents(chi_partID, ofKind = 'Module')
+                if len(parents_of_target_HY) == 0:
+                    children_of_targetMod, self.last_responseText = util.get_children(par_partID, ofKind = 'Hybrid')
+                    HYs_already_occupying_target_position = []
+                    occupied_target_positions = []
+                    Mod_HY_relations_to_delete = []
+                    # test whether sensor VBD clusters match (or something else that makes two hybrids form a good pair),
+                    # if yes or the user confirms to connect another hybrid regardless, proceed
+                    mismatch = False
+                    confirmed_mismatch = 'OVERWRITE'
+                    for c in children_of_targetMod:
+                        # need to check whether a hybrid occupies the module HV-side OR no particular position
+                        # old relations between MO & HY did NOT enforce position attribute, so we are left with
+                        # empty or invalid position attributes
+                        # the only thing we can be sure about is that a hybrid that is connected on LV-side is
+                        # harmless for the following operation, such potential relation does not need to be deleted
+                        # similar for the other side (swap HV & LV)
+                        if str(c['position']) != 'LV':
+                            occupied = True
+                            occupied_target_positions.append(c['position'])
+                            HYs_already_occupying_target_position.append(c['part']['serial_number'])
+                            Mod_HY_relations_to_delete.append(c['record_id'])
+                        else:
+                            # ToDo: implement the actual call to something like child sensor of other hybrid
+                            # or some attribute / measurement of the hybrid itself
+                            if str(c['part']['serial_number']) == 'something_that_tells_us_the_VBD_mismatch':
+                                mismatch = True
+                    if mismatch:
+                        confirmed_mismatch = ''
+                        dialog_mismatch = customtkinter.CTkInputDialog(text=f"This Module is already connected to a LV-side HY" +
+                                                              f" which does not match the VBD pairing cluster of your currently selected HV-side HY.\n" +
+                                    "Confirm by typing a confirmation: OVERWRITE to connect your selected HY irrespective of this mismatch:", title="Confirm dialog")
+                        confirmed_mismatch = dialog_mismatch.get_input()
+                    if confirmed_mismatch == 'OVERWRITE':
+                        if occupied:
+                            confirmed = ''
+                            dialog = customtkinter.CTkInputDialog(text=f"This Module is already connected to the non-LV-side HY(s) {','.join(HYs_already_occupying_target_position)}\n" +
+                                                                  f"at position(s) {','.join(occupied_target_positions)}.\n" +
+                                        "Confirm by typing a confirmation: OVERWRITE to overwrite ALL known non-LV-side hybrid children of the selected parent module with your selected HY:", title="Confirm dialog")
+                            confirmed = dialog.get_input()
+                            if debug:
+                                print("Typed in confirmation from confirm dialog:", confirmed)
+                            if confirmed == 'OVERWRITE':
+                                # DELETION OF PREVIOUS STUFF
+                                
+                                # delete Mod -> HY relations for the HYs that already connect to that Mod
+                                for del_this in Mod_HY_relations_to_delete:
+                                    self.last_responseText = api.delete_information(f'/partstreedelete/{del_this}/')
+        
+                                # POSTING NEW STUFF
+        
+                                # connect new HY there by creating a new Mod -> HY relation
+                                self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                                posted_new_rel = True
+                        else:
+                            self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                            posted_new_rel = True
+                            
+                else:
+                    info_text = wrapped_text.fill(f'Error: You can not connect this hybrid to the selected module.\nFirst you need to delete its existing relation to a module!')
+                    print(f'>>> {info_text}')
+                    self.label_info.configure(text=info_text)
 
-    def button_add_child_HY_LV_event_click(self):
-        pass
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                self.last_responseText = str(e)
+            except ValueError as e:
+                self.last_responseText = str(e)
+
+            if self.last_responseText[:2] != '20':
+                self.api_status = 0
+                self.progressbar.configure(progress_color="#ff0000")
+                info_text = wrapped_text.fill(f'Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}')
+                print(f'>>> {info_text}')
+                self.label_info.configure(text=info_text)
+            else:
+                self.api_status = 1
+                self.progressbar.configure(progress_color="#007711")
+
+                if posted_new_rel:
+                    self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
+                    self.loading_wheel.start()
+                    self.update_progressbar(self.loading_wheel)
+
+    def button_add_child_HY_LV_event_click(self, debug = False):
+        chi = self.combobox_MA_HY_LV_chi.get()
+        par = self.combobox_MA_mod_par.get()
+        pos = 'LV'
+        if chi == '- Select -' or par == '- Select -':
+            info_text = 'Warning: Select a child & parent from the respective lists to proceed.'
+            print(f'>>> {info_text}')
+            self.label_info.configure(text=info_text)
+        else:
+            self.label_info.configure(text=' ')        
+            chi_partID = self.possible_HY_LV_partIDs[self.possible_HY_LV_SNs.index(chi)]
+            par_partID = self.possible_MA_mod_par_partIDs[self.possible_MA_mod_par_SNs.index(par)]
+            if self.user != 'None' and self.user != 'new...':
+                part_tree = {
+                    'position': pos,
+                    'is_record_deleted': 'F',
+                    'part': chi_partID,
+                    'part_parent': par_partID,
+                    'record_insertion_user': self.user,
+                }
+            else:
+                part_tree = {
+                    'position': pos,
+                    'is_record_deleted': 'F',
+                    'part': chi_partID,
+                    'part_parent': par_partID,
+                }
+            occupied = False
+            confirmed = 'OVERWRITE'
+            posted_new_rel = False
+            try:
+                parents_of_target_HY, self.last_responseText = util.get_parents(chi_partID, ofKind = 'Module')
+                if len(parents_of_target_HY) == 0:
+                    children_of_targetMod, self.last_responseText = util.get_children(par_partID, ofKind = 'Hybrid')
+                    HYs_already_occupying_target_position = []
+                    occupied_target_positions = []
+                    Mod_HY_relations_to_delete = []
+                    # test whether sensor VBD clusters match (or something else that makes two hybrids form a good pair),
+                    # if yes or the user confirms to connect another hybrid regardless, proceed
+                    mismatch = False
+                    confirmed_mismatch = 'OVERWRITE'
+                    for c in children_of_targetMod:
+                        # need to check whether a hybrid occupies the module LV-side OR no particular position
+                        # old relations between MO & HY did NOT enforce position attribute, so we are left with
+                        # empty or invalid position attributes
+                        # the only thing we can be sure about is that a hybrid that is connected on HV-side is
+                        # harmless for the following operation, such potential relation does not need to be deleted
+                        # similar for the other side (swap HV & LV)
+                        if str(c['position']) != 'HV':
+                            occupied = True
+                            occupied_target_positions.append(c['position'])
+                            HYs_already_occupying_target_position.append(c['part']['serial_number'])
+                            Mod_HY_relations_to_delete.append(c['record_id'])
+                        else:
+                            # ToDo: implement the actual call to something like child sensor of other hybrid
+                            # or some attribute / measurement of the hybrid itself
+                            if str(c['part']['serial_number']) == 'something_that_tells_us_the_VBD_mismatch':
+                                mismatch = True
+                    if mismatch:
+                        confirmed_mismatch = ''
+                        dialog_mismatch = customtkinter.CTkInputDialog(text=f"This Module is already connected to a HV-side HY" +
+                                                              f" which does not match the VBD pairing cluster of your currently selected LV-side HY.\n" +
+                                    "Confirm by typing a confirmation: OVERWRITE to connect your selected HY irrespective of this mismatch:", title="Confirm dialog")
+                        confirmed_mismatch = dialog_mismatch.get_input()
+                    if confirmed_mismatch == 'OVERWRITE':
+                        if occupied:
+                            confirmed = ''
+                            dialog = customtkinter.CTkInputDialog(text=f"This Module is already connected to the non-HV-side HY(s) {','.join(HYs_already_occupying_target_position)}\n" +
+                                                                  f"at position(s) {','.join(occupied_target_positions)}.\n" +
+                                        "Confirm by typing a confirmation: OVERWRITE to overwrite ALL known non-HV-side hybrid children of the selected parent module with your selected HY:", title="Confirm dialog")
+                            confirmed = dialog.get_input()
+                            if debug:
+                                print("Typed in confirmation from confirm dialog:", confirmed)
+                            if confirmed == 'OVERWRITE':
+                                # DELETION OF PREVIOUS STUFF
+                                
+                                # delete Mod -> HY relations for the HYs that already connect to that Mod
+                                for del_this in Mod_HY_relations_to_delete:
+                                    self.last_responseText = api.delete_information(f'/partstreedelete/{del_this}/')
+        
+                                # POSTING NEW STUFF
+        
+                                # connect new HY there by creating a new Mod -> HY relation
+                                self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                                posted_new_rel = True
+                        else:
+                            self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                            posted_new_rel = True
+                            
+                else:
+                    info_text = wrapped_text.fill(f'Error: You can not connect this hybrid to the selected module.\nFirst you need to delete its existing relation to a module!')
+                    print(f'>>> {info_text}')
+                    self.label_info.configure(text=info_text)
+
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                self.last_responseText = str(e)
+            except ValueError as e:
+                self.last_responseText = str(e)
+
+            if self.last_responseText[:2] != '20':
+                self.api_status = 0
+                self.progressbar.configure(progress_color="#ff0000")
+                info_text = wrapped_text.fill(f'Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}')
+                print(f'>>> {info_text}')
+                self.label_info.configure(text=info_text)
+            else:
+                self.api_status = 1
+                self.progressbar.configure(progress_color="#007711")
+
+                if posted_new_rel:
+                    self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
+                    self.loading_wheel.start()
+                    self.update_progressbar(self.loading_wheel)
         
     def button_add_ft_event_click(self, debug = False):
         chi = self.combobox_ft.get()
