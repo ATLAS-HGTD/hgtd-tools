@@ -1094,14 +1094,14 @@ class App(customtkinter.CTk):
                     children_of_targetMod, self.last_responseText = util.get_children(par_partID, ofKind = 'Module Flex')
                     MF_already_occupying_target_position = ''
                     Mod_MF_relation_to_delete = ''
-                    matching_relation = []
+                    # all children found are also matching (we have no position to fill with a MO to MF relation)
                     for c in children_of_targetMod:
                         occupied = True
                         MF_already_occupying_target_position = c['part']['serial_number']
                         Mod_MF_relation_to_delete = c['record_id']
                     if occupied:
                         confirmed = ''
-                        dialog = customtkinter.CTkInputDialog(text=f"This Module is already connected to the MF {MF_already_occupying_target_position}.\n" +
+                        dialog = customtkinter.CTkInputDialog(text=f"This Module is already connected to (at least one) MF {MF_already_occupying_target_position}.\n" +
                                     "Confirm by typing a confirmation: OVERWRITE to overwrite it with your selected MF:", title="Confirm dialog")
                         confirmed = dialog.get_input()
                         if debug:
@@ -1110,7 +1110,8 @@ class App(customtkinter.CTk):
                             # DELETION OF PREVIOUS STUFF
                             
                             # delete Mod -> MF relation for the MF that already connects to that Mod
-                            self.last_responseText = api.delete_information(f'/partstreedelete/{Mod_MF_relation_to_delete}/')
+                            for c in children_of_targetMod:
+                                self.last_responseText = api.delete_information(f'/partstreedelete/{c['record_id']}/')
     
                             # POSTING NEW STUFF
     
@@ -1413,16 +1414,16 @@ class App(customtkinter.CTk):
                     children_of_targetSlot, self.last_responseText = util.get_children(par_partID, ofKind = 'Flex Tail')
                     FT_already_occupying_target_position = ''
                     Slot_FT_relation_to_delete = ''
-                    matching_relation = []
+                    matching_relations = []
                     for c in children_of_targetSlot:
                         occupied_slot = True
                         FT_already_occupying_target_position = c['part']['serial_number']
                         Slot_FT_relation_to_delete = c['record_id']
-                        matching_relation = c
+                        matching_relations.append(c)
                         break
                     if occupied_slot:
                         confirmed = ''
-                        dialog = customtkinter.CTkInputDialog(text=f"This Slot is already occupied by the FT {FT_already_occupying_target_position}.\n" +
+                        dialog = customtkinter.CTkInputDialog(text=f"This Slot is already occupied by (at least one) FT {FT_already_occupying_target_position}.\n" +
                                 "Confirm by typing a confirmation: OVERWRITE to overwrite it with your selected FT:", title="Confirm dialog")
                         confirmed = dialog.get_input()
                         if debug:
@@ -1431,7 +1432,8 @@ class App(customtkinter.CTk):
                             # DELETION OF PREVIOUS STUFF
 
                             # delete Slot -> FT relation for the FT that already occupies that Slot
-                            self.last_responseText = api.delete_information(f'/partstreedelete/{Slot_FT_relation_to_delete}/')
+                            for c in matching_relations:
+                                self.last_responseText = api.delete_information(f'/partstreedelete/{c['record_id']}/')
 
                             # POSTING NEW STUFF
 
@@ -1543,24 +1545,23 @@ class App(customtkinter.CTk):
                                     self.label_info.configure(text=info_text)
                                 else:
                                     allowed_VLQ = True
-                                    children_of_targetDetector, self.last_responseText = util.get_children(par_partID)
+                                    # make sure to only check for DU children KoP, nothing else
+                                    children_of_targetDetector, self.last_responseText = util.get_children(par_partID, ofKind = 'Detector Unit')
                                     DU_already_occupying_target_position = ''
                                     Det_DU_relation_to_delete = ''
-                                    matching_relation = []
+                                    matching_relations = []
                                     for c in children_of_targetDetector:
-                                        # make sure to only check for DU children KoP, nothing else
-                                        if str(c['part']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['PEB']):
-                                            # position of Det child is the same as the desired one, and DU type of desired DU is same as the one that already occupies the spot:
-                                            if str(c['position']) == pos and self.displayedDUtype in c['part']['serial_number']:
-                                                occupied_VLQ = True
-                                                DU_already_occupying_target_position = c['part']['serial_number']
-                                                Det_DU_relation_to_delete = c['record_id']
-                                                matching_relation = c
-                                                break
+                                        # position of Det child is the same as the desired one, and DU type of desired DU is same as the one that already occupies the spot:
+                                        if str(c['position']) == pos and self.displayedDUtype in c['part']['serial_number']:
+                                            occupied_VLQ = True
+                                            DU_already_occupying_target_position = c['part']['serial_number']
+                                            Det_DU_relation_to_delete = c['record_id']
+                                            matching_relations.append(c)
+                                            break
 
                                     if occupied_VLQ:
                                         confirmed = ''
-                                        dialog = customtkinter.CTkInputDialog(text=f"This Vessel Layer Quadrant is already occupied by the DU {DU_already_occupying_target_position}.\n" +
+                                        dialog = customtkinter.CTkInputDialog(text=f"This Vessel Layer Quadrant is already occupied by (at least one) DU {DU_already_occupying_target_position}.\n" +
                                             "Confirm by typing the desired Vessel Layer Quadrant (VxLyQz) again to overwrite it with your selected DU:", title="Confirm dialog")
                                         confirmed = dialog.get_input()
                                         if debug:
@@ -1568,19 +1569,18 @@ class App(customtkinter.CTk):
                                         if confirmed == pos:
                                             # DELETION OF PREVIOUS STUFF
 
-                                            # delete Det -> DU relation for the DU that already occupies that VLQ
-                                            self.last_responseText = api.delete_information(f'/partstreedelete/{Det_DU_relation_to_delete}/')
-                                            # get children modules of the DU that previously occupied the VLQ
-                                            affected_previous_modules, self.last_responseText = util.get_children(matching_relation['part']['part_id'])
-                                            # the parent slots of modules of the DU that previously occupied the VLQ
-                                            for a in affected_previous_modules:
-                                                affected_parents_of_children, self.last_responseText = util.get_parents(a['part']['part_id'])
-                                                for p in affected_parents_of_children:
-                                                    if debug:
-                                                        print(str(p['part_parent']['kind_of_part']['kind_of_part_id']))
-                                                    if str(p['part_parent']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['Slot']):
+                                            # delete Det -> DU relation for the DUs that already occupy that VLQ
+                                            for c in matching_relations:
+                                                self.last_responseText = api.delete_information(f'/partstreedelete/{c['record_id']}/')
+                                                # get children modules of the DU that previously occupied the VLQ
+                                                affected_previous_modules, self.last_responseText = util.get_children(c['part']['part_id'], ofKind = 'Module')
+                                                # the parent slots of modules of the DU that previously occupied the VLQ
+                                                for a in affected_previous_modules:
+                                                    affected_parents_of_children, self.last_responseText = util.get_parents(a['part']['part_id'], ofKind = 'Slot')
+                                                    for p in affected_parents_of_children:
                                                         # delete those Slot -> Mod relations
                                                         if debug:
+                                                            print(str(p['part_parent']['kind_of_part']['kind_of_part_id']))
                                                             print('Delete Slot -> Module relation', p)
                                                         self.last_responseText = api.delete_information(f'/partstreedelete/{p['record_id']}/')
 
@@ -1628,29 +1628,28 @@ class App(customtkinter.CTk):
                                         self.label_info.configure(text=info_text)
                                     else:
                                         allowed_VLQ = True
-                                        children_of_targetDetector, self.last_responseText = util.get_children(par_partID)
+                                        # make sure to only check for PEB children KoP, nothing else
+                                        children_of_targetDetector, self.last_responseText = util.get_children(par_partID, ofKind = 'PEB')
                                         PEB_already_occupying_target_position = ''
                                         Det_PEB_relation_to_delete = ''
-                                        matching_relation = []
+                                        matching_relations = []
                                         for c in children_of_targetDetector:
-                                            # make sure to only check for PEB children KoP, nothing else
-                                            if str(c['part']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['PEB']):
-                                                # position of Det child is the same as the desired one, and PEB type of desired PEB is same as the one that already occupies the spot:
-                                                if str(c['position']) == pos:
-                                                    # == OLD ==: previous schema did not include PEB Type in PEB SN
-                                                    # == OLD ==:  => used to need to fetch the attributes of maybe occupying children PEBs, because PEB type was only part of attributes (not part of SN sadly)
-                                                    # == OLD ==: child_attributes, self.last_responseText = api.fetch_information(f'/partattrlist/{c['part']['part_id']}/')
-                                                    # == OLD ==: PEB_type_occupying = [c for c in child_attributes if c['attribute']['name'] == 'Type'][0]['value']
-                                                    # NEW: PEB type is part of PEB SN!
-                                                    if self.displayed_PEB_type in c['part']['serial_number']:
-                                                        occupied_VLQ = True
-                                                        PEB_already_occupying_target_position = c['part']['serial_number']
-                                                        Det_PEB_relation_to_delete = c['record_id']
-                                                        matching_relation = c
-                                                        break
+                                            # position of Det child is the same as the desired one, and PEB type of desired PEB is same as the one that already occupies the spot:
+                                            if str(c['position']) == pos:
+                                                # == OLD ==: previous schema did not include PEB Type in PEB SN
+                                                # == OLD ==:  => used to need to fetch the attributes of maybe occupying children PEBs, because PEB type was only part of attributes (not part of SN sadly)
+                                                # == OLD ==: child_attributes, self.last_responseText = api.fetch_information(f'/partattrlist/{c['part']['part_id']}/')
+                                                # == OLD ==: PEB_type_occupying = [c for c in child_attributes if c['attribute']['name'] == 'Type'][0]['value']
+                                                # NEW: PEB type is part of PEB SN!
+                                                if self.displayed_PEB_type in c['part']['serial_number']:
+                                                    occupied_VLQ = True
+                                                    PEB_already_occupying_target_position = c['part']['serial_number']
+                                                    Det_PEB_relation_to_delete = c['record_id']
+                                                    matching_relations.append(c)
+                                                    break
                                         if occupied_VLQ:
                                             confirmed = ''
-                                            dialog = customtkinter.CTkInputDialog(text=f"This Vessel Layer Quadrant is already occupied by the PEB {PEB_already_occupying_target_position}.\n" +
+                                            dialog = customtkinter.CTkInputDialog(text=f"This Vessel Layer Quadrant is already occupied by (at least one) PEB {PEB_already_occupying_target_position}.\n" +
                                                 "Confirm by typing the desired Vessel Layer Quadrant (VxLyQz) again to overwrite it with your selected PEB:", title="Confirm dialog")
                                             confirmed = dialog.get_input()
                                             if debug:
@@ -1659,7 +1658,8 @@ class App(customtkinter.CTk):
                                                 # DELETION OF PREVIOUS STUFF
     
                                                 # delete Det -> PEB relation for the PEB that already occupies that VLQ
-                                                self.last_responseText = api.delete_information(f'/partstreedelete/{Det_PEB_relation_to_delete}/')
+                                                for c in matching_relations:
+                                                    self.last_responseText = api.delete_information(f'/partstreedelete/{c['record_id']}/')
     
                                                 # POSTING NEW STUFF
     
@@ -2577,7 +2577,7 @@ class App(customtkinter.CTk):
     def delete_old_and_post_new_slots_for_loaded_modules(self, V, L, Q):
         for entry in self.this_DU_relations_MODULE:
             try:
-                parents_of_child_module, self.responseText = util.get_parents(entry['part']['part_id'])
+                parents_of_child_module, self.responseText = util.get_parents(entry['part']['part_id'], ofKind = 'Slot')
             except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
                 self.last_responseText = str(e)
             except ValueError as e:
@@ -2594,23 +2594,22 @@ class App(customtkinter.CTk):
                 self.progressbar.configure(progress_color="#007711")
 
                 for r in parents_of_child_module:
-                    if str(r['part_parent']['kind_of_part']['kind_of_part_id']) == str(data.KoPID_from_partKoPName['Slot']):
-                        try:
-                            self.last_responseText = api.delete_information(f'/partstreedelete/{r['record_id']}/')
-                        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                            self.last_responseText = str(e)
-                        except ValueError as e:
-                            self.last_responseText = str(e)
+                    try:
+                        self.last_responseText = api.delete_information(f'/partstreedelete/{r['record_id']}/')
+                    except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                        self.last_responseText = str(e)
+                    except ValueError as e:
+                        self.last_responseText = str(e)
 
-                        if self.last_responseText[:2] != '20':
-                            self.api_status = 0
-                            self.progressbar.configure(progress_color="#ff0000")
-                            info_text = wrapped_text.fill(f'Error: Record could not be deleted from ProdDB API.\n{self.last_responseText}')
-                            print(f'>>> {info_text}')
-                            self.label_info.configure(text=info_text)
-                        else:
-                            self.api_status = 1
-                            self.progressbar.configure(progress_color="#007711")
+                    if self.last_responseText[:2] != '20':
+                        self.api_status = 0
+                        self.progressbar.configure(progress_color="#ff0000")
+                        info_text = wrapped_text.fill(f'Error: Record could not be deleted from ProdDB API.\n{self.last_responseText}')
+                        print(f'>>> {info_text}')
+                        self.label_info.configure(text=info_text)
+                    else:
+                        self.api_status = 1
+                        self.progressbar.configure(progress_color="#007711")
                 if self.api_status == 1:
                     attribute_SU_r = entry['position'].split('R').pop().split('M')[0]
                     attribute_SU_m = entry['position'].split('M').pop()
@@ -2673,7 +2672,8 @@ class App(customtkinter.CTk):
             parentDU_partID = self.possible_parents_partIDs[self.possible_parents_SNs.index(DU_SN)]
             if childSNIn != '- Select -':
                 childModule_partID = self.possible_children_partIDs[self.possible_children_SNs.index(childSNIn)]
-                # fetch possibly existing parents of module to make sure we don't load it again somewhere else
+                # fetch possibly existing parents of module to make sure we don't load it again somewhere else,
+                # record multiple KoP as parents!
                 try:
                     self.module_parents, self.last_responseText = util.get_parents(childModule_partID)
                 except(requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
@@ -2722,8 +2722,8 @@ class App(customtkinter.CTk):
                     self.canvas.create_text(20, 290, text='Capacitor side', anchor='nw', fill=data.fillColor_SU_Text, angle=90)
                 # get the children of that DU, interested in Modules only here; get potential detector parent
                 try:
-                    self.partstree, self.last_responseText = util.get_children(parentDU_partID)
-                    detector, self.last_responseText = util.get_parents(parentDU_partID)
+                    self.partstree, self.last_responseText = util.get_children(parentDU_partID, ofKind = 'Module')
+                    detector, self.last_responseText = util.get_parents(parentDU_partID, ofKind = 'Detector')
                 except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
                     self.partstree = []
                     detector = []
@@ -2824,7 +2824,7 @@ class App(customtkinter.CTk):
                 info_text = ' '
                 self.label_info.configure(text=info_text)
                 try:
-                    detector, self.last_responseText = util.get_parents(PEB_partID)
+                    detector, self.last_responseText = util.get_parents(PEB_partID, ofKind = 'Detector')
                 except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
                     detector = []
                     self.last_responseText = str(e)
@@ -3298,6 +3298,7 @@ class App(customtkinter.CTk):
 
             # do the most expensive part last (when easy filters on existing data have already been applied)
             # expensive meaning need to make calls to the API for each part in the list that survived the previous cuts
+            # multiple KoP possible
             if self.child_conn != None and self.child_conn != 'All children':
                 self.possible_children = [pp for pp in self.possible_children if (len(util.get_parents(pp['part_id'])[0])) == 0]
 
