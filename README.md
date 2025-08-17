@@ -100,47 +100,8 @@ python main.py
 
 Closing the application works like you would expect from other applications, e.g. you'll find a red button to close hgtd-tools, you could quit the application with shortcuts of your operating system (e.g. MacOS: cmd+Q), or interrupting the python program from command line with ctrl+c.
 
-## Showcase of typical use cases
-A video showing the main features included with v0.0.1 is available under this [cernbox link](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/public/for_HGTD/screencast_hgtd-tools_v0p0p1.mov) (protected / atlas-hgtd group access only).
-
-### General aspects
-#### API status
-HGTD Tools shows a dynamic progress bar whenever one or multiple API requests are ongoing.
-
-<span style="color:green">Green</span>: request was successful (triggered by status codes in the 200s)  
-<span style="color:yellow">Yellow</span>: ongoing request, please wait  
-<span style="color:red">Red</span>: request resulted in an error that is specified in the status bar in the footer of the application
-
-Example: if you lose connection to the web e.g. by purposefully switching off WiFi for this example, your app will look like this:
-
-![](docs/showcase_v1p2p0_api_error.png)
-
-#### Appearance mode (theme)
-Default appearance mode is System default, otherwise feel free to select from Light and Dark mode.
-
-### Module Loading
-HGTD Tools looks like this when first starting the app. You have various options, comboboxes etc. to preselect the parts to be shown. User actions like switching between Loading / Assembly, or selecting different parent or child parts reloads this view freshly with API calls to the database.
-
-![](docs/showcase_v1p2p0_module_loading_start.png)
-
-HGTD Tools shows already loaded module slots on a selected DU in blue. User actions like switching between Loading / Assembly, or selecting different parent or child parts reloads this view freshly with API calls to the database.
-
-When loading a new module to a position on the DU that is not already blocked by another module, this position is highlighted in green. You can proceed with the ADD PARTS TREE button.
-
-![](docs/showcase_v1p2p0_module_loading_new.png)
-
-Trying to load a module into a position that is already in use is not possible. This requires a further user action to prevent accidentally overwriting something. As noted in the message, feel free to inspect the affected parts clicking the INSPECT ... buttons below the selected serial numbers.
-
-![](docs/showcase_v1p2p0_module_loading_notAllowed.png)
-
-### Detector Assembly (CERN)
-HGTD Tools complains if the desired Layer is not compatible with the type of the DU to load there. Other implemented cases catch allowed / not allowed Vessel and Quadrant attributes.
-
-![](docs/showcase_v1p2p0_detector_assembly_incompatibleVLQ.png)
-
-HGTD Tools asks the user for confirmation, if a VesselLayerQuadrant combination was already used for the desired DU type (= already occupied).
-
-![](docs/showcase_v1p2p0_detector_assembly_occupiedVLQ.png)
+## Documentation of typical use cases
+We have a new [documentation page](https://hgtd-database.docs.cern.ch/) for the HGTD Production Database, which contains a [section on hgtd-tools](https://hgtd-database.docs.cern.ch/content/user/parts_tree_hgtd-tools/) as well. From now on, you will find guides to use the tools over there.
 
 ## Developer corner
 ### Reusing the included API module
@@ -155,7 +116,7 @@ DELETE: without payload, remove some record
 Those three variants are implemented as `api.fetch_information`, `api.post_information`, `api.delete_information` handling the endpoint, headers etc. for you so you don't have to worry about anything besides the actual information received, posted or deleted.
 
 ### Dockerization
-A deployment of this app to CERN OKD using docker is in preparation. 
+A deployment of this app to CERN OKD using docker is in preparation.
 
 There are two relevant registry links, for which a login is needed:
 
