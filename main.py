@@ -1384,7 +1384,7 @@ class App(customtkinter.CTk):
             self.label_info.configure(text=' ')
             chi_partID = self.possible_ft_partIDs[self.possible_ft_SNs.index(chi)]
             for s in self.slots:
-                if s['part_serial_number'] == par:
+                if str(s['part_serial_number']) == str(par):
                     par_partID = s['part_id']
                     break
             if self.user != 'None' and self.user != 'new...':
@@ -1923,6 +1923,10 @@ class App(customtkinter.CTk):
 
         self.combined_slot = f'V{v}:L{l}:Q{q}:R{r}:M{m}'
         self.this_SLOT_relations_FT = []
+        self.this_FT_relations_SLOT = []
+        self.possible_ft = []
+        self.combobox_ft.configure(values=[])
+        self.combobox_ft.set("- Select -")
 
         for s in self.slots:
             if s['part_serial_number'] == self.combined_slot:
@@ -2546,6 +2550,11 @@ class App(customtkinter.CTk):
         self.this_MODULE_relations_SLOT = []
         self.slots = None
         self.partstree = None
+        self.clicked_module = []
+        self.button_inspect_clicked.configure(text=f'INSPECT CLICKED MODULE')
+        self.button_inspect_clicked.configure(state='disabled')
+        self.button_delete_clicked.configure(text=f'UNLOAD CLICKED MODULE')
+        self.button_delete_clicked.configure(state='disabled')
 
         parentSNIn = self.combobox_parent.get()
         childSNIn = self.combobox_child.get()
@@ -2611,16 +2620,29 @@ class App(customtkinter.CTk):
                         self.api_status = 1
                         self.progressbar.configure(progress_color="#007711")
                 if self.api_status == 1:
+                    if debug:
+                        print(entry)
                     attribute_SU_r = entry['position'].split('R').pop().split('M')[0]
                     attribute_SU_m = entry['position'].split('M').pop()
+                    if debug:
+                        print('self.displayedDUtype',self.displayedDUtype)
+                        print('V',V)
+                        print('L',L)
+                        print('Q',Q)
+                        print('attribute_SU_r',attribute_SU_r)
+                        print('attribute_SU_m',attribute_SU_m)
+                        print(self.slots[0])
                     for sl in self.slots:
-                        if (sl['Vessel'] == V \
-                            and sl['Layer'] == L \
-                            and sl['Quadrant'] == Q \
-                            and sl['SU_type'] == self.displayedDUtype \
-                            and sl['SU_Row'] == attribute_SU_r \
-                            and sl['SU_Module'] == attribute_SU_m):
+                        if (sl['Vessel'] == str(V) \
+                            and str(sl['Layer']) == str(L) \
+                            and str(sl['Quadrant']) == str(Q) \
+                            and str(sl['SU_type']) == str(self.displayedDUtype) \
+                            and str(sl['SU_Row']) == str(attribute_SU_r) \
+                            and str(sl['SU_Module']) == str(attribute_SU_m)):
                             # found a slot :-)
+                            if debug:
+                                print('found a slot')
+                                print('sl:', sl)
                             if self.user != 'None' and self.user != 'new...':
                                 part_tree = {
                                     'position': '',
@@ -2637,6 +2659,7 @@ class App(customtkinter.CTk):
                                     'part_parent': sl['part_id'],
                                 }
                             try:
+                                print(part_tree)
                                 self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
                             except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
                                 self.last_responseText = str(e)
@@ -2751,7 +2774,7 @@ class App(customtkinter.CTk):
                                 self.this_DU_relations_MODULE.append(r)
                                 # make the corresponding slot blue if already in use, white if not used
                                 for mod in data.allDUs[self.displayedDUtype]:
-                                    if mod['slot'] == str(r['position']):
+                                    if str(mod['slot']) == str(r['position']):
                                         self.canvas_place_rounded_rectangle(mod['x'], mod['y'], mod['w'], mod['h'], fill=data.fillColor_AlreadyLoadedSlot)
                                         self.clicked_module = r['part']
                     if len(self.this_DU_relations_MODULE) == len(data.allDUs[self.displayedDUtype]):

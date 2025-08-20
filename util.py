@@ -54,7 +54,7 @@ def delete_children(par_partID, onlyNonDeleted = True, ofKind = 'all', dryrun = 
         if onlyNonDeleted:
             interesting_partstree = []
             for p in partstree:
-                if p['is_record_deleted'] == 'F':
+                if str(p['is_record_deleted']) == 'F':
                     if ofKind == 'all' or str(data.KoPID_from_partKoPName[ofKind]) == str(p['part']['kind_of_part']['kind_of_part_id']):
                         interesting_partstree.append(p)
         else:
@@ -74,7 +74,7 @@ def delete_parents(chi_partID, onlyNonDeleted = True, ofKind = 'all', dryrun = F
         if onlyNonDeleted:
             interesting_partstree = []
             for p in partstree:
-                if p['is_record_deleted'] == 'F':
+                if str(p['is_record_deleted']) == 'F':
                     if ofKind == 'all' or str(data.KoPID_from_partKoPName[ofKind]) == str(p['part_parent']['kind_of_part']['kind_of_part_id']):
                         interesting_partstree.append(p)
         else:
@@ -102,7 +102,7 @@ def get_relevant_parts(partKoP_shortname, onlyNonDeleted = True, getFullAttribut
                     json.dump(slots, f)
                 for alSl in these_parts:
                     for s in slots:
-                        if alSl['part_serial_number'] == s['serial_number']:
+                        if str(alSl['part_serial_number']) == str(s['serial_number']):
                             alSl['part_id'] = s['part_id']
 
             # == OLD ==: had to load PEB attributes to get PEB type in the past, now not necessary anymore
@@ -153,7 +153,7 @@ def get_relevant_parts(partKoP_shortname, onlyNonDeleted = True, getFullAttribut
                 
             for alSl in these_parts:
                 for s in slots:
-                    if alSl['part_serial_number'] == s['Serial #']:
+                    if str(alSl['part_serial_number']) == str(s['Serial #']):
                         alSl['part_id'] = s['Part ID']
         return these_parts, responseText
     except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
@@ -167,7 +167,7 @@ def get_parents(chi_partID, onlyNonDeleted = True, ofKind = 'all'):
         if onlyNonDeleted:
             interesting_partstree = []
             for p in partstree:
-                if p['is_record_deleted'] == 'F':
+                if str(p['is_record_deleted']) == 'F':
                     if ofKind == 'all' or str(data.KoPID_from_partKoPName[ofKind]) == str(p['part_parent']['kind_of_part']['kind_of_part_id']):
                         interesting_partstree.append(p)
             return interesting_partstree, responseText
@@ -185,7 +185,7 @@ def get_children(par_partID, onlyNonDeleted = True, ofKind = 'all'):
         if onlyNonDeleted:
             interesting_partstree = []
             for p in partstree:
-                if p['is_record_deleted'] == 'F':
+                if str(p['is_record_deleted']) == 'F':
                     if ofKind == 'all' or str(data.KoPID_from_partKoPName[ofKind]) == str(p['part']['kind_of_part']['kind_of_part_id']):
                         interesting_partstree.append(p)
             return interesting_partstree, responseText
@@ -202,7 +202,7 @@ def get_locations(onlyNonDeleted = True):
         if onlyNonDeleted:
             interesting_locations = []
             for m in locations:
-                if m['is_record_deleted'] == 'F':
+                if str(m['is_record_deleted']) == 'F':
                     interesting_locations.append(m)
             return interesting_locations, responseText
         else:
@@ -218,7 +218,7 @@ def get_manufacturers(onlyNonDeleted = True):
         if onlyNonDeleted:
             interesting_manufacturers = []
             for m in manufacturers:
-                if m['is_record_deleted'] == 'F':
+                if str(m['is_record_deleted']) == 'F':
                     interesting_manufacturers.append(m)
             return interesting_manufacturers, responseText
         else:
@@ -243,7 +243,7 @@ def load_partstree(onlyNonDeleted = True, useLocal = False):
                 partstree, responseText = json.load(partstreeJson), '200: Local File'
         interesting_partstree = []
         for p in partstree:
-            if p['is_record_deleted'] == 'F':
+            if str(p['is_record_deleted']) == 'F':
                 if p['part']['kind_of_part']['kind_of_part_id'] == 1005 and p['part_parent']['kind_of_part']['kind_of_part_id'] == 2407:
                     interesting_partstree.append(p)
         return interesting_partstree, responseText
