@@ -1386,6 +1386,8 @@ class App(customtkinter.CTk):
             for s in self.slots:
                 if str(s['part_serial_number']) == str(par):
                     par_partID = s['part_id']
+                    connects_to_PEB_type = s['PEB_type']
+                    connects_to_DU_type = s['SU_type']
                     break
             if self.user != 'None' and self.user != 'new...':
                 part_tree = {
@@ -1414,12 +1416,14 @@ class App(customtkinter.CTk):
                     children_of_targetSlot, self.last_responseText = util.get_children(par_partID, ofKind = 'Flex Tail')
                     FT_already_occupying_target_position = ''
                     Slot_FT_relation_to_delete = ''
+                    matching_partIDs = []
                     matching_relations = []
                     for c in children_of_targetSlot:
                         occupied_slot = True
                         FT_already_occupying_target_position = c['part']['serial_number']
                         Slot_FT_relation_to_delete = c['record_id']
                         matching_relations.append(c)
+                        matching_partIDs.append(c['part']['part_id'])
                         break
                     if occupied_slot:
                         confirmed = ''
@@ -1432,16 +1436,102 @@ class App(customtkinter.CTk):
                             # DELETION OF PREVIOUS STUFF
 
                             # delete Slot -> FT relation for the FT that already occupies that Slot
-                            for c in matching_relations:
-                                self.last_responseText = api.delete_information(f'/partstreedelete/{c['record_id']}/')
+                            # the deletion of slot relations will be done as part of parent deletion
+                            # but not only that, we need to delete the already occupying FTs' parents (all of them, Slot, DU, PEB, MO)
+                            for occ_pid in matching_partIDs:
+                                occ_pid_parents, self.last_responseText = util.get_parents(occ_pid)
+                                for opp in occ_pid_parents:
+                                    self.last_responseText = api.delete_information(f'/partstreedelete/{opp['record_id']}/')
 
-                            # POSTING NEW STUFF
+                    # POSTING NEW STUFF
 
-                            # connect new FT there by creating a new Slot -> FT relation
+                    # connect new FT there by creating a new Slot -> FT relation
+                    self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+
+                    # mod to connect FT to
+                    mod_for_FT, self.last_responseText = util.get_children(par_partID, ofKind = 'Module')
+                    if len(mod_for_FT) > 0:
+                        for mFT in mod_for_FT:
+                            parentMod_for_FT_partID = mFT['part']['part_id']
+                            if self.user != 'None' and self.user != 'new...':
+                                part_tree = {
+                                    'position': '',
+                                    'is_record_deleted': 'F',
+                                    'part': chi_partID,
+                                    'part_parent': parentMod_for_FT_partID,
+                                    'record_insertion_user': self.user,
+                                }
+                            else:
+                                part_tree = {
+                                    'position': '',
+                                    'is_record_deleted': 'F',
+                                    'part': chi_partID,
+                                    'part_parent': parentMod_for_FT_partID,
+                                }
                             self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                            
+                            # the DU this FT will connect to
+                            mod_in_DU, self.last_responseText = util.get_parents(parentMod_for_FT_partID, ofKind = 'Detector Unit')
+                            if len(mod_in_DU) > 0:
+                                for du_rel in mod_in_DU:
+                                    if debug:
+                                        print(du_rel)
+                                    if self.user != 'None' and self.user != 'new...':
+                                        part_tree = {
+                                            'position': du_rel['position'],
+                                            'is_record_deleted': 'F',
+                                            'part': chi_partID,
+                                            'part_parent': du_rel['part_parent']['part_id'],
+                                            'record_insertion_user': self.user,
+                                        }
+                                    else:
+                                        part_tree = {
+                                            'position': du_rel['position'],
+                                            'is_record_deleted': 'F',
+                                            'part': chi_partID,
+                                            'part_parent': du_rel['part_parent']['part_id'],
+                                        }
+                                    self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+        
+                                # the PEB this FT will connect to
+                                all_PEB_childs_of_mainDet, self.last_responseText = util.get_children(data.partID_parent_Detector, ofKind = 'PEB')
+                                found_PEB_for_FT = False
+                                for peb_rel in all_PEB_childs_of_mainDet:
+                                    if str(peb_rel['position']) == f'V{par[1]}L{par[4]}Q{par[7]}':
+                                        # it's for the correct quadrant
+                                        if str(connects_to_PEB_type) == str(peb_rel['part']['serial_number'][9:11]):
+                                            # it's also correct type of PEB sitting there
+                                            # so we can connect the FT to this PEB
+                                            found_PEB_for_FT = True
+                                            if self.user != 'None' and self.user != 'new...':
+                                                part_tree = {
+                                                    'position': du_rel['position'],
+                                                    'is_record_deleted': 'F',
+                                                    'part': chi_partID,
+                                                    'part_parent': peb_rel['part']['part_id'],
+                                                    'record_insertion_user': self.user,
+                                                }
+                                            else:
+                                                part_tree = {
+                                                    'position': du_rel['position'],
+                                                    'is_record_deleted': 'F',
+                                                    'part': chi_partID,
+                                                    'part_parent': peb_rel['part']['part_id'],
+                                                }
+                                            self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                                            break
+                                if not found_PEB_for_FT:
+                                    info_text = wrapped_text.fill(f'Error: You can not connect this FT to the selected slot.\nThere is no PEB on the cooling plate!')
+                                    print(f'>>> {info_text}')
+                                    self.label_info.configure(text=info_text)
+                            else:
+                                info_text = wrapped_text.fill(f'Error: You can not connect this FT to the selected slot.\nThere is no detector unit on the cooling plate!')
+                                print(f'>>> {info_text}')
+                                self.label_info.configure(text=info_text)
                     else:
-                        self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
-                        
+                        info_text = wrapped_text.fill(f'Error: You can not connect this FT to the selected slot.\nThere is no module occupying this slot!')
+                        print(f'>>> {info_text}')
+                        self.label_info.configure(text=info_text)
                 else:
                     info_text = wrapped_text.fill(f'Error: You can not connect this FT to the selected slot.\nCheck the FT generation and FT category requirements!')
                     print(f'>>> {info_text}')
@@ -1784,6 +1874,7 @@ class App(customtkinter.CTk):
         if len(self.this_FT_relations_SLOT) > 0:
             try:
                 for k in self.this_FT_relations_SLOT:
+                    # this already deletes ALL relations of this FT to any parent, including: Slot, DU, PEB, MO
                     self.last_responseText = util.delete_parents(k['part']['part_id'])
             except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
                 self.last_responseText = str(e)

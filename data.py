@@ -16,6 +16,7 @@ partIDs_for_Testing = {
     'Module' : 6573,
     #'Slot' : 
 }
+partID_parent_Detector = 28833
 
 # define module geometry for canvas - not to scale!!!
 modLongSide = 80
