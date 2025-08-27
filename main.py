@@ -1439,9 +1439,7 @@ class App(customtkinter.CTk):
                             # the deletion of slot relations will be done as part of parent deletion
                             # but not only that, we need to delete the already occupying FTs' parents (all of them, Slot, DU, PEB, MO)
                             for occ_pid in matching_partIDs:
-                                occ_pid_parents, self.last_responseText = util.get_parents(occ_pid)
-                                for opp in occ_pid_parents:
-                                    self.last_responseText = api.delete_information(f'/partstreedelete/{opp['record_id']}/')
+                                self.last_responseText = util.delete_parents(occ_pid)
 
                     # POSTING NEW STUFF
 
