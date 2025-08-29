@@ -147,8 +147,7 @@ def fetch_information(endpoint, authorized = True, debug = False):
             print("OOps: Something Else",err)
         raise requests.exceptions.RequestException("OOps: Something Else",err)
 
-def post_information(endpoint, payload, authorized = True, debug = False, dryrun = False):
-    headers = {'content-type': 'application/json'}
+def post_information(endpoint, payload, authorized = True, debug = False, dryrun = False, content_type = 'application/json', files_payload = {}):
     if debug:
         pprint(payload)
     if not dryrun:
@@ -156,10 +155,21 @@ def post_information(endpoint, payload, authorized = True, debug = False, dryrun
             if authorized:
                 access_token = get_access_token()
                 authorization = 'Bearer ' + access_token
-                headers = {'Authorization': authorization, 'content-type': 'application/json'}
-                response = requests.post(protectedApiUrlPrefix + endpoint, data=json.dumps(payload), headers=headers)
+                if content_type == 'application/json':
+                    headers = {'Authorization': authorization, 'content-type': 'application/json'}
+                    response = requests.post(protectedApiUrlPrefix + endpoint, data=json.dumps(payload), headers=headers)
+                elif content_type == 'multipart/form-data':
+                    # we don't need to add , 'content-type': 'multipart/form-data' because it is used implicitly
+                    headers = {'Authorization': authorization}
+                    response = requests.post(protectedApiUrlPrefix + endpoint, files=files_payload, data=payload, headers=headers)
+                else:
+                    raise NotImplementedError('This content-type is not implemented.')
             else:
-                response = requests.post(apiUrlPrefix + endpoint, data=json.dumps(payload), headers=headers)
+                if content_type == 'application/json':
+                    headers = {'content-type': 'application/json'}
+                    response = requests.post(apiUrlPrefix + endpoint, data=json.dumps(payload), headers=headers)
+                else:
+                    raise NotImplementedError('This content-type is not implemented.')
             response.raise_for_status()
             if debug:
                 print('>> PATCH response:', response.status_code, response.reason)
