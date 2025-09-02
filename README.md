@@ -110,10 +110,13 @@ The `api.py` module can be used standalone as well to make API requests to the H
 The basic types of requests are:
 
 GET: without payload, fetch some specified record/view etc.  
-POST: sends a payload (dictionary as json)  
+POST: sends a payload (dictionary as json, or more involved types like a tar for measurement data, with another dictionary for human-readable requests)  
 DELETE: without payload, remove some record
 
 Those three variants are implemented as `api.fetch_information`, `api.post_information`, `api.delete_information` handling the endpoint, headers etc. for you so you don't have to worry about anything besides the actual information received, posted or deleted.
+
+#### Worked out standalone example
+Have a look at the notebook `example_API_usage.ipynb` to see the included API module in action. The notebook shows two use cases for user interaction with the DB that can be implemented as part of scripts (as in FADAPro, for example): adding a value for a single attribute (useful for e.g. module metrology) or complete bulk upload of a tar containing various files (useful for e.g. module electrical measurements). For proper authentication, these preliminary steps to get started are included as well.
 
 ### Dockerization
 A deployment of this app to CERN OKD using docker is in preparation.
