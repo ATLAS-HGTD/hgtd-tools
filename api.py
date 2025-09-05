@@ -13,8 +13,6 @@ protectedApiUrlPrefix = 'https://hgtddb-api.web.cern.ch/hgtddb'
 # CERN endpoint to receive API access tokens (e.g. for new backend),
 # method client_credentials
 access_token_url = 'https://auth.cern.ch/auth/realms/cern/api-access/token'
-# We do not yet use password grant_type method to talk to the hgtd-api
-#password_token_url = 'https://auth.cern.ch/auth/realms/cern/protocol/openid-connect/token'
 
 # === For user authentication via OpenID (CERN SSO)
 # Used to write usernames that are different from the default "None"
@@ -73,24 +71,11 @@ def get_access_token(grant_type = 'client_credentials', debug = False):
     applicationDetails['grant_type'] = (None, grant_type)
     if grant_type == 'client_credentials':
         applicationDetails['client_id'] = (None, 'hgtd-api-client')
-        applicationDetails['client_secret'] = (None, 'tfMW775EPllKczpWh3uZaE3VQ2aOHUnr')
+        applicationDetails['client_secret'] = (None, open('config_api').readlines()[0])
         applicationDetails['audience'] = (None, 'webframeworks-paas-hgtddb')
         url_to_use = access_token_url
-    '''    
-    # not yet implemented
-    elif grant_type == 'password':
-        username = input('Enter username: ')
-        password = getpass.getpass('Enter password: ')
-        sixdigit = input('Enter 6-digit verification code: ')
-
-        applicationDetails['scope'] = (None, 'openid')
-        applicationDetails['username'] = (None, username)
-        applicationDetails['password'] = (None, password)
-        applicationDetails['totp'] = (None, sixdigit)
-        applicationDetails['client_id'] = (None, 'public-client')
-        applicationDetails['client_secret'] = (None, '')
-        url_to_use = password_token_url
-    '''
+    else:
+        raise NotImplementedError("Error: hgtddb-api does only accept grant_type = 'client_credentials'")
     headers = {'content-type': 'application/x-www-form-urlencoded'}
 
     try:
@@ -116,11 +101,11 @@ def get_access_token(grant_type = 'client_credentials', debug = False):
             print("OOps: Something Else",err)
         raise requests.exceptions.RequestException("OOps: Something Else",err)
 
-def fetch_information(endpoint, authorized = True, debug = False):
+def fetch_information(endpoint, authorized = True, debug = False, existing_token = None):
     # https://stackoverflow.com/a/47007419
     try:
         if authorized:
-            access_token = get_access_token()
+            access_token = get_access_token() if existing_token == None else existing_token
             authorization = 'Bearer ' + access_token
             headers = {'Authorization': authorization, 'content-type': 'application/json'}
             request = requests.get(protectedApiUrlPrefix + endpoint, timeout=600, headers=headers)
@@ -147,13 +132,13 @@ def fetch_information(endpoint, authorized = True, debug = False):
             print("OOps: Something Else",err)
         raise requests.exceptions.RequestException("OOps: Something Else",err)
 
-def post_information(endpoint, payload, authorized = True, debug = False, dryrun = False, content_type = 'application/json', files_payload = {}):
+def post_information(endpoint, payload, authorized = True, debug = False, dryrun = False, content_type = 'application/json', files_payload = {}, existing_token = None):
     if debug:
         pprint(payload)
     if not dryrun:
         try:
             if authorized:
-                access_token = get_access_token()
+                access_token = get_access_token() if existing_token == None else existing_token
                 authorization = 'Bearer ' + access_token
                 if content_type == 'application/json':
                     headers = {'Authorization': authorization, 'content-type': 'application/json'}
@@ -194,11 +179,11 @@ def post_information(endpoint, payload, authorized = True, debug = False, dryrun
         print('>>> Dryrun post operation with endpoint', endpoint)
         print('>>> and payload', payload)
 
-def delete_information(endpoint, authorized = True, debug = False, dryrun = False):
+def delete_information(endpoint, authorized = True, debug = False, dryrun = False, existing_token = None):
     if not dryrun:
         try:
             if authorized:
-                access_token = get_access_token()
+                access_token = get_access_token() if existing_token == None else existing_token
                 authorization = 'Bearer ' + access_token
                 headers = {'Authorization': authorization, 'content-type': 'application/json'}
                 response = requests.delete(protectedApiUrlPrefix + endpoint, headers=headers)
