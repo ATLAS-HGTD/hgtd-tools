@@ -7,7 +7,7 @@
 
 <div align="center">
 
-![Static Badge](https://img.shields.io/badge/python-3.12-blue) ![Static Badge](https://img.shields.io/badge/hgtd--tools-1.6.0-blue) <br>
+![Static Badge](https://img.shields.io/badge/python-3.12-blue) ![Static Badge](https://img.shields.io/badge/hgtd--tools-1.7.0-blue) <br>
 
 ![Static Badge](https://img.shields.io/badge/tested_on-Linux_|_MacOS_|_Windows-green)
 </div>
@@ -21,6 +21,7 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 - API (GET / POST / DELETE)
   - with dynamic progress bar to see API request status
   - efficient lookup of information in local files (e.g. static Slot table) and fetching of dynamic information via ProdDB API
+  - allows standalone usage of API client
 - GUI (Linux / Mac / Windows)
   - clickable canvas to get local coordinates easily, conversion to global coordinates done internally where needed
   - buttons to inspect affected parts
@@ -120,6 +121,8 @@ Those three variants are implemented as `api.fetch_information`, `api.post_infor
 
 #### Worked out standalone example
 Have a look at the notebook `example_API_usage.ipynb` to see the included API module in action. The notebook shows two use cases for user interaction with the DB that can be implemented as part of scripts (as in FADAPro, for example): adding a value for a single attribute (useful for e.g. module metrology) or complete bulk upload of a tar containing various files (useful for e.g. module electrical measurements). For proper authentication, these preliminary steps to get started are included as well.
+
+What will be implemented to FADAPro is being WIP, a first attempt can be seen in `DB_interface.py`.
 
 ### Dockerization
 A deployment of this app to CERN OKD using docker is in preparation.
