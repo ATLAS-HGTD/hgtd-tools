@@ -103,7 +103,7 @@ class App(customtkinter.CTk):
         # fill sidebar
         self.label_logo = customtkinter.CTkLabel(self.frame_sidebar_left, text="HGTD Tools", font=customtkinter.CTkFont(size=20, weight="bold"))
         self.label_logo.grid(row=0, column=0, padx=20, pady=(20, 10), columnspan=2)
-        self.label_credits = customtkinter.CTkLabel(self.frame_sidebar_left, text="v1.6.0 - August 2025\nAnnika Stein (JGU Mainz)")
+        self.label_credits = customtkinter.CTkLabel(self.frame_sidebar_left, text="v1.7.1 - August 2025\nAnnika Stein (JGU Mainz)")
         self.label_credits.grid(row=1, column=0, padx=20, pady=10, columnspan=2)
 
         self.label_progress = customtkinter.CTkLabel(self.frame_sidebar_left, text="API Request Status")
@@ -1068,10 +1068,14 @@ class App(customtkinter.CTk):
             print(f'>>> {info_text}')
             self.label_info.configure(text=info_text)
         else:
-            self.label_info.configure(text=' ')
-            chi_partID = self.possible_MF_partIDs[self.possible_MF_SNs.index(chi)]
-            par_partID = self.possible_MA_mod_par_partIDs[self.possible_MA_mod_par_SNs.index(par)]
-            if self.user != 'None' and self.user != 'new...':
+            if (self.user == 'None' or self.user == 'new...'):
+                info_text = 'Error: Please login with your CERN account, because this operation requires a user name.'
+                print(f'>>> {info_text}')
+                self.label_info.configure(text=info_text)
+            else:
+                self.label_info.configure(text=' ')
+                chi_partID = self.possible_MF_partIDs[self.possible_MF_SNs.index(chi)]
+                par_partID = self.possible_MA_mod_par_partIDs[self.possible_MA_mod_par_SNs.index(par)]
                 part_tree = {
                     'position': pos,
                     'is_record_deleted': 'F',
@@ -1079,71 +1083,64 @@ class App(customtkinter.CTk):
                     'part_parent': par_partID,
                     'record_insertion_user': self.user,
                 }
-            else:
-                part_tree = {
-                    'position': pos,
-                    'is_record_deleted': 'F',
-                    'part': chi_partID,
-                    'part_parent': par_partID,
-                }
-            occupied = False
-            confirmed = 'OVERWRITE'
-            try:
-                parents_of_target_MF, self.last_responseText = util.get_parents(chi_partID, ofKind = 'Module')
-                if len(parents_of_target_MF) == 0:
-                    children_of_targetMod, self.last_responseText = util.get_children(par_partID, ofKind = 'Module Flex')
-                    MF_already_occupying_target_position = ''
-                    Mod_MF_relation_to_delete = ''
-                    # all children found are also matching (we have no position to fill with a MO to MF relation)
-                    for c in children_of_targetMod:
-                        occupied = True
-                        MF_already_occupying_target_position = c['part']['serial_number']
-                        Mod_MF_relation_to_delete = c['record_id']
-                    if occupied:
-                        confirmed = ''
-                        dialog = customtkinter.CTkInputDialog(text=f"This Module is already connected to (at least one) MF {MF_already_occupying_target_position}.\n" +
-                                    "Confirm by typing a confirmation: OVERWRITE to overwrite it with your selected MF:", title="Confirm dialog")
-                        confirmed = dialog.get_input()
-                        if debug:
-                            print("Typed in confirmation from confirm dialog:", confirmed)
-                        if confirmed == 'OVERWRITE':
-                            # DELETION OF PREVIOUS STUFF
-                            
-                            # delete Mod -> MF relation for the MF that already connects to that Mod
-                            for c in children_of_targetMod:
-                                self.last_responseText = api.delete_information(f'/partstreedelete/{c['record_id']}/')
-    
-                            # POSTING NEW STUFF
-    
-                            # connect new MF there by creating a new Mod -> MF relation
+                occupied = False
+                confirmed = 'OVERWRITE'
+                try:
+                    parents_of_target_MF, self.last_responseText = util.get_parents(chi_partID, ofKind = 'Module')
+                    if len(parents_of_target_MF) == 0:
+                        children_of_targetMod, self.last_responseText = util.get_children(par_partID, ofKind = 'Module Flex')
+                        MF_already_occupying_target_position = ''
+                        Mod_MF_relation_to_delete = ''
+                        # all children found are also matching (we have no position to fill with a MO to MF relation)
+                        for c in children_of_targetMod:
+                            occupied = True
+                            MF_already_occupying_target_position = c['part']['serial_number']
+                            Mod_MF_relation_to_delete = c['record_id']
+                        if occupied:
+                            confirmed = ''
+                            dialog = customtkinter.CTkInputDialog(text=f"This Module is already connected to (at least one) MF {MF_already_occupying_target_position}.\n" +
+                                        "Confirm by typing a confirmation: OVERWRITE to overwrite it with your selected MF:", title="Confirm dialog")
+                            confirmed = dialog.get_input()
+                            if debug:
+                                print("Typed in confirmation from confirm dialog:", confirmed)
+                            if confirmed == 'OVERWRITE':
+                                # DELETION OF PREVIOUS STUFF
+                                
+                                # delete Mod -> MF relation for the MF that already connects to that Mod
+                                for c in children_of_targetMod:
+                                    self.last_responseText = api.delete_information(f'/partstreedelete/{c['record_id']}/')
+        
+                                # POSTING NEW STUFF
+        
+                                # connect new MF there by creating a new Mod -> MF relation
+                                self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                        else:
                             self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                                
                     else:
-                        self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
-                            
-                else:
-                    info_text = wrapped_text.fill(f'Error: You can not connect this MF to the selected module.\nFirst you need to delete its existing relation to a module!')
+                        info_text = wrapped_text.fill(f'Error: You can not connect this MF to the selected module.\nFirst you need to delete its existing relation to a module!')
+                        print(f'>>> {info_text}')
+                        self.label_info.configure(text=info_text)
+    
+                except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                    self.last_responseText = str(e)
+                except ValueError as e:
+                    self.last_responseText = str(e)
+    
+                if self.last_responseText[:2] != '20':
+                    self.api_status = 0
+                    self.progressbar.configure(progress_color="#ff0000")
+                    info_text = wrapped_text.fill(f'Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}')
                     print(f'>>> {info_text}')
                     self.label_info.configure(text=info_text)
-
-            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                self.last_responseText = str(e)
-            except ValueError as e:
-                self.last_responseText = str(e)
-
-            if self.last_responseText[:2] != '20':
-                self.api_status = 0
-                self.progressbar.configure(progress_color="#ff0000")
-                info_text = wrapped_text.fill(f'Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}')
-                print(f'>>> {info_text}')
-                self.label_info.configure(text=info_text)
-            else:
-                self.api_status = 1
-                self.progressbar.configure(progress_color="#007711")
-
-                if len(parents_of_target_MF) == 0 and ((occupied == False) or (occupied == True and confirmed == 'OVERWRITE')):
-                    self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
-                    self.loading_wheel.start()
-                    self.update_progressbar(self.loading_wheel)
+                else:
+                    self.api_status = 1
+                    self.progressbar.configure(progress_color="#007711")
+    
+                    if len(parents_of_target_MF) == 0 and ((occupied == False) or (occupied == True and confirmed == 'OVERWRITE')):
+                        self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
+                        self.loading_wheel.start()
+                        self.update_progressbar(self.loading_wheel)
 
     def button_add_child_HY_HV_event_click(self, debug = False):
         chi = self.combobox_MA_HY_HV_chi.get()
@@ -1154,10 +1151,14 @@ class App(customtkinter.CTk):
             print(f'>>> {info_text}')
             self.label_info.configure(text=info_text)
         else:
-            self.label_info.configure(text=' ')        
-            chi_partID = self.possible_HY_HV_partIDs[self.possible_HY_HV_SNs.index(chi)]
-            par_partID = self.possible_MA_mod_par_partIDs[self.possible_MA_mod_par_SNs.index(par)]
-            if self.user != 'None' and self.user != 'new...':
+            if self.user == 'None' or self.user == 'new...':
+                info_text = 'Error: Please login with your CERN account, because this operation requires a user name.'
+                print(f'>>> {info_text}')
+                self.label_info.configure(text=info_text)
+            else:
+                self.label_info.configure(text=' ')
+                chi_partID = self.possible_HY_HV_partIDs[self.possible_HY_HV_SNs.index(chi)]
+                par_partID = self.possible_MA_mod_par_partIDs[self.possible_MA_mod_par_SNs.index(par)]
                 part_tree = {
                     'position': pos,
                     'is_record_deleted': 'F',
@@ -1165,99 +1166,92 @@ class App(customtkinter.CTk):
                     'part_parent': par_partID,
                     'record_insertion_user': self.user,
                 }
-            else:
-                part_tree = {
-                    'position': pos,
-                    'is_record_deleted': 'F',
-                    'part': chi_partID,
-                    'part_parent': par_partID,
-                }
-            occupied = False
-            confirmed = 'OVERWRITE'
-            posted_new_rel = False
-            try:
-                parents_of_target_HY, self.last_responseText = util.get_parents(chi_partID, ofKind = 'Module')
-                if len(parents_of_target_HY) == 0:
-                    children_of_targetMod, self.last_responseText = util.get_children(par_partID, ofKind = 'Hybrid')
-                    HYs_already_occupying_target_position = []
-                    occupied_target_positions = []
-                    Mod_HY_relations_to_delete = []
-                    # test whether sensor VBD clusters match (or something else that makes two hybrids form a good pair),
-                    # if yes or the user confirms to connect another hybrid regardless, proceed
-                    mismatch = False
-                    confirmed_mismatch = 'OVERWRITE'
-                    for c in children_of_targetMod:
-                        # need to check whether a hybrid occupies the module HV-side OR no particular position
-                        # old relations between MO & HY did NOT enforce position attribute, so we are left with
-                        # empty or invalid position attributes
-                        # the only thing we can be sure about is that a hybrid that is connected on LV-side is
-                        # harmless for the following operation, such potential relation does not need to be deleted
-                        # similar for the other side (swap HV & LV)
-                        if str(c['position']) != 'LV':
-                            occupied = True
-                            occupied_target_positions.append(c['position'])
-                            HYs_already_occupying_target_position.append(c['part']['serial_number'])
-                            Mod_HY_relations_to_delete.append(c['record_id'])
-                        else:
-                            # ToDo: implement the actual call to something like child sensor of other hybrid
-                            # or some attribute / measurement of the hybrid itself
-                            if str(c['part']['serial_number']) == 'something_that_tells_us_the_VBD_mismatch':
-                                mismatch = True
-                    if mismatch:
-                        confirmed_mismatch = ''
-                        dialog_mismatch = customtkinter.CTkInputDialog(text=f"This Module is already connected to a LV-side HY" +
-                                                              f" which does not match the VBD pairing cluster of your currently selected HV-side HY.\n" +
-                                    "Confirm by typing a confirmation: OVERWRITE to connect your selected HY irrespective of this mismatch:", title="Confirm dialog")
-                        confirmed_mismatch = dialog_mismatch.get_input()
-                    if confirmed_mismatch == 'OVERWRITE':
-                        if occupied:
-                            confirmed = ''
-                            dialog = customtkinter.CTkInputDialog(text=f"This Module is already connected to the non-LV-side HY(s) {','.join(HYs_already_occupying_target_position)}\n" +
-                                                                  f"at position(s) {','.join(occupied_target_positions)}.\n" +
-                                        "Confirm by typing a confirmation: OVERWRITE to overwrite ALL known non-LV-side hybrid children of the selected parent module with your selected HY:", title="Confirm dialog")
-                            confirmed = dialog.get_input()
-                            if debug:
-                                print("Typed in confirmation from confirm dialog:", confirmed)
-                            if confirmed == 'OVERWRITE':
-                                # DELETION OF PREVIOUS STUFF
-                                
-                                # delete Mod -> HY relations for the HYs that already connect to that Mod
-                                for del_this in Mod_HY_relations_to_delete:
-                                    self.last_responseText = api.delete_information(f'/partstreedelete/{del_this}/')
-        
-                                # POSTING NEW STUFF
-        
-                                # connect new HY there by creating a new Mod -> HY relation
+                occupied = False
+                confirmed = 'OVERWRITE'
+                posted_new_rel = False
+                try:
+                    parents_of_target_HY, self.last_responseText = util.get_parents(chi_partID, ofKind = 'Module')
+                    if len(parents_of_target_HY) == 0:
+                        children_of_targetMod, self.last_responseText = util.get_children(par_partID, ofKind = 'Hybrid')
+                        HYs_already_occupying_target_position = []
+                        occupied_target_positions = []
+                        Mod_HY_relations_to_delete = []
+                        # test whether sensor VBD clusters match (or something else that makes two hybrids form a good pair),
+                        # if yes or the user confirms to connect another hybrid regardless, proceed
+                        mismatch = False
+                        confirmed_mismatch = 'OVERWRITE'
+                        for c in children_of_targetMod:
+                            # need to check whether a hybrid occupies the module HV-side OR no particular position
+                            # old relations between MO & HY did NOT enforce position attribute, so we are left with
+                            # empty or invalid position attributes
+                            # the only thing we can be sure about is that a hybrid that is connected on LV-side is
+                            # harmless for the following operation, such potential relation does not need to be deleted
+                            # similar for the other side (swap HV & LV)
+                            if str(c['position']) != 'LV':
+                                occupied = True
+                                occupied_target_positions.append(c['position'])
+                                HYs_already_occupying_target_position.append(c['part']['serial_number'])
+                                Mod_HY_relations_to_delete.append(c['record_id'])
+                            else:
+                                # ToDo: implement the actual call to something like child sensor of other hybrid
+                                # or some attribute / measurement of the hybrid itself
+                                if str(c['part']['serial_number']) == 'something_that_tells_us_the_VBD_mismatch':
+                                    mismatch = True
+                        if mismatch:
+                            confirmed_mismatch = ''
+                            dialog_mismatch = customtkinter.CTkInputDialog(text=f"This Module is already connected to a LV-side HY" +
+                                                                  f" which does not match the VBD pairing cluster of your currently selected HV-side HY.\n" +
+                                        "Confirm by typing a confirmation: OVERWRITE to connect your selected HY irrespective of this mismatch:", title="Confirm dialog")
+                            confirmed_mismatch = dialog_mismatch.get_input()
+                        if confirmed_mismatch == 'OVERWRITE':
+                            if occupied:
+                                confirmed = ''
+                                dialog = customtkinter.CTkInputDialog(text=f"This Module is already connected to the non-LV-side HY(s) {','.join(HYs_already_occupying_target_position)}\n" +
+                                                                      f"at position(s) {','.join(occupied_target_positions)}.\n" +
+                                            "Confirm by typing a confirmation: OVERWRITE to overwrite ALL known non-LV-side hybrid children of the selected parent module with your selected HY:", title="Confirm dialog")
+                                confirmed = dialog.get_input()
+                                if debug:
+                                    print("Typed in confirmation from confirm dialog:", confirmed)
+                                if confirmed == 'OVERWRITE':
+                                    # DELETION OF PREVIOUS STUFF
+                                    
+                                    # delete Mod -> HY relations for the HYs that already connect to that Mod
+                                    for del_this in Mod_HY_relations_to_delete:
+                                        self.last_responseText = api.delete_information(f'/partstreedelete/{del_this}/')
+            
+                                    # POSTING NEW STUFF
+            
+                                    # connect new HY there by creating a new Mod -> HY relation
+                                    self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                                    posted_new_rel = True
+                            else:
                                 self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
                                 posted_new_rel = True
-                        else:
-                            self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
-                            posted_new_rel = True
-                            
-                else:
-                    info_text = wrapped_text.fill(f'Error: You can not connect this hybrid to the selected module.\nFirst you need to delete its existing relation to a module!')
+                                
+                    else:
+                        info_text = wrapped_text.fill(f'Error: You can not connect this hybrid to the selected module.\nFirst you need to delete its existing relation to a module!')
+                        print(f'>>> {info_text}')
+                        self.label_info.configure(text=info_text)
+    
+                except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                    self.last_responseText = str(e)
+                except ValueError as e:
+                    self.last_responseText = str(e)
+    
+                if self.last_responseText[:2] != '20':
+                    self.api_status = 0
+                    self.progressbar.configure(progress_color="#ff0000")
+                    info_text = wrapped_text.fill(f'Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}')
                     print(f'>>> {info_text}')
                     self.label_info.configure(text=info_text)
-
-            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                self.last_responseText = str(e)
-            except ValueError as e:
-                self.last_responseText = str(e)
-
-            if self.last_responseText[:2] != '20':
-                self.api_status = 0
-                self.progressbar.configure(progress_color="#ff0000")
-                info_text = wrapped_text.fill(f'Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}')
-                print(f'>>> {info_text}')
-                self.label_info.configure(text=info_text)
-            else:
-                self.api_status = 1
-                self.progressbar.configure(progress_color="#007711")
-
-                if posted_new_rel:
-                    self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
-                    self.loading_wheel.start()
-                    self.update_progressbar(self.loading_wheel)
+                else:
+                    self.api_status = 1
+                    self.progressbar.configure(progress_color="#007711")
+    
+                    if posted_new_rel:
+                        self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
+                        self.loading_wheel.start()
+                        self.update_progressbar(self.loading_wheel)
 
     def button_add_child_HY_LV_event_click(self, debug = False):
         chi = self.combobox_MA_HY_LV_chi.get()
@@ -1268,10 +1262,14 @@ class App(customtkinter.CTk):
             print(f'>>> {info_text}')
             self.label_info.configure(text=info_text)
         else:
-            self.label_info.configure(text=' ')        
-            chi_partID = self.possible_HY_LV_partIDs[self.possible_HY_LV_SNs.index(chi)]
-            par_partID = self.possible_MA_mod_par_partIDs[self.possible_MA_mod_par_SNs.index(par)]
-            if self.user != 'None' and self.user != 'new...':
+            if (self.user == 'None' or self.user == 'new...'):
+                info_text = 'Error: Please login with your CERN account, because this operation requires a user name.'
+                print(f'>>> {info_text}')
+                self.label_info.configure(text=info_text)
+            else:
+                self.label_info.configure(text=' ')        
+                chi_partID = self.possible_HY_LV_partIDs[self.possible_HY_LV_SNs.index(chi)]
+                par_partID = self.possible_MA_mod_par_partIDs[self.possible_MA_mod_par_SNs.index(par)]
                 part_tree = {
                     'position': pos,
                     'is_record_deleted': 'F',
@@ -1279,99 +1277,92 @@ class App(customtkinter.CTk):
                     'part_parent': par_partID,
                     'record_insertion_user': self.user,
                 }
-            else:
-                part_tree = {
-                    'position': pos,
-                    'is_record_deleted': 'F',
-                    'part': chi_partID,
-                    'part_parent': par_partID,
-                }
-            occupied = False
-            confirmed = 'OVERWRITE'
-            posted_new_rel = False
-            try:
-                parents_of_target_HY, self.last_responseText = util.get_parents(chi_partID, ofKind = 'Module')
-                if len(parents_of_target_HY) == 0:
-                    children_of_targetMod, self.last_responseText = util.get_children(par_partID, ofKind = 'Hybrid')
-                    HYs_already_occupying_target_position = []
-                    occupied_target_positions = []
-                    Mod_HY_relations_to_delete = []
-                    # test whether sensor VBD clusters match (or something else that makes two hybrids form a good pair),
-                    # if yes or the user confirms to connect another hybrid regardless, proceed
-                    mismatch = False
-                    confirmed_mismatch = 'OVERWRITE'
-                    for c in children_of_targetMod:
-                        # need to check whether a hybrid occupies the module LV-side OR no particular position
-                        # old relations between MO & HY did NOT enforce position attribute, so we are left with
-                        # empty or invalid position attributes
-                        # the only thing we can be sure about is that a hybrid that is connected on HV-side is
-                        # harmless for the following operation, such potential relation does not need to be deleted
-                        # similar for the other side (swap HV & LV)
-                        if str(c['position']) != 'HV':
-                            occupied = True
-                            occupied_target_positions.append(c['position'])
-                            HYs_already_occupying_target_position.append(c['part']['serial_number'])
-                            Mod_HY_relations_to_delete.append(c['record_id'])
-                        else:
-                            # ToDo: implement the actual call to something like child sensor of other hybrid
-                            # or some attribute / measurement of the hybrid itself
-                            if str(c['part']['serial_number']) == 'something_that_tells_us_the_VBD_mismatch':
-                                mismatch = True
-                    if mismatch:
-                        confirmed_mismatch = ''
-                        dialog_mismatch = customtkinter.CTkInputDialog(text=f"This Module is already connected to a HV-side HY" +
-                                                              f" which does not match the VBD pairing cluster of your currently selected LV-side HY.\n" +
-                                    "Confirm by typing a confirmation: OVERWRITE to connect your selected HY irrespective of this mismatch:", title="Confirm dialog")
-                        confirmed_mismatch = dialog_mismatch.get_input()
-                    if confirmed_mismatch == 'OVERWRITE':
-                        if occupied:
-                            confirmed = ''
-                            dialog = customtkinter.CTkInputDialog(text=f"This Module is already connected to the non-HV-side HY(s) {','.join(HYs_already_occupying_target_position)}\n" +
-                                                                  f"at position(s) {','.join(occupied_target_positions)}.\n" +
-                                        "Confirm by typing a confirmation: OVERWRITE to overwrite ALL known non-HV-side hybrid children of the selected parent module with your selected HY:", title="Confirm dialog")
-                            confirmed = dialog.get_input()
-                            if debug:
-                                print("Typed in confirmation from confirm dialog:", confirmed)
-                            if confirmed == 'OVERWRITE':
-                                # DELETION OF PREVIOUS STUFF
-                                
-                                # delete Mod -> HY relations for the HYs that already connect to that Mod
-                                for del_this in Mod_HY_relations_to_delete:
-                                    self.last_responseText = api.delete_information(f'/partstreedelete/{del_this}/')
-        
-                                # POSTING NEW STUFF
-        
-                                # connect new HY there by creating a new Mod -> HY relation
+                occupied = False
+                confirmed = 'OVERWRITE'
+                posted_new_rel = False
+                try:
+                    parents_of_target_HY, self.last_responseText = util.get_parents(chi_partID, ofKind = 'Module')
+                    if len(parents_of_target_HY) == 0:
+                        children_of_targetMod, self.last_responseText = util.get_children(par_partID, ofKind = 'Hybrid')
+                        HYs_already_occupying_target_position = []
+                        occupied_target_positions = []
+                        Mod_HY_relations_to_delete = []
+                        # test whether sensor VBD clusters match (or something else that makes two hybrids form a good pair),
+                        # if yes or the user confirms to connect another hybrid regardless, proceed
+                        mismatch = False
+                        confirmed_mismatch = 'OVERWRITE'
+                        for c in children_of_targetMod:
+                            # need to check whether a hybrid occupies the module LV-side OR no particular position
+                            # old relations between MO & HY did NOT enforce position attribute, so we are left with
+                            # empty or invalid position attributes
+                            # the only thing we can be sure about is that a hybrid that is connected on HV-side is
+                            # harmless for the following operation, such potential relation does not need to be deleted
+                            # similar for the other side (swap HV & LV)
+                            if str(c['position']) != 'HV':
+                                occupied = True
+                                occupied_target_positions.append(c['position'])
+                                HYs_already_occupying_target_position.append(c['part']['serial_number'])
+                                Mod_HY_relations_to_delete.append(c['record_id'])
+                            else:
+                                # ToDo: implement the actual call to something like child sensor of other hybrid
+                                # or some attribute / measurement of the hybrid itself
+                                if str(c['part']['serial_number']) == 'something_that_tells_us_the_VBD_mismatch':
+                                    mismatch = True
+                        if mismatch:
+                            confirmed_mismatch = ''
+                            dialog_mismatch = customtkinter.CTkInputDialog(text=f"This Module is already connected to a HV-side HY" +
+                                                                  f" which does not match the VBD pairing cluster of your currently selected LV-side HY.\n" +
+                                        "Confirm by typing a confirmation: OVERWRITE to connect your selected HY irrespective of this mismatch:", title="Confirm dialog")
+                            confirmed_mismatch = dialog_mismatch.get_input()
+                        if confirmed_mismatch == 'OVERWRITE':
+                            if occupied:
+                                confirmed = ''
+                                dialog = customtkinter.CTkInputDialog(text=f"This Module is already connected to the non-HV-side HY(s) {','.join(HYs_already_occupying_target_position)}\n" +
+                                                                      f"at position(s) {','.join(occupied_target_positions)}.\n" +
+                                            "Confirm by typing a confirmation: OVERWRITE to overwrite ALL known non-HV-side hybrid children of the selected parent module with your selected HY:", title="Confirm dialog")
+                                confirmed = dialog.get_input()
+                                if debug:
+                                    print("Typed in confirmation from confirm dialog:", confirmed)
+                                if confirmed == 'OVERWRITE':
+                                    # DELETION OF PREVIOUS STUFF
+                                    
+                                    # delete Mod -> HY relations for the HYs that already connect to that Mod
+                                    for del_this in Mod_HY_relations_to_delete:
+                                        self.last_responseText = api.delete_information(f'/partstreedelete/{del_this}/')
+            
+                                    # POSTING NEW STUFF
+            
+                                    # connect new HY there by creating a new Mod -> HY relation
+                                    self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                                    posted_new_rel = True
+                            else:
                                 self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
                                 posted_new_rel = True
-                        else:
-                            self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
-                            posted_new_rel = True
-                            
-                else:
-                    info_text = wrapped_text.fill(f'Error: You can not connect this hybrid to the selected module.\nFirst you need to delete its existing relation to a module!')
+                                
+                    else:
+                        info_text = wrapped_text.fill(f'Error: You can not connect this hybrid to the selected module.\nFirst you need to delete its existing relation to a module!')
+                        print(f'>>> {info_text}')
+                        self.label_info.configure(text=info_text)
+    
+                except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                    self.last_responseText = str(e)
+                except ValueError as e:
+                    self.last_responseText = str(e)
+    
+                if self.last_responseText[:2] != '20':
+                    self.api_status = 0
+                    self.progressbar.configure(progress_color="#ff0000")
+                    info_text = wrapped_text.fill(f'Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}')
                     print(f'>>> {info_text}')
                     self.label_info.configure(text=info_text)
-
-            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                self.last_responseText = str(e)
-            except ValueError as e:
-                self.last_responseText = str(e)
-
-            if self.last_responseText[:2] != '20':
-                self.api_status = 0
-                self.progressbar.configure(progress_color="#ff0000")
-                info_text = wrapped_text.fill(f'Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}')
-                print(f'>>> {info_text}')
-                self.label_info.configure(text=info_text)
-            else:
-                self.api_status = 1
-                self.progressbar.configure(progress_color="#007711")
-
-                if posted_new_rel:
-                    self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
-                    self.loading_wheel.start()
-                    self.update_progressbar(self.loading_wheel)
+                else:
+                    self.api_status = 1
+                    self.progressbar.configure(progress_color="#007711")
+    
+                    if posted_new_rel:
+                        self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
+                        self.loading_wheel.start()
+                        self.update_progressbar(self.loading_wheel)
         
     def button_add_ft_event_click(self, debug = False):
         chi = self.combobox_ft.get()
@@ -1381,15 +1372,19 @@ class App(customtkinter.CTk):
             print(f'>>> {info_text}')
             self.label_info.configure(text=info_text)
         else:
-            self.label_info.configure(text=' ')
-            chi_partID = self.possible_ft_partIDs[self.possible_ft_SNs.index(chi)]
-            for s in self.slots:
-                if str(s['part_serial_number']) == str(par):
-                    par_partID = s['part_id']
-                    connects_to_PEB_type = s['PEB_type']
-                    connects_to_DU_type = s['SU_type']
-                    break
-            if self.user != 'None' and self.user != 'new...':
+            if (self.user == 'None' or self.user == 'new...'):
+                info_text = 'Error: Please login with your CERN account, because this operation requires a user name.'
+                print(f'>>> {info_text}')
+                self.label_info.configure(text=info_text)
+            else:
+                self.label_info.configure(text=' ')
+                chi_partID = self.possible_ft_partIDs[self.possible_ft_SNs.index(chi)]
+                for s in self.slots:
+                    if str(s['part_serial_number']) == str(par):
+                        par_partID = s['part_id']
+                        connects_to_PEB_type = s['PEB_type']
+                        connects_to_DU_type = s['SU_type']
+                        break
                 part_tree = {
                     'position': '',
                     'is_record_deleted': 'F',
@@ -1397,61 +1392,53 @@ class App(customtkinter.CTk):
                     'part_parent': par_partID,
                     'record_insertion_user': self.user,
                 }
-            else:
-                part_tree = {
-                    'position': '',
-                    'is_record_deleted': 'F',
-                    'part': chi_partID,
-                    'part_parent': par_partID,
-                }
-            allowed_slot = False
-            occupied_slot = False
-            confirmed = ''
-            try:
-                # allowed: chosen FT matches the generation and category that the slot requires
-                gen = self.ft_filter.split('+')[0].split('/') # multiple generations
-                cat = self.ft_filter[-2:] # the last two chars make the category
-                if any(gen_ in chi for gen_ in gen) and int(chi[9:11]) == int(cat):
-                    allowed_slot = True
-                    children_of_targetSlot, self.last_responseText = util.get_children(par_partID, ofKind = 'Flex Tail')
-                    FT_already_occupying_target_position = ''
-                    Slot_FT_relation_to_delete = ''
-                    matching_partIDs = []
-                    matching_relations = []
-                    for c in children_of_targetSlot:
-                        occupied_slot = True
-                        FT_already_occupying_target_position = c['part']['serial_number']
-                        Slot_FT_relation_to_delete = c['record_id']
-                        matching_relations.append(c)
-                        matching_partIDs.append(c['part']['part_id'])
-                        break
-                    if occupied_slot:
-                        confirmed = ''
-                        dialog = customtkinter.CTkInputDialog(text=f"This Slot is already occupied by (at least one) FT {FT_already_occupying_target_position}.\n" +
-                                "Confirm by typing a confirmation: OVERWRITE to overwrite it with your selected FT:", title="Confirm dialog")
-                        confirmed = dialog.get_input()
-                        if debug:
-                            print("Typed in confirmation from confirm dialog:", confirmed)
-                        if confirmed == 'OVERWRITE':
-                            # DELETION OF PREVIOUS STUFF
-
-                            # delete Slot -> FT relation for the FT that already occupies that Slot
-                            # the deletion of slot relations will be done as part of parent deletion
-                            # but not only that, we need to delete the already occupying FTs' parents (all of them, Slot, DU, PEB, MO)
-                            for occ_pid in matching_partIDs:
-                                self.last_responseText = util.delete_parents(occ_pid)
-
-                    # POSTING NEW STUFF
-
-                    # connect new FT there by creating a new Slot -> FT relation
-                    self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
-
-                    # mod to connect FT to
-                    mod_for_FT, self.last_responseText = util.get_children(par_partID, ofKind = 'Module')
-                    if len(mod_for_FT) > 0:
-                        for mFT in mod_for_FT:
-                            parentMod_for_FT_partID = mFT['part']['part_id']
-                            if self.user != 'None' and self.user != 'new...':
+                allowed_slot = False
+                occupied_slot = False
+                confirmed = ''
+                try:
+                    # allowed: chosen FT matches the generation and category that the slot requires
+                    gen = self.ft_filter.split('+')[0].split('/') # multiple generations
+                    cat = self.ft_filter[-2:] # the last two chars make the category
+                    if any(gen_ in chi for gen_ in gen) and int(chi[9:11]) == int(cat):
+                        allowed_slot = True
+                        children_of_targetSlot, self.last_responseText = util.get_children(par_partID, ofKind = 'Flex Tail')
+                        FT_already_occupying_target_position = ''
+                        Slot_FT_relation_to_delete = ''
+                        matching_partIDs = []
+                        matching_relations = []
+                        for c in children_of_targetSlot:
+                            occupied_slot = True
+                            FT_already_occupying_target_position = c['part']['serial_number']
+                            Slot_FT_relation_to_delete = c['record_id']
+                            matching_relations.append(c)
+                            matching_partIDs.append(c['part']['part_id'])
+                            break
+                        if occupied_slot:
+                            confirmed = ''
+                            dialog = customtkinter.CTkInputDialog(text=f"This Slot is already occupied by (at least one) FT {FT_already_occupying_target_position}.\n" +
+                                    "Confirm by typing a confirmation: OVERWRITE to overwrite it with your selected FT:", title="Confirm dialog")
+                            confirmed = dialog.get_input()
+                            if debug:
+                                print("Typed in confirmation from confirm dialog:", confirmed)
+                            if confirmed == 'OVERWRITE':
+                                # DELETION OF PREVIOUS STUFF
+    
+                                # delete Slot -> FT relation for the FT that already occupies that Slot
+                                # the deletion of slot relations will be done as part of parent deletion
+                                # but not only that, we need to delete the already occupying FTs' parents (all of them, Slot, DU, PEB, MO)
+                                for occ_pid in matching_partIDs:
+                                    self.last_responseText = util.delete_parents(occ_pid)
+    
+                        # POSTING NEW STUFF
+    
+                        # connect new FT there by creating a new Slot -> FT relation
+                        self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+    
+                        # mod to connect FT to
+                        mod_for_FT, self.last_responseText = util.get_children(par_partID, ofKind = 'Module')
+                        if len(mod_for_FT) > 0:
+                            for mFT in mod_for_FT:
+                                parentMod_for_FT_partID = mFT['part']['part_id']
                                 part_tree = {
                                     'position': '',
                                     'is_record_deleted': 'F',
@@ -1459,22 +1446,14 @@ class App(customtkinter.CTk):
                                     'part_parent': parentMod_for_FT_partID,
                                     'record_insertion_user': self.user,
                                 }
-                            else:
-                                part_tree = {
-                                    'position': '',
-                                    'is_record_deleted': 'F',
-                                    'part': chi_partID,
-                                    'part_parent': parentMod_for_FT_partID,
-                                }
-                            self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
-                            
-                            # the DU this FT will connect to
-                            mod_in_DU, self.last_responseText = util.get_parents(parentMod_for_FT_partID, ofKind = 'Detector Unit')
-                            if len(mod_in_DU) > 0:
-                                for du_rel in mod_in_DU:
-                                    if debug:
-                                        print(du_rel)
-                                    if self.user != 'None' and self.user != 'new...':
+                                self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                                
+                                # the DU this FT will connect to
+                                mod_in_DU, self.last_responseText = util.get_parents(parentMod_for_FT_partID, ofKind = 'Detector Unit')
+                                if len(mod_in_DU) > 0:
+                                    for du_rel in mod_in_DU:
+                                        if debug:
+                                            print(du_rel)
                                         part_tree = {
                                             'position': du_rel['position'],
                                             'is_record_deleted': 'F',
@@ -1482,26 +1461,18 @@ class App(customtkinter.CTk):
                                             'part_parent': du_rel['part_parent']['part_id'],
                                             'record_insertion_user': self.user,
                                         }
-                                    else:
-                                        part_tree = {
-                                            'position': du_rel['position'],
-                                            'is_record_deleted': 'F',
-                                            'part': chi_partID,
-                                            'part_parent': du_rel['part_parent']['part_id'],
-                                        }
-                                    self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
-        
-                                # the PEB this FT will connect to
-                                all_PEB_childs_of_mainDet, self.last_responseText = util.get_children(data.partID_parent_Detector, ofKind = 'PEB')
-                                found_PEB_for_FT = False
-                                for peb_rel in all_PEB_childs_of_mainDet:
-                                    if str(peb_rel['position']) == f'V{par[1]}L{par[4]}Q{par[7]}':
-                                        # it's for the correct quadrant
-                                        if str(connects_to_PEB_type) == str(peb_rel['part']['serial_number'][9:11]):
-                                            # it's also correct type of PEB sitting there
-                                            # so we can connect the FT to this PEB
-                                            found_PEB_for_FT = True
-                                            if self.user != 'None' and self.user != 'new...':
+                                        self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+            
+                                    # the PEB this FT will connect to
+                                    all_PEB_childs_of_mainDet, self.last_responseText = util.get_children(data.partID_parent_Detector, ofKind = 'PEB')
+                                    found_PEB_for_FT = False
+                                    for peb_rel in all_PEB_childs_of_mainDet:
+                                        if str(peb_rel['position']) == f'V{par[1]}L{par[4]}Q{par[7]}':
+                                            # it's for the correct quadrant
+                                            if str(connects_to_PEB_type) == str(peb_rel['part']['serial_number'][9:11]):
+                                                # it's also correct type of PEB sitting there
+                                                # so we can connect the FT to this PEB
+                                                found_PEB_for_FT = True
                                                 part_tree = {
                                                     'position': du_rel['position'],
                                                     'is_record_deleted': 'F',
@@ -1509,52 +1480,45 @@ class App(customtkinter.CTk):
                                                     'part_parent': peb_rel['part']['part_id'],
                                                     'record_insertion_user': self.user,
                                                 }
-                                            else:
-                                                part_tree = {
-                                                    'position': du_rel['position'],
-                                                    'is_record_deleted': 'F',
-                                                    'part': chi_partID,
-                                                    'part_parent': peb_rel['part']['part_id'],
-                                                }
-                                            self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
-                                            break
-                                if not found_PEB_for_FT:
-                                    info_text = wrapped_text.fill(f'Error: You can not connect this FT to the selected slot.\nThere is no PEB on the cooling plate!')
+                                                self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                                                break
+                                    if not found_PEB_for_FT:
+                                        info_text = wrapped_text.fill(f'Error: You can not connect this FT to the selected slot.\nThere is no PEB on the cooling plate!')
+                                        print(f'>>> {info_text}')
+                                        self.label_info.configure(text=info_text)
+                                else:
+                                    info_text = wrapped_text.fill(f'Error: You can not connect this FT to the selected slot.\nThere is no detector unit on the cooling plate!')
                                     print(f'>>> {info_text}')
                                     self.label_info.configure(text=info_text)
-                            else:
-                                info_text = wrapped_text.fill(f'Error: You can not connect this FT to the selected slot.\nThere is no detector unit on the cooling plate!')
-                                print(f'>>> {info_text}')
-                                self.label_info.configure(text=info_text)
+                        else:
+                            info_text = wrapped_text.fill(f'Error: You can not connect this FT to the selected slot.\nThere is no module occupying this slot!')
+                            print(f'>>> {info_text}')
+                            self.label_info.configure(text=info_text)
                     else:
-                        info_text = wrapped_text.fill(f'Error: You can not connect this FT to the selected slot.\nThere is no module occupying this slot!')
+                        info_text = wrapped_text.fill(f'Error: You can not connect this FT to the selected slot.\nCheck the FT generation and FT category requirements!')
                         print(f'>>> {info_text}')
                         self.label_info.configure(text=info_text)
-                else:
-                    info_text = wrapped_text.fill(f'Error: You can not connect this FT to the selected slot.\nCheck the FT generation and FT category requirements!')
+    
+                except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                    self.last_responseText = str(e)
+                except ValueError as e:
+                    self.last_responseText = str(e)
+    
+                if self.last_responseText[:2] != '20':
+                    self.api_status = 0
+                    self.progressbar.configure(progress_color="#ff0000")
+                    info_text = wrapped_text.fill(f'Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}')
                     print(f'>>> {info_text}')
                     self.label_info.configure(text=info_text)
-
-            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                self.last_responseText = str(e)
-            except ValueError as e:
-                self.last_responseText = str(e)
-
-            if self.last_responseText[:2] != '20':
-                self.api_status = 0
-                self.progressbar.configure(progress_color="#ff0000")
-                info_text = wrapped_text.fill(f'Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}')
-                print(f'>>> {info_text}')
-                self.label_info.configure(text=info_text)
-            else:
-                self.api_status = 1
-                self.progressbar.configure(progress_color="#007711")
-
-                self.combobox_ft.set("- Select -")
-                self.this_FT_relations_SLOT = []
-                self.loading_wheel = threading.Thread(target=self.fetch_ft)
-                self.loading_wheel.start()
-                self.update_progressbar(self.loading_wheel)
+                else:
+                    self.api_status = 1
+                    self.progressbar.configure(progress_color="#007711")
+    
+                    self.combobox_ft.set("- Select -")
+                    self.this_FT_relations_SLOT = []
+                    self.loading_wheel = threading.Thread(target=self.fetch_ft)
+                    self.loading_wheel.start()
+                    self.update_progressbar(self.loading_wheel)
 
     def button_add_event_click(self, debug = False):
         chi = self.combobox_child.get()
@@ -1565,10 +1529,14 @@ class App(customtkinter.CTk):
             print(f'>>> {info_text}')
             self.label_info.configure(text=info_text)
         else:
-            self.label_info.configure(text=' ')
-            chi_partID = self.possible_children_partIDs[self.possible_children_SNs.index(chi)]
-            par_partID = self.possible_parents_partIDs[self.possible_parents_SNs.index(par)]
-            if self.user != 'None' and self.user != 'new...':
+            if (self.user == 'None' or self.user == 'new...'):
+                info_text = 'Error: Please login with your CERN account, because this operation requires a user name.'
+                print(f'>>> {info_text}')
+                self.label_info.configure(text=info_text)
+            else:
+                self.label_info.configure(text=' ')
+                chi_partID = self.possible_children_partIDs[self.possible_children_SNs.index(chi)]
+                par_partID = self.possible_parents_partIDs[self.possible_parents_SNs.index(par)]
                 part_tree = {
                     'position': pos,
                     'is_record_deleted': 'F',
@@ -1576,119 +1544,29 @@ class App(customtkinter.CTk):
                     'part_parent': par_partID,
                     'record_insertion_user': self.user,
                 }
-            else:
-                part_tree = {
-                    'position': pos,
-                    'is_record_deleted': 'F',
-                    'part': chi_partID,
-                    'part_parent': par_partID,
-                }
-            allowed_VLQ = False
-            occupied_VLQ = False
-            confirmed = pos
-            try:
-                if self.operation_mode == 'Module Loading':
-                    self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
-
-                    self.displayedDUtype = "None"
-                    self.this_DU_relations_MODULE = []
-                    self.this_MODULE_relations_DU = []
-                    self.this_MODULE_relations_SLOT = []
-                    self.possible_parents = []
-                    self.possible_children = []
-                    self.slots = None
-                    self.partstree = None
-
-                    self.loading_wheel = threading.Thread(target=self.fetch_loaded_DU_and_display, args=(chi, par))
-                    self.loading_wheel.start()
-                    self.update_progressbar(self.loading_wheel)
-                elif self.operation_mode == 'Detector Assembly (CERN): DU':
-                    attribute_Vessel = pos.split('V').pop().split('L')[0]
-                    if attribute_Vessel not in ['1', '2', 'M', 'D']:
-                        info_text = wrapped_text.fill(f'Error: You can not load to this vessel.\nVessel attribute only accepts 1, 2, M, or D, but you selected {attribute_Vessel}!')
-                        print(f'>>> {info_text}')
-                        self.label_info.configure(text=info_text)
-                    else:
-                        attribute_Layer = pos.split('L').pop().split('Q')[0]
-                        if attribute_Layer not in ['0', '1', '2', '3']:
-                            info_text = wrapped_text.fill(f'Error: You can not load to this layer.\nLayer attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Layer}!')
-                            print(f'>>> {info_text}')
-                            self.label_info.configure(text=info_text)
-                        else:
-                            if attribute_Layer == '0' or attribute_Layer == '3':
-                                allowed_type = 'F'
-                                not_allowed_type = 'B'
-                            else:#elif attribute_Layer == '1' or attribute_Layer == '2':
-                                allowed_type = 'B'
-                                not_allowed_type = 'F'
-                            if self.displayedDUtype[0] == not_allowed_type:
-                                info_text = wrapped_text.fill(f'Error: You can not load this DU to this layer.\nLayer {attribute_Layer} only accepts {allowed_type} DUs, but you selected a {self.displayedDUtype[0]} DU!')
-                                print(f'>>> {info_text}')
-                                self.label_info.configure(text=info_text)
-                            else:
-                                attribute_Quadrant = pos.split('Q').pop()
-                                if attribute_Quadrant not in ['0', '1', '2', '3']:
-                                    info_text = wrapped_text.fill(f'Error: You can not load to this quadrant.\nQuadrant attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Quadrant}!')
-                                    print(f'>>> {info_text}')
-                                    self.label_info.configure(text=info_text)
-                                else:
-                                    allowed_VLQ = True
-                                    # make sure to only check for DU children KoP, nothing else
-                                    children_of_targetDetector, self.last_responseText = util.get_children(par_partID, ofKind = 'Detector Unit')
-                                    DU_already_occupying_target_position = ''
-                                    Det_DU_relation_to_delete = ''
-                                    matching_relations = []
-                                    for c in children_of_targetDetector:
-                                        # position of Det child is the same as the desired one, and DU type of desired DU is same as the one that already occupies the spot:
-                                        if str(c['position']) == pos and self.displayedDUtype in c['part']['serial_number']:
-                                            occupied_VLQ = True
-                                            DU_already_occupying_target_position = c['part']['serial_number']
-                                            Det_DU_relation_to_delete = c['record_id']
-                                            matching_relations.append(c)
-                                            break
-
-                                    if occupied_VLQ:
-                                        confirmed = ''
-                                        dialog = customtkinter.CTkInputDialog(text=f"This Vessel Layer Quadrant is already occupied by (at least one) DU {DU_already_occupying_target_position}.\n" +
-                                            "Confirm by typing the desired Vessel Layer Quadrant (VxLyQz) again to overwrite it with your selected DU:", title="Confirm dialog")
-                                        confirmed = dialog.get_input()
-                                        if debug:
-                                            print("Typed in slot from confirm dialog:", confirmed)
-                                        if confirmed == pos:
-                                            # DELETION OF PREVIOUS STUFF
-
-                                            # delete Det -> DU relation for the DUs that already occupy that VLQ
-                                            for c in matching_relations:
-                                                self.last_responseText = api.delete_information(f'/partstreedelete/{c['record_id']}/')
-                                                # get children modules of the DU that previously occupied the VLQ
-                                                affected_previous_modules, self.last_responseText = util.get_children(c['part']['part_id'], ofKind = 'Module')
-                                                # the parent slots of modules of the DU that previously occupied the VLQ
-                                                for a in affected_previous_modules:
-                                                    affected_parents_of_children, self.last_responseText = util.get_parents(a['part']['part_id'], ofKind = 'Slot')
-                                                    for p in affected_parents_of_children:
-                                                        # delete those Slot -> Mod relations
-                                                        if debug:
-                                                            print(str(p['part_parent']['kind_of_part']['kind_of_part_id']))
-                                                            print('Delete Slot -> Module relation', p)
-                                                        self.last_responseText = api.delete_information(f'/partstreedelete/{p['record_id']}/')
-
-                                            # POSTING NEW STUFF
-
-                                            # place new DU at this position by creating a new Det -> DU relation
-                                            self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
-                                            self.canvas.itemconfig(self.duAlreadyPlacedText, text=f'Now placed at:\n{pos}')
-                                    else:
-                                        self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
-                                        self.canvas.itemconfig(self.duAlreadyPlacedText, text=f'Now placed at:\n{pos}')
-                elif self.operation_mode == 'Detector Assembly (CERN): PEB':
-                    attribute_Vessel = pos.split('V').pop().split('L')[0]
-                    if attribute_Vessel not in ['1', '2', 'M', 'D']:
-                        info_text = wrapped_text.fill(f'Error: You can not load to this vessel.\nVessel attribute only accepts 1, 2, M, or D, but you selected {attribute_Vessel}!')
-                        print(f'>>> {info_text}')
-                        self.label_info.configure(text=info_text)
-                    else:
-                        if attribute_Vessel in ['D'] and self.displayed_PEB_type != '1F':
-                            info_text = wrapped_text.fill(f'Error: You can not load to this vessel (demonstrator).\nDemonstratorV1 only accepts PEB type 1F, but you selected a PEB of type {self.displayed_PEB_type}!')
+                allowed_VLQ = False
+                occupied_VLQ = False
+                confirmed = pos
+                try:
+                    if self.operation_mode == 'Module Loading':
+                        self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+    
+                        self.displayedDUtype = "None"
+                        self.this_DU_relations_MODULE = []
+                        self.this_MODULE_relations_DU = []
+                        self.this_MODULE_relations_SLOT = []
+                        self.possible_parents = []
+                        self.possible_children = []
+                        self.slots = None
+                        self.partstree = None
+    
+                        self.loading_wheel = threading.Thread(target=self.fetch_loaded_DU_and_display, args=(chi, par))
+                        self.loading_wheel.start()
+                        self.update_progressbar(self.loading_wheel)
+                    elif self.operation_mode == 'Detector Assembly (CERN): DU':
+                        attribute_Vessel = pos.split('V').pop().split('L')[0]
+                        if attribute_Vessel not in ['1', '2', 'M', 'D']:
+                            info_text = wrapped_text.fill(f'Error: You can not load to this vessel.\nVessel attribute only accepts 1, 2, M, or D, but you selected {attribute_Vessel}!')
                             print(f'>>> {info_text}')
                             self.label_info.configure(text=info_text)
                         else:
@@ -1699,13 +1577,13 @@ class App(customtkinter.CTk):
                                 self.label_info.configure(text=info_text)
                             else:
                                 if attribute_Layer == '0' or attribute_Layer == '3':
-                                    allowed_types = data.F_PEBs
-                                    not_allowed_type = '3B'
+                                    allowed_type = 'F'
+                                    not_allowed_type = 'B'
                                 else:#elif attribute_Layer == '1' or attribute_Layer == '2':
-                                    allowed_types = data.B_PEBs
-                                    not_allowed_type = '3F'
-                                if self.displayed_PEB_type == not_allowed_type:
-                                    info_text = wrapped_text.fill(f'Error: You can not load this PEB to this layer.\nLayer {attribute_Layer} only accepts {allowed_types} PEBs, but you selected a {self.displayed_PEB_type} PEB!')
+                                    allowed_type = 'B'
+                                    not_allowed_type = 'F'
+                                if self.displayedDUtype[0] == not_allowed_type:
+                                    info_text = wrapped_text.fill(f'Error: You can not load this DU to this layer.\nLayer {attribute_Layer} only accepts {allowed_type} DUs, but you selected a {self.displayedDUtype[0]} DU!')
                                     print(f'>>> {info_text}')
                                     self.label_info.configure(text=info_text)
                                 else:
@@ -1716,66 +1594,149 @@ class App(customtkinter.CTk):
                                         self.label_info.configure(text=info_text)
                                     else:
                                         allowed_VLQ = True
-                                        # make sure to only check for PEB children KoP, nothing else
-                                        children_of_targetDetector, self.last_responseText = util.get_children(par_partID, ofKind = 'PEB')
-                                        PEB_already_occupying_target_position = ''
-                                        Det_PEB_relation_to_delete = ''
+                                        # make sure to only check for DU children KoP, nothing else
+                                        children_of_targetDetector, self.last_responseText = util.get_children(par_partID, ofKind = 'Detector Unit')
+                                        DU_already_occupying_target_position = ''
+                                        Det_DU_relation_to_delete = ''
                                         matching_relations = []
                                         for c in children_of_targetDetector:
-                                            # position of Det child is the same as the desired one, and PEB type of desired PEB is same as the one that already occupies the spot:
-                                            if str(c['position']) == pos:
-                                                # == OLD ==: previous schema did not include PEB Type in PEB SN
-                                                # == OLD ==:  => used to need to fetch the attributes of maybe occupying children PEBs, because PEB type was only part of attributes (not part of SN sadly)
-                                                # == OLD ==: child_attributes, self.last_responseText = api.fetch_information(f'/partattrlist/{c['part']['part_id']}/')
-                                                # == OLD ==: PEB_type_occupying = [c for c in child_attributes if c['attribute']['name'] == 'Type'][0]['value']
-                                                # NEW: PEB type is part of PEB SN!
-                                                if self.displayed_PEB_type in c['part']['serial_number']:
-                                                    occupied_VLQ = True
-                                                    PEB_already_occupying_target_position = c['part']['serial_number']
-                                                    Det_PEB_relation_to_delete = c['record_id']
-                                                    matching_relations.append(c)
-                                                    break
+                                            # position of Det child is the same as the desired one, and DU type of desired DU is same as the one that already occupies the spot:
+                                            if str(c['position']) == pos and self.displayedDUtype in c['part']['serial_number']:
+                                                occupied_VLQ = True
+                                                DU_already_occupying_target_position = c['part']['serial_number']
+                                                Det_DU_relation_to_delete = c['record_id']
+                                                matching_relations.append(c)
+                                                break
+    
                                         if occupied_VLQ:
                                             confirmed = ''
-                                            dialog = customtkinter.CTkInputDialog(text=f"This Vessel Layer Quadrant is already occupied by (at least one) PEB {PEB_already_occupying_target_position}.\n" +
-                                                "Confirm by typing the desired Vessel Layer Quadrant (VxLyQz) again to overwrite it with your selected PEB:", title="Confirm dialog")
+                                            dialog = customtkinter.CTkInputDialog(text=f"This Vessel Layer Quadrant is already occupied by (at least one) DU {DU_already_occupying_target_position}.\n" +
+                                                "Confirm by typing the desired Vessel Layer Quadrant (VxLyQz) again to overwrite it with your selected DU:", title="Confirm dialog")
                                             confirmed = dialog.get_input()
                                             if debug:
                                                 print("Typed in slot from confirm dialog:", confirmed)
                                             if confirmed == pos:
                                                 # DELETION OF PREVIOUS STUFF
     
-                                                # delete Det -> PEB relation for the PEB that already occupies that VLQ
+                                                # delete Det -> DU relation for the DUs that already occupy that VLQ
                                                 for c in matching_relations:
                                                     self.last_responseText = api.delete_information(f'/partstreedelete/{c['record_id']}/')
+                                                    # get children modules of the DU that previously occupied the VLQ
+                                                    affected_previous_modules, self.last_responseText = util.get_children(c['part']['part_id'], ofKind = 'Module')
+                                                    # the parent slots of modules of the DU that previously occupied the VLQ
+                                                    for a in affected_previous_modules:
+                                                        affected_parents_of_children, self.last_responseText = util.get_parents(a['part']['part_id'], ofKind = 'Slot')
+                                                        for p in affected_parents_of_children:
+                                                            # delete those Slot -> Mod relations
+                                                            if debug:
+                                                                print(str(p['part_parent']['kind_of_part']['kind_of_part_id']))
+                                                                print('Delete Slot -> Module relation', p)
+                                                            self.last_responseText = api.delete_information(f'/partstreedelete/{p['record_id']}/')
     
                                                 # POSTING NEW STUFF
     
-                                                # place new DU at this position by creating a new Det -> PEB relation
+                                                # place new DU at this position by creating a new Det -> DU relation
                                                 self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                                                self.canvas.itemconfig(self.duAlreadyPlacedText, text=f'Now placed at:\n{pos}')
                                         else:
                                             self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
-
-            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                self.last_responseText = str(e)
-            except ValueError as e:
-                self.last_responseText = str(e)
-
-            if self.last_responseText[:2] != '20':
-                self.api_status = 0
-                self.progressbar.configure(progress_color="#ff0000")
-                info_text = wrapped_text.fill(f'Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}')
-                print(f'>>> {info_text}')
-                self.label_info.configure(text=info_text)
-            else:
-                self.api_status = 1
-                self.progressbar.configure(progress_color="#007711")
-
-                if self.operation_mode == 'Detector Assembly (CERN): DU' and allowed_VLQ and ((occupied_VLQ and confirmed == pos) or not occupied_VLQ):
-                    # find all existing relations between this DU and its Modules, those are propagated to create new Slot -> Module relations
-                    self.loading_wheel_A = threading.Thread(target=self.fetch_and_write_module_slots, args=(attribute_Vessel, attribute_Layer, attribute_Quadrant))
-                    self.loading_wheel_A.start()
-                    self.update_progressbar(self.loading_wheel_A)
+                                            self.canvas.itemconfig(self.duAlreadyPlacedText, text=f'Now placed at:\n{pos}')
+                    elif self.operation_mode == 'Detector Assembly (CERN): PEB':
+                        attribute_Vessel = pos.split('V').pop().split('L')[0]
+                        if attribute_Vessel not in ['1', '2', 'M', 'D']:
+                            info_text = wrapped_text.fill(f'Error: You can not load to this vessel.\nVessel attribute only accepts 1, 2, M, or D, but you selected {attribute_Vessel}!')
+                            print(f'>>> {info_text}')
+                            self.label_info.configure(text=info_text)
+                        else:
+                            if attribute_Vessel in ['D'] and self.displayed_PEB_type != '1F':
+                                info_text = wrapped_text.fill(f'Error: You can not load to this vessel (demonstrator).\nDemonstratorV1 only accepts PEB type 1F, but you selected a PEB of type {self.displayed_PEB_type}!')
+                                print(f'>>> {info_text}')
+                                self.label_info.configure(text=info_text)
+                            else:
+                                attribute_Layer = pos.split('L').pop().split('Q')[0]
+                                if attribute_Layer not in ['0', '1', '2', '3']:
+                                    info_text = wrapped_text.fill(f'Error: You can not load to this layer.\nLayer attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Layer}!')
+                                    print(f'>>> {info_text}')
+                                    self.label_info.configure(text=info_text)
+                                else:
+                                    if attribute_Layer == '0' or attribute_Layer == '3':
+                                        allowed_types = data.F_PEBs
+                                        not_allowed_type = '3B'
+                                    else:#elif attribute_Layer == '1' or attribute_Layer == '2':
+                                        allowed_types = data.B_PEBs
+                                        not_allowed_type = '3F'
+                                    if self.displayed_PEB_type == not_allowed_type:
+                                        info_text = wrapped_text.fill(f'Error: You can not load this PEB to this layer.\nLayer {attribute_Layer} only accepts {allowed_types} PEBs, but you selected a {self.displayed_PEB_type} PEB!')
+                                        print(f'>>> {info_text}')
+                                        self.label_info.configure(text=info_text)
+                                    else:
+                                        attribute_Quadrant = pos.split('Q').pop()
+                                        if attribute_Quadrant not in ['0', '1', '2', '3']:
+                                            info_text = wrapped_text.fill(f'Error: You can not load to this quadrant.\nQuadrant attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Quadrant}!')
+                                            print(f'>>> {info_text}')
+                                            self.label_info.configure(text=info_text)
+                                        else:
+                                            allowed_VLQ = True
+                                            # make sure to only check for PEB children KoP, nothing else
+                                            children_of_targetDetector, self.last_responseText = util.get_children(par_partID, ofKind = 'PEB')
+                                            PEB_already_occupying_target_position = ''
+                                            Det_PEB_relation_to_delete = ''
+                                            matching_relations = []
+                                            for c in children_of_targetDetector:
+                                                # position of Det child is the same as the desired one, and PEB type of desired PEB is same as the one that already occupies the spot:
+                                                if str(c['position']) == pos:
+                                                    # == OLD ==: previous schema did not include PEB Type in PEB SN
+                                                    # == OLD ==:  => used to need to fetch the attributes of maybe occupying children PEBs, because PEB type was only part of attributes (not part of SN sadly)
+                                                    # == OLD ==: child_attributes, self.last_responseText = api.fetch_information(f'/partattrlist/{c['part']['part_id']}/')
+                                                    # == OLD ==: PEB_type_occupying = [c for c in child_attributes if c['attribute']['name'] == 'Type'][0]['value']
+                                                    # NEW: PEB type is part of PEB SN!
+                                                    if self.displayed_PEB_type in c['part']['serial_number']:
+                                                        occupied_VLQ = True
+                                                        PEB_already_occupying_target_position = c['part']['serial_number']
+                                                        Det_PEB_relation_to_delete = c['record_id']
+                                                        matching_relations.append(c)
+                                                        break
+                                            if occupied_VLQ:
+                                                confirmed = ''
+                                                dialog = customtkinter.CTkInputDialog(text=f"This Vessel Layer Quadrant is already occupied by (at least one) PEB {PEB_already_occupying_target_position}.\n" +
+                                                    "Confirm by typing the desired Vessel Layer Quadrant (VxLyQz) again to overwrite it with your selected PEB:", title="Confirm dialog")
+                                                confirmed = dialog.get_input()
+                                                if debug:
+                                                    print("Typed in slot from confirm dialog:", confirmed)
+                                                if confirmed == pos:
+                                                    # DELETION OF PREVIOUS STUFF
+        
+                                                    # delete Det -> PEB relation for the PEB that already occupies that VLQ
+                                                    for c in matching_relations:
+                                                        self.last_responseText = api.delete_information(f'/partstreedelete/{c['record_id']}/')
+        
+                                                    # POSTING NEW STUFF
+        
+                                                    # place new DU at this position by creating a new Det -> PEB relation
+                                                    self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                                            else:
+                                                self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+    
+                except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                    self.last_responseText = str(e)
+                except ValueError as e:
+                    self.last_responseText = str(e)
+    
+                if self.last_responseText[:2] != '20':
+                    self.api_status = 0
+                    self.progressbar.configure(progress_color="#ff0000")
+                    info_text = wrapped_text.fill(f'Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}')
+                    print(f'>>> {info_text}')
+                    self.label_info.configure(text=info_text)
+                else:
+                    self.api_status = 1
+                    self.progressbar.configure(progress_color="#007711")
+    
+                    if self.operation_mode == 'Detector Assembly (CERN): DU' and allowed_VLQ and ((occupied_VLQ and confirmed == pos) or not occupied_VLQ):
+                        # find all existing relations between this DU and its Modules, those are propagated to create new Slot -> Module relations
+                        self.loading_wheel_A = threading.Thread(target=self.fetch_and_write_module_slots, args=(attribute_Vessel, attribute_Layer, attribute_Quadrant))
+                        self.loading_wheel_A.start()
+                        self.update_progressbar(self.loading_wheel_A)
 
     # Combobox page selection by pressing a button to go left or right (previous page / next page)
     def button_combobox_paginationButton_click(self, affects, page_dir):
@@ -1870,136 +1831,166 @@ class App(customtkinter.CTk):
 
     def button_delete_connected_ft_event_click(self):
         if len(self.this_FT_relations_SLOT) > 0:
-            try:
-                for k in self.this_FT_relations_SLOT:
-                    # this already deletes ALL relations of this FT to any parent, including: Slot, DU, PEB, MO
-                    self.last_responseText = util.delete_parents(k['part']['part_id'])
-            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                self.last_responseText = str(e)
-            except ValueError as e:
-                self.last_responseText = str(e)
-
-            if self.last_responseText[:2] != '20':
-                self.api_status = 0
-                self.progressbar.configure(progress_color="#ff0000")
-                info_text = wrapped_text.fill(f'Error: Existing FT relation could not be deleted (disconnected from slot) with ProdDB API.\n{self.last_responseText}')
+            if (self.user == 'None' or self.user == 'new...'):
+                info_text = 'Error: Please login with your CERN account, because this operation requires a user name.'
                 print(f'>>> {info_text}')
                 self.label_info.configure(text=info_text)
             else:
-                self.api_status = 1
-                self.progressbar.configure(progress_color="#007711")
                 self.label_info.configure(text=' ')
-                self.this_FT_relations_SLOT = []
-                self.button_delete_connected_ft.configure(state='disabled')
+                try:
+                    for k in self.this_FT_relations_SLOT:
+                        # this already deletes ALL relations of this FT to any parent, including: Slot, DU, PEB, MO
+                        self.last_responseText = util.delete_parents(k['part']['part_id'])
+                except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                    self.last_responseText = str(e)
+                except ValueError as e:
+                    self.last_responseText = str(e)
+    
+                if self.last_responseText[:2] != '20':
+                    self.api_status = 0
+                    self.progressbar.configure(progress_color="#ff0000")
+                    info_text = wrapped_text.fill(f'Error: Existing FT relation could not be deleted (disconnected from slot) with ProdDB API.\n{self.last_responseText}')
+                    print(f'>>> {info_text}')
+                    self.label_info.configure(text=info_text)
+                else:
+                    self.api_status = 1
+                    self.progressbar.configure(progress_color="#007711")
+                    self.label_info.configure(text=' ')
+                    self.this_FT_relations_SLOT = []
+                    self.button_delete_connected_ft.configure(state='disabled')
         
     def button_delete_clicked_event_click(self):
         if len(self.clicked_module) > 0:
-            try:
-                self.last_responseText = util.delete_parents(self.clicked_module['part']['part_id'])
-            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                self.last_responseText = str(e)
-            except ValueError as e:
-                self.last_responseText = str(e)
-
-            if self.last_responseText[:2] != '20':
-                self.api_status = 0
-                self.progressbar.configure(progress_color="#ff0000")
-                info_text = wrapped_text.fill(f'Error: Existing module relation could not be deleted (unloaded) with ProdDB API.\n{self.last_responseText}')
+            if (self.user == 'None' or self.user == 'new...'):
+                info_text = 'Error: Please login with your CERN account, because this operation requires a user name.'
                 print(f'>>> {info_text}')
                 self.label_info.configure(text=info_text)
             else:
-                self.api_status = 1
-                self.progressbar.configure(progress_color="#007711")
-
-                # reload DU etc.
-                self.displayedDUtype = "None"
-                self.this_DU_relations_MODULE = []
-                self.this_MODULE_relations_DU = []
-                self.this_MODULE_relations_SLOT = []
-                self.possible_parents = []
-                self.possible_children = []
-                self.slots = None
-                self.partstree = None
-                self.clicked_module = []
-                self.button_inspect_clicked.configure(text=f'INSPECT CLICKED MODULE')
-                self.button_inspect_clicked.configure(state='disabled')
-                self.button_delete_clicked.configure(text=f'UNLOAD CLICKED MODULE')
-                self.button_delete_clicked.configure(state='disabled')
-
-                parentSNIn = self.combobox_parent.get()
-                childSNIn = self.combobox_child.get()
-                self.loading_wheel = threading.Thread(target=self.fetch_loaded_DU_and_display, args=(childSNIn, parentSNIn))
-                self.loading_wheel.start()
-                self.update_progressbar(self.loading_wheel)
+                self.label_info.configure(text=' ')
+                try:
+                    self.last_responseText = util.delete_parents(self.clicked_module['part']['part_id'])
+                except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                    self.last_responseText = str(e)
+                except ValueError as e:
+                    self.last_responseText = str(e)
+    
+                if self.last_responseText[:2] != '20':
+                    self.api_status = 0
+                    self.progressbar.configure(progress_color="#ff0000")
+                    info_text = wrapped_text.fill(f'Error: Existing module relation could not be deleted (unloaded) with ProdDB API.\n{self.last_responseText}')
+                    print(f'>>> {info_text}')
+                    self.label_info.configure(text=info_text)
+                else:
+                    self.api_status = 1
+                    self.progressbar.configure(progress_color="#007711")
+    
+                    # reload DU etc.
+                    self.displayedDUtype = "None"
+                    self.this_DU_relations_MODULE = []
+                    self.this_MODULE_relations_DU = []
+                    self.this_MODULE_relations_SLOT = []
+                    self.possible_parents = []
+                    self.possible_children = []
+                    self.slots = None
+                    self.partstree = None
+                    self.clicked_module = []
+                    self.button_inspect_clicked.configure(text=f'INSPECT CLICKED MODULE')
+                    self.button_inspect_clicked.configure(state='disabled')
+                    self.button_delete_clicked.configure(text=f'UNLOAD CLICKED MODULE')
+                    self.button_delete_clicked.configure(state='disabled')
+    
+                    parentSNIn = self.combobox_parent.get()
+                    childSNIn = self.combobox_child.get()
+                    self.loading_wheel = threading.Thread(target=self.fetch_loaded_DU_and_display, args=(childSNIn, parentSNIn))
+                    self.loading_wheel.start()
+                    self.update_progressbar(self.loading_wheel)
 
     def button_delete_child_module_flex_event_click(self):
         if len(self.this_MF_relations_MOD) > 0:
-            try:
-                for k in self.this_MF_relations_MOD:
-                    self.last_responseText = util.delete_parents(k['part']['part_id'], ofKind = 'Module')
-            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                self.last_responseText = str(e)
-            except ValueError as e:
-                self.last_responseText = str(e)
-
-            if self.last_responseText[:2] != '20':
-                self.api_status = 0
-                self.progressbar.configure(progress_color="#ff0000")
-                info_text = wrapped_text.fill(f'Error: Existing MF relation could not be deleted (disconnected from module) with ProdDB API.\n{self.last_responseText}')
+            if (self.user == 'None' or self.user == 'new...'):
+                info_text = 'Error: Please login with your CERN account, because this operation requires a user name.'
                 print(f'>>> {info_text}')
                 self.label_info.configure(text=info_text)
             else:
-                self.api_status = 1
-                self.progressbar.configure(progress_color="#007711")
                 self.label_info.configure(text=' ')
-                self.this_MF_relations_MOD = []
-                self.button_delete_child_MF.configure(state='disabled')
+                try:
+                    for k in self.this_MF_relations_MOD:
+                        self.last_responseText = util.delete_parents(k['part']['part_id'], ofKind = 'Module')
+                except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                    self.last_responseText = str(e)
+                except ValueError as e:
+                    self.last_responseText = str(e)
+    
+                if self.last_responseText[:2] != '20':
+                    self.api_status = 0
+                    self.progressbar.configure(progress_color="#ff0000")
+                    info_text = wrapped_text.fill(f'Error: Existing MF relation could not be deleted (disconnected from module) with ProdDB API.\n{self.last_responseText}')
+                    print(f'>>> {info_text}')
+                    self.label_info.configure(text=info_text)
+                else:
+                    self.api_status = 1
+                    self.progressbar.configure(progress_color="#007711")
+                    self.label_info.configure(text=' ')
+                    self.this_MF_relations_MOD = []
+                    self.button_delete_child_MF.configure(state='disabled')
 
     def button_delete_child_HY_HV_event_click(self):
         if len(self.this_HY_HV_relations_MOD) > 0:
-            try:
-                for k in self.this_HY_HV_relations_MOD:
-                    self.last_responseText = util.delete_parents(k['part']['part_id'], ofKind = 'Module')
-            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                self.last_responseText = str(e)
-            except ValueError as e:
-                self.last_responseText = str(e)
-
-            if self.last_responseText[:2] != '20':
-                self.api_status = 0
-                self.progressbar.configure(progress_color="#ff0000")
-                info_text = wrapped_text.fill(f'Error: Existing HY HV-side relation could not be deleted (disconnected from module) with ProdDB API.\n{self.last_responseText}')
+            if (self.user == 'None' or self.user == 'new...'):
+                info_text = 'Error: Please login with your CERN account, because this operation requires a user name.'
                 print(f'>>> {info_text}')
                 self.label_info.configure(text=info_text)
             else:
-                self.api_status = 1
-                self.progressbar.configure(progress_color="#007711")
                 self.label_info.configure(text=' ')
-                self.this_HY_HV_relations_MOD = []
-                self.button_delete_child_HY_HV.configure(state='disabled')
+                try:
+                    for k in self.this_HY_HV_relations_MOD:
+                        self.last_responseText = util.delete_parents(k['part']['part_id'], ofKind = 'Module')
+                except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                    self.last_responseText = str(e)
+                except ValueError as e:
+                    self.last_responseText = str(e)
+    
+                if self.last_responseText[:2] != '20':
+                    self.api_status = 0
+                    self.progressbar.configure(progress_color="#ff0000")
+                    info_text = wrapped_text.fill(f'Error: Existing HY HV-side relation could not be deleted (disconnected from module) with ProdDB API.\n{self.last_responseText}')
+                    print(f'>>> {info_text}')
+                    self.label_info.configure(text=info_text)
+                else:
+                    self.api_status = 1
+                    self.progressbar.configure(progress_color="#007711")
+                    self.label_info.configure(text=' ')
+                    self.this_HY_HV_relations_MOD = []
+                    self.button_delete_child_HY_HV.configure(state='disabled')
 
     def button_delete_child_HY_LV_event_click(self):
         if len(self.this_HY_LV_relations_MOD) > 0:
-            try:
-                for k in self.this_HY_LV_relations_MOD:
-                    self.last_responseText = util.delete_parents(k['part']['part_id'], ofKind = 'Module')
-            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                self.last_responseText = str(e)
-            except ValueError as e:
-                self.last_responseText = str(e)
-
-            if self.last_responseText[:2] != '20':
-                self.api_status = 0
-                self.progressbar.configure(progress_color="#ff0000")
-                info_text = wrapped_text.fill(f'Error: Existing HY LV-side relation could not be deleted (disconnected from module) with ProdDB API.\n{self.last_responseText}')
+            if (self.user == 'None' or self.user == 'new...'):
+                info_text = 'Error: Please login with your CERN account, because this operation requires a user name.'
                 print(f'>>> {info_text}')
                 self.label_info.configure(text=info_text)
             else:
-                self.api_status = 1
-                self.progressbar.configure(progress_color="#007711")
                 self.label_info.configure(text=' ')
-                self.this_HY_LV_relations_MOD = []
-                self.button_delete_child_HY_LV.configure(state='disabled')
+                try:
+                    for k in self.this_HY_LV_relations_MOD:
+                        self.last_responseText = util.delete_parents(k['part']['part_id'], ofKind = 'Module')
+                except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                    self.last_responseText = str(e)
+                except ValueError as e:
+                    self.last_responseText = str(e)
+    
+                if self.last_responseText[:2] != '20':
+                    self.api_status = 0
+                    self.progressbar.configure(progress_color="#ff0000")
+                    info_text = wrapped_text.fill(f'Error: Existing HY LV-side relation could not be deleted (disconnected from module) with ProdDB API.\n{self.last_responseText}')
+                    print(f'>>> {info_text}')
+                    self.label_info.configure(text=info_text)
+                else:
+                    self.api_status = 1
+                    self.progressbar.configure(progress_color="#007711")
+                    self.label_info.configure(text=' ')
+                    self.this_HY_LV_relations_MOD = []
+                    self.button_delete_child_HY_LV.configure(state='disabled')
         
     def button_find_slot_event_click(self):
         self.label_info.configure(text=' ')
@@ -2673,66 +2664,71 @@ class App(customtkinter.CTk):
                 self.update_progressbar(self.loading_wheel)
 
     def delete_old_and_post_new_slots_for_loaded_modules(self, V, L, Q):
-        for entry in self.this_DU_relations_MODULE:
-            try:
-                parents_of_child_module, self.responseText = util.get_parents(entry['part']['part_id'], ofKind = 'Slot')
-            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                self.last_responseText = str(e)
-            except ValueError as e:
-                self.last_responseText = str(e)
-
-            if self.last_responseText[:2] != '20':
-                self.api_status = 0
-                self.progressbar.configure(progress_color="#ff0000")
-                info_text = wrapped_text.fill(f'Error: Parents could not be loaded from ProdDB API.\n{self.last_responseText}')
-                print(f'>>> {info_text}')
-                self.label_info.configure(text=info_text)
-            else:
-                self.api_status = 1
-                self.progressbar.configure(progress_color="#007711")
-
-                for r in parents_of_child_module:
-                    try:
-                        self.last_responseText = api.delete_information(f'/partstreedelete/{r['record_id']}/')
-                    except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                        self.last_responseText = str(e)
-                    except ValueError as e:
-                        self.last_responseText = str(e)
-
-                    if self.last_responseText[:2] != '20':
-                        self.api_status = 0
-                        self.progressbar.configure(progress_color="#ff0000")
-                        info_text = wrapped_text.fill(f'Error: Record could not be deleted from ProdDB API.\n{self.last_responseText}')
-                        print(f'>>> {info_text}')
-                        self.label_info.configure(text=info_text)
-                    else:
-                        self.api_status = 1
-                        self.progressbar.configure(progress_color="#007711")
-                if self.api_status == 1:
-                    if debug:
-                        print(entry)
-                    attribute_SU_r = entry['position'].split('R').pop().split('M')[0]
-                    attribute_SU_m = entry['position'].split('M').pop()
-                    if debug:
-                        print('self.displayedDUtype',self.displayedDUtype)
-                        print('V',V)
-                        print('L',L)
-                        print('Q',Q)
-                        print('attribute_SU_r',attribute_SU_r)
-                        print('attribute_SU_m',attribute_SU_m)
-                        print(self.slots[0])
-                    for sl in self.slots:
-                        if (sl['Vessel'] == str(V) \
-                            and str(sl['Layer']) == str(L) \
-                            and str(sl['Quadrant']) == str(Q) \
-                            and str(sl['SU_type']) == str(self.displayedDUtype) \
-                            and str(sl['SU_Row']) == str(attribute_SU_r) \
-                            and str(sl['SU_Module']) == str(attribute_SU_m)):
-                            # found a slot :-)
-                            if debug:
-                                print('found a slot')
-                                print('sl:', sl)
-                            if self.user != 'None' and self.user != 'new...':
+        if (self.user == 'None' or self.user == 'new...'):
+            info_text = 'Error: Please login with your CERN account, because this operation requires a user name.'
+            print(f'>>> {info_text}')
+            self.label_info.configure(text=info_text)
+        else:
+            self.label_info.configure(text=' ')
+            for entry in self.this_DU_relations_MODULE:
+                try:
+                    parents_of_child_module, self.responseText = util.get_parents(entry['part']['part_id'], ofKind = 'Slot')
+                except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                    self.last_responseText = str(e)
+                except ValueError as e:
+                    self.last_responseText = str(e)
+    
+                if self.last_responseText[:2] != '20':
+                    self.api_status = 0
+                    self.progressbar.configure(progress_color="#ff0000")
+                    info_text = wrapped_text.fill(f'Error: Parents could not be loaded from ProdDB API.\n{self.last_responseText}')
+                    print(f'>>> {info_text}')
+                    self.label_info.configure(text=info_text)
+                else:
+                    self.api_status = 1
+                    self.progressbar.configure(progress_color="#007711")
+    
+                    for r in parents_of_child_module:
+                        try:
+                            self.last_responseText = api.delete_information(f'/partstreedelete/{r['record_id']}/')
+                        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                            self.last_responseText = str(e)
+                        except ValueError as e:
+                            self.last_responseText = str(e)
+    
+                        if self.last_responseText[:2] != '20':
+                            self.api_status = 0
+                            self.progressbar.configure(progress_color="#ff0000")
+                            info_text = wrapped_text.fill(f'Error: Record could not be deleted from ProdDB API.\n{self.last_responseText}')
+                            print(f'>>> {info_text}')
+                            self.label_info.configure(text=info_text)
+                        else:
+                            self.api_status = 1
+                            self.progressbar.configure(progress_color="#007711")
+                    if self.api_status == 1:
+                        if debug:
+                            print(entry)
+                        attribute_SU_r = entry['position'].split('R').pop().split('M')[0]
+                        attribute_SU_m = entry['position'].split('M').pop()
+                        if debug:
+                            print('self.displayedDUtype',self.displayedDUtype)
+                            print('V',V)
+                            print('L',L)
+                            print('Q',Q)
+                            print('attribute_SU_r',attribute_SU_r)
+                            print('attribute_SU_m',attribute_SU_m)
+                            print(self.slots[0])
+                        for sl in self.slots:
+                            if (sl['Vessel'] == str(V) \
+                                and str(sl['Layer']) == str(L) \
+                                and str(sl['Quadrant']) == str(Q) \
+                                and str(sl['SU_type']) == str(self.displayedDUtype) \
+                                and str(sl['SU_Row']) == str(attribute_SU_r) \
+                                and str(sl['SU_Module']) == str(attribute_SU_m)):
+                                # found a slot :-)
+                                if debug:
+                                    print('found a slot')
+                                    print('sl:', sl)
                                 part_tree = {
                                     'position': '',
                                     'is_record_deleted': 'F',
@@ -2740,30 +2736,23 @@ class App(customtkinter.CTk):
                                     'part_parent': sl['part_id'],
                                     'record_insertion_user': self.user,
                                 }
-                            else:
-                                part_tree = {
-                                    'position': '',
-                                    'is_record_deleted': 'F',
-                                    'part': entry['part']['part_id'],
-                                    'part_parent': sl['part_id'],
-                                }
-                            try:
-                                print(part_tree)
-                                self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
-                            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-                                self.last_responseText = str(e)
-                            except ValueError as e:
-                                self.last_responseText = str(e)
-
-                            if self.last_responseText[:2] != '20':
-                                self.api_status = 0
-                                self.progressbar.configure(progress_color="#ff0000")
-                                info_text = wrapped_text.fill(f'Error: Parent / Child relation could not be patched to ProdDB API.\n{self.last_responseText}')
-                                print(f'>>> {info_text}')
-                                self.label_info.configure(text=info_text)
-                            else:
-                                self.api_status = 1
-                                self.progressbar.configure(progress_color="#007711")
+                                try:
+                                    print(part_tree)
+                                    self.last_responseText = api.post_information('/partstreelist', part_tree, dryrun = False)
+                                except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                                    self.last_responseText = str(e)
+                                except ValueError as e:
+                                    self.last_responseText = str(e)
+    
+                                if self.last_responseText[:2] != '20':
+                                    self.api_status = 0
+                                    self.progressbar.configure(progress_color="#ff0000")
+                                    info_text = wrapped_text.fill(f'Error: Parent / Child relation could not be patched to ProdDB API.\n{self.last_responseText}')
+                                    print(f'>>> {info_text}')
+                                    self.label_info.configure(text=info_text)
+                                else:
+                                    self.api_status = 1
+                                    self.progressbar.configure(progress_color="#007711")
 
     def exit(self):
         self.destroy()
