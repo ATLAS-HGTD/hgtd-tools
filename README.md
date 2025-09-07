@@ -7,7 +7,7 @@
 
 <div align="center">
 
-![Static Badge](https://img.shields.io/badge/python-3.12-blue) ![Static Badge](https://img.shields.io/badge/hgtd--tools-1.7.1-blue) <br>
+![Static Badge](https://img.shields.io/badge/python-3.12-blue) ![Static Badge](https://img.shields.io/badge/hgtd--tools-1.7.2-blue) <br>
 
 ![Static Badge](https://img.shields.io/badge/tested_on-Linux_|_MacOS_|_Windows-green)
 </div>

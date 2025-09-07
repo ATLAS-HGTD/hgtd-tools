@@ -102,14 +102,16 @@ class App(customtkinter.CTk):
 
         # fill sidebar
         self.label_logo = customtkinter.CTkLabel(self.frame_sidebar_left, text="HGTD Tools", font=customtkinter.CTkFont(size=20, weight="bold"))
-        self.label_logo.grid(row=0, column=0, padx=20, pady=(20, 10), columnspan=2)
-        self.label_credits = customtkinter.CTkLabel(self.frame_sidebar_left, text="v1.7.1 - August 2025\nAnnika Stein (JGU Mainz)")
-        self.label_credits.grid(row=1, column=0, padx=20, pady=10, columnspan=2)
+        self.label_logo.grid(row=0, column=0, padx=20, pady=(20,5), columnspan=2)
+        self.my_version = '1.7.2'
+        self.version_full_text = f'v{self.my_version} - September 2025\nAnnika Stein (JGU Mainz)'
+        self.label_credits = customtkinter.CTkLabel(self.frame_sidebar_left, text=self.version_full_text)
+        self.label_credits.grid(row=1, column=0, padx=20, pady=5, columnspan=2)
 
         self.label_progress = customtkinter.CTkLabel(self.frame_sidebar_left, text="API Request Status")
-        self.label_progress.grid(row=2, column=0, padx=20, pady=10, columnspan=2)
+        self.label_progress.grid(row=2, column=0, padx=20, pady=5, columnspan=2)
         self.progressbar = customtkinter.CTkProgressBar(self.frame_sidebar_left, orientation="horizontal", progress_color="#007711")
-        self.progressbar.grid(row=3, column=0, padx=20, pady=10, columnspan=2)
+        self.progressbar.grid(row=3, column=0, padx=20, pady=5, columnspan=2)
         self.progressbar.set(1)
 
         # buttons to select use case of the tool
@@ -119,7 +121,7 @@ class App(customtkinter.CTk):
         self.operation_mode = 'Module Assembly'
 
         self.label_operation_mode = customtkinter.CTkLabel(self.frame_operation_mode, text="Operation Mode", font=customtkinter.CTkFont(size=16, weight="bold"))
-        self.label_operation_mode.grid(row=0, column=0, padx=20, pady=10, columnspan=2)
+        self.label_operation_mode.grid(row=0, column=0, padx=20, pady=5, columnspan=2)
 
         self.button_operation_mode_MA = customtkinter.CTkButton(self.frame_operation_mode, text="Module Assembly",
             command=lambda: self.button_mode_event_click('Module Assembly'), fg_color="#339941", hover_color="#228831")
@@ -143,7 +145,7 @@ class App(customtkinter.CTk):
 
         # buttons to go to external useful pages
         self.frame_useful_links = customtkinter.CTkFrame(self.frame_sidebar_left)
-        self.frame_useful_links.grid(row=5, column=0, padx=5, pady=20, sticky="nsew", columnspan=2)
+        self.frame_useful_links.grid(row=5, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
         self.frame_useful_links.grid_columnconfigure((0,1), weight=1)
 
         self.label_useful_links = customtkinter.CTkLabel(self.frame_useful_links, text="Useful Links", font=customtkinter.CTkFont(size=16, weight="bold"))
@@ -175,26 +177,26 @@ class App(customtkinter.CTk):
 
 
         self.label_user = customtkinter.CTkLabel(self.frame_sidebar_left, text="User:", anchor="e")
-        self.label_user.grid(row=7, column=0, padx=5, pady=10)
+        self.label_user.grid(row=7, column=0, padx=5, pady=5)
         self.optionmenu_user = customtkinter.CTkOptionMenu(self.frame_sidebar_left, values=['None', 'new...'],
                                                                        command=self.change_user_event, width=60)
-        self.optionmenu_user.grid(row=7, column=1, padx=5, pady=10)
+        self.optionmenu_user.grid(row=7, column=1, padx=5, pady=5)
         self.optionmenu_user.set("None")
         self.user_window = None
 
 
         self.label_appearance_mode = customtkinter.CTkLabel(self.frame_sidebar_left, text="Theme:", anchor="e")
-        self.label_appearance_mode.grid(row=8, column=0, padx=5, pady=10)
+        self.label_appearance_mode.grid(row=8, column=0, padx=5, pady=5)
         self.optionmenu_appearance_mode = customtkinter.CTkOptionMenu(self.frame_sidebar_left, values=["Light", "Dark", "System"],
                                                                        command=self.change_appearance_mode_event, width=60)
-        self.optionmenu_appearance_mode.grid(row=8, column=1, padx=5, pady=10)
+        self.optionmenu_appearance_mode.grid(row=8, column=1, padx=5, pady=5)
         self.optionmenu_appearance_mode.set("System")
         
         self.label_scaling = customtkinter.CTkLabel(self.frame_sidebar_left, text="UI Scaling:", anchor="e")
-        self.label_scaling.grid(row=9, column=0, padx=5, pady=10)
+        self.label_scaling.grid(row=9, column=0, padx=5, pady=5)
         self.optionmenu_scaling = customtkinter.CTkOptionMenu(self.frame_sidebar_left, values=["80%", "90%", "100%", "110%", "120%"],
                                                                command=self.change_scaling_event, width=60)
-        self.optionmenu_scaling.grid(row=9, column=1, padx=5, pady=10)
+        self.optionmenu_scaling.grid(row=9, column=1, padx=5, pady=5)
         self.optionmenu_scaling.set("100%")
 
         self.help_image = customtkinter.CTkImage(Image.open("circle-question.png"), size=(20,20))
@@ -942,6 +944,19 @@ class App(customtkinter.CTk):
         self.label_combobox_chi_type_paginationFrame.configure(text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}")
         self.combobox_par_type.configure(values=self.possible_par_types_chunked[0])
         self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[0])
+
+        upstream_version, upstream_version_last_responseText = api.get_version()
+        print('='*80)
+        print(f'Welcome to hgtd-tools!')
+        print('-'*80)
+        if (self.my_version != upstream_version):
+            print(f'You are not running the most recent version of hgtd-tools.')
+            print(f'Your release: {self.my_version} / latest published release: {upstream_version}.')
+            print(f'Consider updating to a new release, either via git workflow (pull) or by downloading a specific release archive from gitlab.')
+            self.version_full_text = self.version_full_text + f'\noutdated release, please update'
+            self.label_credits.configure(text = self.version_full_text)
+        else:
+            print(f'You are running version {self.my_version}, the most recent release of hgtd-tools. Enjoy!')
 
         # Get first parents and children for default operating mode
         try:

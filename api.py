@@ -23,6 +23,33 @@ client_secret = ""
 keycloak_endpoint = kc_server+"/auth/realms/cern/protocol/openid-connect/token"
 userinfo_endpoint = kc_server+"/auth/realms/cern/protocol/openid-connect/userinfo"
 
+# === For checking against latest version
+hgtd_tools_version_endpoint = 'https://cernbox.cern.ch/remote.php/dav/public-files/rE9VXEvRY0T9j0N/hgtd-tools-version'
+
+def get_version(debug=False):
+    try:
+        request = requests.get(hgtd_tools_version_endpoint)
+        request.raise_for_status()
+        if debug:
+            print('>> GET response:', request.status_code, request.reason)
+        return request.text, f'{request.status_code}, {request.reason}'
+    except requests.exceptions.HTTPError as errh:
+        if debug:
+            print("Http Error:",errh)
+        raise requests.exceptions.HTTPError("Http Error:",errh)
+    except requests.exceptions.ConnectionError as errc:
+        if debug:
+            print("Error Connecting:",errc)
+        raise requests.exceptions.ConnectionError("Error Connecting:",errc)
+    except requests.exceptions.Timeout as errt:
+        if debug:
+            print("Timeout Error:",errt)
+        raise requests.exceptions.Timeout("Timeout Error:",errt)
+    except requests.exceptions.RequestException as err:
+        if debug:
+            print("OOps: Something Else",err)
+        raise requests.exceptions.RequestException("OOps: Something Else",err)
+
 def get_user(us,pw,to, debug=False):   
     try:
         # get an access token
