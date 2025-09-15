@@ -3,6 +3,7 @@ import datetime
 import os, os.path
 import getpass, requests
 import tarfile
+import time, yaml
 from argparse import ArgumentParser
 from msg_style import bcolors
 
@@ -40,6 +41,9 @@ parser.add_argument('--overwrite_end_date', dest='overwriteEndDate',
 parser.add_argument('--comment', dest='comment',
                     help='[Optional] Set a comment.',
                     default=None)
+parser.add_argument('--dryrun', dest='dryrun',
+                    help='[Optional] Only test running until the last very step, but do not perform upload.',
+                    default=False)
 args = parser.parse_args()
 
 def authenticate(u_name, pw, totp, dbFolder_path):
@@ -106,6 +110,7 @@ def upload(data_payload, files_payload, token, dryRun = False,
 # read the arguments submitted from user by CLI
 analysisFolder, dbFolder, username = args.analysisFolder, args.dbFolder, args.userName
 overwriteRunType, overwriteStartDate, overwriteEndDate, comment = args.overwriteRunType, args.overwriteStartDate, args.overwriteEndDate, args.comment
+dryrun = args.dryrun
 
 # get existing token, search through the db folder to get file with username as filename
 # if existing token found, check validity, otherwise let user re-auth
@@ -196,17 +201,43 @@ if sum(SNs_exist) == len(SNs_exist):
     
     # ToDo read such info from FADAPro analysis output instead of requesting via CLI from user input
     DB_upload_info_Folder = find_last_recursively(analysisFolder, search_for='DB_upload_info.yaml')
+    print(DB_upload_info_Folder)
+    
+    with open(os.path.join(DB_upload_info_Folder, 'DB_upload_info.yaml')) as yamlfile:
+        meas_upload_info = yaml.safe_load(yamlfile)
+        meas_step = meas_upload_info.get('meas_step') # aka run_type
+        # the meas_type like sourceScan is taken from the directory structure on the backend-level
+        # timestamp serves as run_start and run_end
+        #datetime_obj = datetime.datetime.strptime(meas_upload_info.get('timestamp'),"%d/%m/%Y %H:%M:%S")
+        #unix_timestamp = datetime_obj.timestamp()
+        #timestamp = datetime.datetime.utcfromtimestamp(unix_timestamp).strftime('%Y-%m-%dT%H:%M:%SZ')
+        #timestamp_date = datetime.datetime.strptime(meas_upload_info.get('timestamp'),"%d/%m/%Y %H:%M:%S")
+        meas_date = meas_upload_info.get('timestamp').split(' ')[0] # just the date
+        meas_date_y, meas_date_m, meas_date_d = meas_date[6:10], meas_date[3:5], meas_date[0:2]
+        timestamp = f'{meas_date_y}-{meas_date_m}-{meas_date_d}'
+        print('meas_step from yaml:',meas_step)
+        print('timestamp from yaml:',timestamp)
+
+    run_type = meas_step
+    run_start, run_end = timestamp, timestamp
+    
+    '''
+    meas_folder: B_None_On_all_Inj_none_N_100000_Vth_380_Q_12
+    meas_step: assembly
+    meas_type: sourceScan
+    timestamp: 26/08/2025 16:35:56
+    '''
     # ToDo agree on what shall be allowed here or not and how to get the most up-to-date list
-    run_type = input('Type measurement type, including the step and possibly more detailed tag'
-                     ' for irradiation, thermal cycling etc. '
-                     'Confirm with [Enter]: ')
+    #run_type = input('Type measurement type, including the step and possibly more detailed tag'
+    #                 ' for irradiation, thermal cycling etc. '
+    #                 'Confirm with [Enter]: ')
     # ToDo agree on what shall be allowed here or not and how to get the most up-to-date list
     meas_loc = input('Type measurement location, choose any of the allowed locations from the list. Example: 1521. '
                      'Confirm with [Enter]: ')
-    run_start = input('Type start date of measurement (format: YYYY-MM-DD). '
-                     'Confirm with [Enter]: ')
-    run_end = input('Type end date of measurement (format: YYYY-MM-DD). '
-                     'Confirm with [Enter]: ')
+    #run_start = input('Type start date of measurement (format: YYYY-MM-DD). '
+    #                 'Confirm with [Enter]: ')
+    #run_end = input('Type end date of measurement (format: YYYY-MM-DD). '
+    #                 'Confirm with [Enter]: ')
     comment = input('[Optional] Type comment, or leave empty. '
                      'Confirm with [Enter]: ')
     
@@ -218,17 +249,20 @@ if sum(SNs_exist) == len(SNs_exist):
                     'run_end_timestamp': run_end, # end of measurement data, usual time and date format
                     'comment_description': comment, # comment
                     'record_insertion_user': username} # to store who did this upload in the database
-    
-    upload_response = upload(data_payload, files_payload, myToken)
-    # ToDo: check the successful upload by attempting to download the data again. And test for existing SN must happen before!!!
-    if upload_response[:2] != '20':
-        print(ERROR + 'Data was not uploaded successfully.' +
-              ' Inspect the content of the temporary tar file for potential mistakes and check if the SN exists in the DB.' +
-              f'\n{last_responseText}')
-        raise RuntimeError('Upload failed')
+
+    if not dryrun:
+        upload_response = upload(data_payload, files_payload, myToken)
+        # ToDo: check the successful upload by attempting to download the data again. And test for existing SN must happen before!!!
+        if upload_response[:2] != '20':
+            print(ERROR + 'Data was not uploaded successfully.' +
+                  ' Inspect the content of the temporary tar file for potential mistakes and check if the SN exists in the DB.' +
+                  f'\n{last_responseText}')
+            raise RuntimeError('Upload failed')
+        else:
+            print(INFO + 'Data successfully uploaded, deleting temporary tar archive now.')
+            os.remove(dbFolder + '/temporary_tar_output.tar')
     else:
-        print(INFO + 'Data successfully uploaded, deleting temporary tar archive now.')
-        os.remove(dbFolder + '/temporary_tar_output.tar')
+        print(INFO + 'Concluding dryrun without uploading.')
 else:
     for existance_i in range(len(SNs_exist)):
         if not SNs_exist[existance_i]:
