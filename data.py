@@ -18,6 +18,18 @@ partIDs_for_Testing = {
 }
 partID_parent_Detector = 28833
 
+relevant_location_IDs_by_shortname = {
+    'ifae' : 1,
+    'ihep' : 1401,
+    'ijclab' : 1122,
+    'lpnhe' : 1501,
+    'mainz' : 1481,
+    'mascir' : 1581,
+    'ustc' : 1441,
+    'cern' : 1541, # clean room, where tests are done
+    'test' : 1521
+}
+
 # define module geometry for canvas - not to scale!!!
 modLongSide = 80
 modShortSide = 40

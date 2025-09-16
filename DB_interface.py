@@ -1,4 +1,4 @@
-import api, util
+import api, data, util
 import datetime
 import os, os.path
 import getpass, requests
@@ -6,6 +6,7 @@ import tarfile
 import time, yaml
 from argparse import ArgumentParser
 from msg_style import bcolors
+from pprint import pprint
 
 INFO = '[INFO] : '
 WARNING = bcolors.WARNING + '[WARNING] : ' + bcolors.ENDC
@@ -28,6 +29,10 @@ parser.add_argument('--db-folder', dest='dbFolder',
                     default='analysis/db_data')
 parser.add_argument('--overwrite_run_type', dest='overwriteRunType',
                     help='[Optional] Set a custom run type, not taking the one from '
+                    'existing metadata upload file.',
+                    default=None)
+parser.add_argument('--overwrite_location', dest='overwriteLocation',
+                    help='[Optional] Set a custom run location, not taking the one from '
                     'existing metadata upload file.',
                     default=None)
 parser.add_argument('--overwrite_start_date', dest='overwriteStartDate',
@@ -108,8 +113,8 @@ def upload(data_payload, files_payload, token, dryRun = False,
     return last_responseText
 
 # read the arguments submitted from user by CLI
-analysisFolder, dbFolder, username = args.analysisFolder, args.dbFolder, args.userName
-overwriteRunType, overwriteStartDate, overwriteEndDate, comment = args.overwriteRunType, args.overwriteStartDate, args.overwriteEndDate, args.comment
+analysisFolder, dbFolder, username, comment = args.analysisFolder, args.dbFolder, args.userName, args.comment
+overwriteRunType, overwriteLocation, overwriteStartDate, overwriteEndDate = args.overwriteRunType, args.overwriteLocation, args.overwriteStartDate, args.overwriteEndDate
 dryrun = args.dryrun
 
 # get existing token, search through the db folder to get file with username as filename
@@ -128,7 +133,7 @@ with open(dbFolder + '/' + username, 'r') as tokenFile:
 
 # this function taken from FADAPro
 # ToDo for MR this must be replaced by a call to an imported IO module
-def find_last_recursively(start_dir, search_for='meas_parameters.yaml', this_depth = 0, max_depth = 10, dir_to_skip = [], skip_subdir_names = ['last_vthc','.ipynb_checkpoints']):
+def find_last_recursively(start_dir, search_for='meas_parameters.yaml', this_depth = 0, max_depth = 10, dir_to_skip = [], skip_subdir_names = []):
     """ find the last folder, recursively, starting from start_dir and navigating subfolders until the file search_for is found.
     Return None if no folder is found
     
@@ -170,7 +175,7 @@ def find_last_recursively(start_dir, search_for='meas_parameters.yaml', this_dep
     return find_last_recursively(start_dir=last_sub, search_for=search_for, this_depth=this_depth+1, max_depth=max_depth, dir_to_skip=dir_to_skip, skip_subdir_names=skip_subdir_names)
 
 def find_SN_in_analysisFolder(analysisFolder):
-    first_sn_File = find_last_recursively(analysisFolder, search_for='SN.txt')
+    first_sn_File = find_last_recursively(analysisFolder, search_for='SN.txt', skip_subdir_names = ['last_vthc','.ipynb_checkpoints'])
     # from the first sn file, we know where to look for others
     parent_of_first_sn_file = os.path.dirname(first_sn_File)
     module_dirs = [os.path.join(parent_of_first_sn_file, d) for d in os.listdir(parent_of_first_sn_file) if os.path.isdir(os.path.join(parent_of_first_sn_file, d))]
@@ -199,19 +204,69 @@ if sum(SNs_exist) == len(SNs_exist):
     # and deleted afterwards)
     prep_tar(analysisFolder)
     
-    # ToDo read such info from FADAPro analysis output instead of requesting via CLI from user input
-    DB_upload_info_Folder = find_last_recursively(analysisFolder, search_for='DB_upload_info.yaml')
+    DB_upload_info_Folder = find_last_recursively(analysisFolder, search_for='DB_upload_info.yaml', skip_subdir_names = ['last_vthc','.ipynb_checkpoints'])
     print(DB_upload_info_Folder)
     
     with open(os.path.join(DB_upload_info_Folder, 'DB_upload_info.yaml')) as yamlfile:
         meas_upload_info = yaml.safe_load(yamlfile)
+        # ToDo agree on what shall be allowed here or not and how to get the most up-to-date list
         meas_step = meas_upload_info.get('meas_step') # aka run_type
+        meas_loc = meas_upload_info.get('meas_loc') # aka location
+        possible_locs = data.relevant_location_IDs_by_shortname.keys()
+        if overwriteLocation == None:
+            if meas_loc != None:
+                if meas_loc not in possible_locs:
+                    print(WARNING + f'Your analysis folder does contain a measurement location:  {meas_loc}  that is not allowed.' +
+                          ' You now need to give this information via the command line.')
+                    print(INFO + 'Allowed locations: ifae, ihep, ijclab, mainz, mascir, ustc, cern, test')
+                    good_loc = False
+                    while good_loc == False:
+                        meas_loc = input('Type measurement location, choose any of the allowed locations from the list. Example: ifae. '
+                                 'Confirm with [Enter]: ')
+                        if meas_loc in possible_locs:
+                            good_loc = True
+                        else:
+                            print(WARNING + f'Your custom input via command line does contain a measurement location:  {meas_loc}  that is not allowed.' +
+                                  ' Please try again.')
+            else:
+                if meas_step == 'cern_reception':
+                    print(WARNING + 'Your analysis folder does not contain a measurement location.' +
+                          ' But because it does contain information that this is cern_reception,' +
+                          ' will assume location = CERN clean room, no need to enter anything from your side.')
+                else:
+                    print(WARNING + 'Your analysis folder does not contain a measurement location.' +
+                          ' You now need to give this information via the command line.')
+                    # ToDo figure out if there is anything special to do for IJCLab (assembly), LPNHE (loading) or if both get the ijclab site when taking meas.
+                    print(INFO + 'Allowed locations: ifae, ihep, ijclab, mainz, mascir, ustc, cern, test')
+                    good_loc = False
+                    while good_loc == False:
+                        meas_loc = input('Type measurement location, choose any of the allowed locations from the list. Example: ifae. '
+                                 'Confirm with [Enter]: ')
+                        if meas_loc in possible_locs:
+                            good_loc = True
+                        else:
+                            print(WARNING + f'Your custom input via command line does contain a measurement location:  {meas_loc}  that is not allowed.' +
+                                  ' Please try again.')
+            # at this point, we should definitely have a valid loc
+            loc_id_for_DB = data.relevant_location_IDs_by_shortname[meas_loc]
+        else:
+            if overwriteLocation in possible_locs:
+                loc_id_for_DB = data.relevant_location_IDs_by_shortname[overwriteLocation]
+            else:
+                print(WARNING + f'Your custom input via command line does contain a measurement location:  {overwriteLocation}  that is not allowed.' +
+                      ' You now need to give this information via the command line.')
+                print(INFO + 'Allowed locations: ifae, ihep, ijclab, mainz, mascir, ustc, cern, test')
+                good_loc = False
+                while good_loc == False:
+                    meas_loc = input('Type measurement location, choose any of the allowed locations from the list. Example: ifae. '
+                             'Confirm with [Enter]: ')
+                    if meas_loc in possible_locs:
+                        good_loc = True
+                    else:
+                        print(WARNING + f'Your custom input via command line does contain a measurement location:  {meas_loc}  that is not allowed.' +
+                              ' Please try again.')
         # the meas_type like sourceScan is taken from the directory structure on the backend-level
         # timestamp serves as run_start and run_end
-        #datetime_obj = datetime.datetime.strptime(meas_upload_info.get('timestamp'),"%d/%m/%Y %H:%M:%S")
-        #unix_timestamp = datetime_obj.timestamp()
-        #timestamp = datetime.datetime.utcfromtimestamp(unix_timestamp).strftime('%Y-%m-%dT%H:%M:%SZ')
-        #timestamp_date = datetime.datetime.strptime(meas_upload_info.get('timestamp'),"%d/%m/%Y %H:%M:%S")
         meas_date = meas_upload_info.get('timestamp').split(' ')[0] # just the date
         meas_date_y, meas_date_m, meas_date_d = meas_date[6:10], meas_date[3:5], meas_date[0:2]
         timestamp = f'{meas_date_y}-{meas_date_m}-{meas_date_d}'
@@ -220,36 +275,27 @@ if sum(SNs_exist) == len(SNs_exist):
 
     run_type = meas_step
     run_start, run_end = timestamp, timestamp
-    
-    '''
-    meas_folder: B_None_On_all_Inj_none_N_100000_Vth_380_Q_12
-    meas_step: assembly
-    meas_type: sourceScan
-    timestamp: 26/08/2025 16:35:56
-    '''
-    # ToDo agree on what shall be allowed here or not and how to get the most up-to-date list
-    #run_type = input('Type measurement type, including the step and possibly more detailed tag'
-    #                 ' for irradiation, thermal cycling etc. '
-    #                 'Confirm with [Enter]: ')
-    # ToDo agree on what shall be allowed here or not and how to get the most up-to-date list
-    meas_loc = input('Type measurement location, choose any of the allowed locations from the list. Example: 1521. '
-                     'Confirm with [Enter]: ')
-    #run_start = input('Type start date of measurement (format: YYYY-MM-DD). '
-    #                 'Confirm with [Enter]: ')
-    #run_end = input('Type end date of measurement (format: YYYY-MM-DD). '
-    #                 'Confirm with [Enter]: ')
-    comment = input('[Optional] Type comment, or leave empty. '
-                     'Confirm with [Enter]: ')
-    
+
+    if comment == None:
+        comment = ''
+    # last step: overwrite the defaults if user requests so
+    if overwriteRunType != None:
+        run_type = overwriteRunType
+    if overwriteStartDate != None:
+        run_start = overwriteStartDate
+    if overwriteEndDate != None:
+        run_end = overwriteEndDate
     files_payload = {'data_file': ('temporary_tar_output.tar', open(dbFolder + '/temporary_tar_output.tar','rb'))}
     data_payload = {'is_record_deleted': 'F', # we want to record this as something that is not "deleted", so we put "F"
-                    'location': meas_loc, # measurement site / location (could be your institute location, cern, clean room etc.) - we need to hardcode somewhere or retrieve the list of locations to choose from, because again this needs an ID
+                    'location': loc_id_for_DB, # measurement site / location (could be your institute location, cern clean room etc.)
                     'run_type': run_type, # measurement type, e.g. the full name of the step (assembly_<insititute>, loading_<after some TCs> etc.)
                     'run_begin_timestamp': run_start, # begin of measurement data, usual time and date format
                     'run_end_timestamp': run_end, # end of measurement data, usual time and date format
                     'comment_description': comment, # comment
                     'record_insertion_user': username} # to store who did this upload in the database
 
+    print(INFO + 'These are the data to be uploaded, please check:')
+    pprint(data_payload)
     if not dryrun:
         upload_response = upload(data_payload, files_payload, myToken)
         # ToDo: check the successful upload by attempting to download the data again. And test for existing SN must happen before!!!
