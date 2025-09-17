@@ -1,4 +1,4 @@
-import getpass, json, requests
+import getpass, json, requests, os
 from pprint import pprint
 
 # === To open links in browser
@@ -98,7 +98,7 @@ def get_access_token(grant_type = 'client_credentials', debug = False):
     applicationDetails['grant_type'] = (None, grant_type)
     if grant_type == 'client_credentials':
         applicationDetails['client_id'] = (None, 'hgtd-api-client')
-        applicationDetails['client_secret'] = (None, open('config_api').readlines()[0])
+        applicationDetails['client_secret'] = (None, open(os.path.dirname(os.path.realpath(__file__))+'/config_api').readlines()[0])
         applicationDetails['audience'] = (None, 'webframeworks-paas-hgtddb')
         url_to_use = access_token_url
     else:
