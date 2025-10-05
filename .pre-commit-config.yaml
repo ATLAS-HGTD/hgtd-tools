@@ -1,0 +1,15 @@
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+    -   id: check-yaml
+        exclude: local
+    -   id: end-of-file-fixer
+        exclude: local
+    -   id: trailing-whitespace
+        exclude: local
+-   repo: https://github.com/psf/black
+    rev: 25.9.0
+    hooks:
+    -   id: black
+        exclude: local

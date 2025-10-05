@@ -7,7 +7,7 @@
 
 <div align="center">
 
-![Static Badge](https://img.shields.io/badge/python-3.12-blue) ![Static Badge](https://img.shields.io/badge/hgtd--tools-1.7.2-blue) <br>
+![Static Badge](https://img.shields.io/badge/python-3.12-blue) ![Static Badge](https://img.shields.io/badge/hgtd--tools-1.7.2-blue) [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit) <br>
 
 ![Static Badge](https://img.shields.io/badge/tested_on-Linux_|_MacOS_|_Windows-green)
 </div>
@@ -68,7 +68,7 @@ Windows:
 4. Get the api secret from [cernbox](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/config_api) and download the file in the main directory of hgtd-tools. This file is shared with the users-egroup only! Do not distribute it anywhere. If you cannot access the file, you are not in the egroup.
 
 
-If you don't like conda (☹️ how? 🤨) or you want to minimize the packages to be installed, make sure to run the tools with a recent python3 environment containing `customtkinter`, `requests`, which can be installed with `pip`. Other used packages of hgtd-tools are already part of the regular python3 lib. Only the provided yml files are tested to stay compatible though.
+If you don't like conda (☹️ how? 🤨) or you want to minimize the packages to be installed, make sure to run the tools with a recent python3 environment containing `customtkinter`, `requests`, which can be installed with `pip`. Other used packages of hgtd-tools are already part of the regular python3 lib. Only the provided yml files are tested to stay compatible though. If you only want to use hgtd-tools for its API client without the GUI, `pip install requests` will be enough (see FADAPro).
 
 ### Updating your local hgtd-tools if this is not your first time installing:
 
@@ -113,8 +113,10 @@ The `api.py` module can be used standalone as well to make API requests to the H
 
 The basic types of requests are:
 
-GET: without payload, fetch some specified record/view etc.  
-POST: sends a payload (dictionary as json, or more involved types like a tar for measurement data, with another dictionary for human-readable requests)  
+GET: without payload, fetch some specified record/view etc.
+
+POST: sends a payload (dictionary as json, or more involved types like a tar for measurement data, with another dictionary for human-readable requests)
+
 DELETE: without payload, remove some record
 
 Those three variants are implemented as `api.fetch_information`, `api.post_information`, `api.delete_information` handling the endpoint, headers etc. for you so you don't have to worry about anything besides the actual information received, posted or deleted.
@@ -122,7 +124,7 @@ Those three variants are implemented as `api.fetch_information`, `api.post_infor
 #### Worked out standalone example
 Have a look at the notebook `example_API_usage.ipynb` to see the included API module in action. The notebook shows two use cases for user interaction with the DB that can be implemented as part of scripts (as in FADAPro, for example): adding a value for a single attribute (useful for e.g. module metrology) or complete bulk upload of a tar containing various files (useful for e.g. module electrical measurements). For proper authentication, these preliminary steps to get started are included as well.
 
-What will be implemented to FADAPro is being WIP, a first attempt can be seen in `DB_interface.py`.
+What will be implemented to FADAPro is WIP, a first attempt can be seen in the [MR](https://gitlab.cern.ch/atlas-hgtd/Electronics/fadapro/-/merge_requests/9).
 
 ### Dockerization
 A deployment of this app to CERN OKD using docker is in preparation.
@@ -143,7 +145,7 @@ The second option is used to deploy to the common registry for the whole hgtddb 
 
 #### Scripts to build / tag / deploy / run container
 
-Not that all commands involving testing the actual GUI from a remote require an X-server, e.g. start a `ssh -XY` connection from inside XQuartz.
+Note that all commands involving testing the actual GUI from a remote require an X-server, e.g. start a `ssh -XY` connection from inside XQuartz.
 
 You need Docker installed on your device, e.g. Docker Desktop running in the background.
 
