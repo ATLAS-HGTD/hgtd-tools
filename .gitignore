@@ -37,8 +37,11 @@ config_api
 *config_api*
 
 # ================================================================
-# Names of testing dirs
+# Names of testing dirs and local files
 # ================================================================
 208FMA05*
 SixModuleBoardTest8Lug*
 analysis/*
+# note that the local files that are already checked are useful
+# just to make sure no new files make it in accidentally
+local/*
