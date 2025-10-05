@@ -4,10 +4,18 @@ repos:
     hooks:
     -   id: check-yaml
         exclude: local
+    -   id: detect-private-key
     -   id: end-of-file-fixer
+        exclude: local
+    -   id: fix-byte-order-marker
         exclude: local
     -   id: trailing-whitespace
         exclude: local
+    -   id: requirements-txt-fixer
+-   repo: https://github.com/asottile/reorder-python-imports
+    rev: v3.15.0
+    hooks:
+    -   id: reorder-python-imports
 -   repo: https://github.com/psf/black
     rev: 25.9.0
     hooks:

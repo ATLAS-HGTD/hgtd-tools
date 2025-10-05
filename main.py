@@ -1,9 +1,10 @@
-import customtkinter
-from PIL import Image
-import requests
 import threading
 import time
 import tkinter
+
+import customtkinter
+import requests
+from PIL import Image
 
 import api
 import data

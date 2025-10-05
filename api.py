@@ -1,5 +1,9 @@
-import getpass, json, requests, os
+import getpass
+import json
+import os
 from pprint import pprint
+
+import requests
 
 # === To open links in browser
 # Redirect to new frontend

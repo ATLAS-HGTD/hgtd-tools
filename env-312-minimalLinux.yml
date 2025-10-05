@@ -15,6 +15,7 @@ dependencies:
   - matplotlib
   - numpy
   - pip
+  - pre-commit
   - pyyaml
 
   - pip:

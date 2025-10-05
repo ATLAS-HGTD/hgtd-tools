@@ -1,7 +1,7 @@
+customtkinter
 # tk[build=xft_*]
 jupyterlab
 matplotlib
 numpy
-pyyaml
-customtkinter
 pre-commit
+pyyaml
