@@ -118,6 +118,53 @@ def delete_parents(chi_partID, onlyNonDeleted=True, ofKind="all", dryrun=False):
         raise e
 
 
+def get_info_of_part_id(part_id):
+    try:
+        attributes, responseText = api.fetch_information(f"/part/{part_id}/")
+        return attributes, responseText
+    except (
+        requests.exceptions.HTTPError,
+        requests.exceptions.ConnectionError,
+        requests.exceptions.Timeout,
+        requests.exceptions.RequestException,
+    ) as e:
+        raise e
+    except ValueError as e:
+        raise e
+
+
+def get_attributes_of_part_id(part_id):
+    try:
+        attributes, responseText = api.fetch_information(f"/partattrlist/{part_id}/")
+        return attributes, responseText
+    except (
+        requests.exceptions.HTTPError,
+        requests.exceptions.ConnectionError,
+        requests.exceptions.Timeout,
+        requests.exceptions.RequestException,
+    ) as e:
+        raise e
+    except ValueError as e:
+        raise e
+
+
+def get_measurement_types_of_module_SN(part_SN):
+    try:
+        measurements, responseText = api.fetch_information(
+            f"/module_threshold_run_type?serial_number={part_SN}"
+        )
+        return measurements, responseText
+    except (
+        requests.exceptions.HTTPError,
+        requests.exceptions.ConnectionError,
+        requests.exceptions.Timeout,
+        requests.exceptions.RequestException,
+    ) as e:
+        raise e
+    except ValueError as e:
+        raise e
+
+
 def get_relevant_parts(
     partKoP_shortname, onlyNonDeleted=True, getFullAttributes=False, useLocal=False
 ):
