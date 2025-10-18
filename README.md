@@ -14,6 +14,8 @@
 
 ⭐️ You can help with testing and improving the tools for more platforms! ⭐️
 
+[[_TOC_]]
+
 ## 1. Description
 These tools interact with the HGTD Production Database for the HGTD Phase-II Upgrade of the ATLAS Experiment at CERN.
 
