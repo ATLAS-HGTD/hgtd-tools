@@ -14,10 +14,10 @@
 
 ⭐️ You can help with testing and improving the tools for more platforms! ⭐️
 
-## Description
+## 1. Description
 These tools interact with the HGTD Production Database for the HGTD Phase-II Upgrade of the ATLAS Experiment at CERN.
 
-### Features
+### 1.1 Features
 - API (GET / POST / DELETE)
   - with dynamic progress bar to see API request status
   - efficient lookup of information in local files (e.g. static Slot table) and fetching of dynamic information via ProdDB API
@@ -38,15 +38,15 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
   - if operation requires subsequent operations (e.g. connecting modules to slots when placing a DU on the detector), perform those subsequent operations in one go, for FT this involves connecting to Slot, Module, Detector Unit and PEB in one go
   - query selection before choosing parent / child from full list (e.g. DU type, module manufacturer, child not yet connected or all possible children)
 
-### Open points requiring implementation
+### 1.2 Open points requiring implementation
 New features, bugs, compatibility improvements and other items are collected with the [Issues](https://gitlab.cern.ch/anstein/hgtd-tools/-/issues)
 
 Some of them are also bound to [Milestones](https://gitlab.cern.ch/anstein/hgtd-tools/-/milestones)
 
-## Installation
+## 2. Installation
 This suite is written in python, and a conda environment is recommended. The included yaml file also lists a couple of useful packages assisting with further analysing / interpreting the data and was tested to work in April 2025.
 
-### First time usage / requirements:
+### 2.1 First time usage / requirements:
 
 Linux:
 1. (If not already installed): install miniconda, e.g. via `wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh` and then running the .sh script (latest release) with e.g. `bash`.
@@ -70,7 +70,7 @@ Windows:
 
 If you don't like conda (☹️ how? 🤨) or you want to minimize the packages to be installed, make sure to run the tools with a recent python3 environment containing `customtkinter`, `requests`, which can be installed with `pip`. Other used packages of hgtd-tools are already part of the regular python3 lib. Only the provided yml files are tested to stay compatible though. If you only want to use hgtd-tools for its API client without the GUI, `pip install requests` will be enough (see FADAPro).
 
-### Updating your local hgtd-tools if this is not your first time installing:
+### 2.2 Updating your local hgtd-tools if this is not your first time installing:
 
 Make sure you get the most recent version, including new features and bugfixes.
 
@@ -93,7 +93,7 @@ conda env update --file env-312-minimalLinux.yml  --prune
 ```
 depending on your system.
 
-## Usage
+## 3. Usage
 
 To open the main window with GUI, execute the following from the hgtd-tools directory (using either Anaconda Prompt or your preferred shell with which you installed miniconda):
 
@@ -104,11 +104,11 @@ python main.py
 
 Closing the application works like you would expect from other applications, e.g. you'll find a red button to close hgtd-tools, you could quit the application with shortcuts of your operating system (e.g. MacOS: cmd+Q), or interrupting the python program from command line with ctrl+c.
 
-## Documentation of typical use cases
+## 4. Documentation of typical use cases
 We have a new [documentation page](https://hgtd-database.docs.cern.ch/) for the HGTD Production Database, which contains a [section on hgtd-tools](https://hgtd-database.docs.cern.ch/content/user/parts_tree_hgtd-tools/) as well. From now on, you will find guides to use the tools over there.
 
-## Developer corner
-### Reusing the included API module
+## 5. Developer corner
+### 5.1 Reusing the included API module
 The `api.py` module can be used standalone as well to make API requests to the HGTD Production Database. Note that the included functions also return the response `status_code` and `reason` and handle a variety of possible errors.
 
 The basic types of requests are:
@@ -121,12 +121,12 @@ DELETE: without payload, remove some record
 
 Those three variants are implemented as `api.fetch_information`, `api.post_information`, `api.delete_information` handling the endpoint, headers etc. for you so you don't have to worry about anything besides the actual information received, posted or deleted.
 
-#### Worked out standalone example
+#### 5.1.1 Worked out standalone example
 Have a look at the notebook `example_API_usage.ipynb` to see the included API module in action. The notebook shows two use cases for user interaction with the DB that can be implemented as part of scripts (as in FADAPro, for example): adding a value for a single attribute (useful for e.g. module metrology) or complete bulk upload of a tar containing various files (useful for e.g. module electrical measurements). For proper authentication, these preliminary steps to get started are included as well.
 
 What will be implemented to FADAPro is WIP, a first attempt can be seen in the [MR](https://gitlab.cern.ch/atlas-hgtd/Electronics/fadapro/-/merge_requests/9).
 
-### Dockerization
+### 5.2 Dockerization
 A deployment of this app to CERN OKD using docker is in preparation.
 
 There are two relevant registry links, for which a login is needed:
@@ -143,7 +143,7 @@ docker login registry.cern.ch
 The second option is used to deploy to the common registry for the whole hgtddb project.
 
 
-#### Scripts to build / tag / deploy / run container
+#### 5.2.1 Scripts to build / tag / deploy / run container
 
 Note that all commands involving testing the actual GUI from a remote require an X-server, e.g. start a `ssh -XY` connection from inside XQuartz.
 
@@ -156,7 +156,7 @@ On Mac: use `bash docker-build_run_on_Mac.sh` if you want to build a new contain
 On linux / lxplus: there is another Dockerfile that pulls the base image from another registry (due to limited number of pulls from the same unauthenticated IP address). You can run a container with an already existing image `bash docker-run_on_lxplus.sh` (see this [source](https://gist.github.com/Moosems/138cfea6fc4e1967e4eae52bd96618ff)) and to build a new image do `bash docker-build_run_on_linux.sh` (does not work yet on lxplus, or you need special rights / uid / gid to perform apt-get install commands).
 
 
-#### Useful commands to do the build / tag / push / run manually
+#### 5.2.2 Useful commands to do the build / tag / push / run manually
 
 Build and push a `latest` image to gitlab:
 ```
@@ -181,5 +181,5 @@ docker push registry.cern.ch/hgtd/hgtd-tools:x86_64_1.4.2
 
 ```
 
-## Acknowledgements
+## 6. Acknowledgements
 Thanks to an unknown reddit user who gave me hope when the PyQt6 installation wouldn't want to work with my setup / machine. This [link](https://www.reddit.com/r/Tkinter/comments/snrb1f/comment/hw4bylf/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button) brought me to [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) and the GUI is built on top of the tutorial.
