@@ -28,7 +28,7 @@ keycloak_endpoint = kc_server + "/auth/realms/cern/protocol/openid-connect/token
 userinfo_endpoint = kc_server + "/auth/realms/cern/protocol/openid-connect/userinfo"
 
 # === For checking against latest version
-hgtd_tools_version_endpoint = "https://cernbox.cern.ch/remote.php/dav/public-files/rE9VXEvRY0T9j0N/hgtd-tools-version"
+hgtd_tools_version_endpoint = "https://cernbox.cern.ch/remote.php/dav/public-files/lFlRlPYl6EO4J3N/hgtd-tools-version"
 
 
 def get_version(debug=False):
