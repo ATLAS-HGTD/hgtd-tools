@@ -165,6 +165,10 @@ def get_measurement_types_of_module_SN(part_SN):
         raise e
 
 
+def get_SN_of_parts(parts):
+    return [part["serial_number"] for part in parts]
+
+
 def get_relevant_parts(
     partKoP_shortname, onlyNonDeleted=True, getFullAttributes=False, useLocal=False
 ):

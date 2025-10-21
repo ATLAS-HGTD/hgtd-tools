@@ -126,7 +126,7 @@ Those three variants are implemented as `api.fetch_information`, `api.post_infor
 #### 5.1.1 Worked out standalone example
 Have a look at the notebook `example_API_usage.ipynb` to see the included API module in action. The notebook shows two use cases for user interaction with the DB that can be implemented as part of scripts (as in FADAPro, for example): adding a value for a single attribute (useful for e.g. module metrology) or complete bulk upload of a tar containing various files (useful for e.g. module electrical measurements). For proper authentication, these preliminary steps to get started are included as well.
 
-What will be implemented to FADAPro is WIP, a first attempt can be seen in the [MR](https://gitlab.cern.ch/atlas-hgtd/Electronics/fadapro/-/merge_requests/9).
+The interface to FADAPro is implemented in the [MR](https://gitlab.cern.ch/atlas-hgtd/Electronics/fadapro/-/merge_requests/9).
 
 ### 5.2 Dockerization
 A deployment of this app to CERN OKD using docker is in preparation.

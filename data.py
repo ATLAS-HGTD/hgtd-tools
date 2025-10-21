@@ -30,6 +30,16 @@ relevant_location_IDs_by_shortname = {
     "test": 1521,
 }
 
+relevant_manufacturer_IDs_by_shortname = {
+    "ifae": 1003,
+    "ihep": 1004,
+    "ijclab": 1061,
+    "mainz": 1141,
+    "mascir": 1241,
+    "ustc": 1261,
+    "test": 1161,
+}
+
 # define module geometry for canvas - not to scale!!!
 modLongSide = 80
 modShortSide = 40
