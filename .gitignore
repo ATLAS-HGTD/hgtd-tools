@@ -45,3 +45,4 @@ analysis/*
 # note that the local files that are already checked are useful
 # just to make sure no new files make it in accidentally
 local/*
+local_info/*

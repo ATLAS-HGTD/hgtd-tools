@@ -1,3 +1,4 @@
+# ======== IDs stored in DB
 KoPID_from_partKoPName = {
     "Detector Unit": 2407,
     "Detector": 2414,
@@ -39,6 +40,39 @@ relevant_manufacturer_IDs_by_shortname = {
     "ustc": 1261,
     "test": 1161,
 }
+
+# ======== Defintion of chars in SNs
+MO_site_id = {
+    "ifae": "F",
+    "ihep": "H",
+    "ijclab": "J",
+    "mainz": "M",
+    "mascir": "A",
+    "ustc": "U",
+}
+
+MO_prod_id = {
+    "prod": "M",  # main production
+    "preprod": "P",  # preproduction
+    "demo": "D",  # demonstrator
+    "test": "T",  # test
+    "other": "O",  # other
+}
+
+
+def get_MO_SN_prefix(site, prod, batch):
+    k = MO_site_id[site.lower()]
+    p = MO_prod_id[prod.lower()]
+    b = str(batch)
+    if len(b) > 1:
+        raise RuntimeError(
+            f"SN : batch should be a single character but you passed {b}"
+        )
+    if not b.isalnum():
+        raise RuntimeError(f"SN : batch should be alphanumeric but you passed {b}")
+    snprefix = f"20WMO{k}{p}{b}"
+    return snprefix.upper()
+
 
 # define module geometry for canvas - not to scale!!!
 modLongSide = 80
