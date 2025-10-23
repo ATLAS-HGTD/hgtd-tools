@@ -191,5 +191,19 @@ docker push registry.cern.ch/hgtd/hgtd-tools:x86_64_1.4.2
 
 ```
 
+### 5.3 pre-commit
+
+We use some standard pre-commit hooks (see `.pre-commit-config.yaml`). If you want to setup this helpful tool as well:
+
+```shell
+pre-commit install
+```
+
+And you can run the hooks on all files by
+
+```shell
+pre-commit run --all-files
+```
+
 ## 6. Acknowledgements
 Thanks to an unknown reddit user who gave me hope when the PyQt6 installation wouldn't want to work with my setup / machine. This [link](https://www.reddit.com/r/Tkinter/comments/snrb1f/comment/hw4bylf/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button) brought me to [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) and the GUI is built on top of the tutorial.
