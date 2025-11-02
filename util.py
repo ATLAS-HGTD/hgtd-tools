@@ -9,6 +9,10 @@ import data
 
 
 # === Operations with standard objects (lists, dicts, strings etc.)
+def flatten(xss):
+    return [x for xs in xss for x in xs]
+
+
 def get_sorted_list_of_lists_by_Nth_column(unsorted_list, column):
     sortList = unsorted_list.copy()
     sortList.sort(key=lambda x: x[column])

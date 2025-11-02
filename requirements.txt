@@ -2,6 +2,7 @@ customtkinter
 # tk[build=xft_*]
 jupyterlab
 matplotlib
+mplhep
 numpy
 pre-commit
 pyyaml

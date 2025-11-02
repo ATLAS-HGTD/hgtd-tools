@@ -1,13 +1,21 @@
 # ======== IDs stored in DB
 KoPID_from_partKoPName = {
-    "Detector Unit": 2407,
-    "Detector": 2414,
-    "Module": 1005,
-    "Slot": 2412,
-    "PEB": 2410,
-    "Flex Tail": 2409,
+    "Sensor": 1000,
+    "Wafer": 1001,
+    "ASIC": 1002,
     "Hybrid": 1003,
     "Module Flex": 1004,
+    "Module": 1005,
+    "Detector Unit": 2407,
+    "Support Unit": 2408,
+    "Flex Tail": 2409,
+    "PEB": 2410,
+    "VTRx": 2411,
+    "Slot": 2412,
+    "Detector": 2414,
+    "PEB_MUX64": 2415,
+    "HV_PS": 2416,
+    "HV_module": 2417,
 }
 
 # hardcoded part ids for testing parts (HGTD Database test)
