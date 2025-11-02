@@ -13,11 +13,14 @@ report-stats:
       # Need expanded token here to push
       #git remote set-url origin https://hgtdci:$CI_ACCESS_TOKEN@gitlab.cern.ch/$CI_PROJECT_PATH.git
       #git config --list
+  variables:
+    SECURE_FILES_DOWNLOAD_PATH: './'
   script:
+    - curl --silent "https://gitlab.com/gitlab-org/incubation-engineering/mobile-devops/download-secure-files/-/raw/main/installer" | bash
     - echo "Testing runner"
-    - touch config_api
-    - cat config_api
-    - echo $TESTVAR >> config_api
-    - cat config_api
-    - echo $hgtdapi_secret >> config_api
+    #- touch config_api
+    #- cat config_api
+    #- echo $TESTVAR >> config_api
+    #- cat config_api
+    #- echo $hgtdapi_secret >> config_api
     - python report_stats.py
