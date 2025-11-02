@@ -7,7 +7,7 @@
 
 <div align="center">
 
-![Static Badge](https://img.shields.io/badge/python-3.12-blue) ![Static Badge](https://img.shields.io/badge/hgtd--tools-1.7.4-blue) [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit) <br>
+![Static Badge](https://img.shields.io/badge/python-3.12-blue) [![Release](https://gitlab.cern.ch/anstein/hgtd-tools/-/badges/release.svg)](https://gitlab.cern.ch/anstein/hgtd-tools/-/releases) [![Pipeline](https://gitlab.cern.ch/anstein/hgtd-tools/badges/master/pipeline.svg)](https://gitlab.cern.ch/anstein/hgtd-tools/-/commits/master) [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit) <br>
 
 ![Static Badge](https://img.shields.io/badge/tested_on-Linux_|_MacOS_|_Windows-green)
 </div>

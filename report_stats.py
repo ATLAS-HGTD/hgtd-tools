@@ -49,7 +49,7 @@ plt.rcParams["axes.prop_cycle"] = cycler(
 
 
 # === CONFIGURATION FOR DATA ACCESS ===
-parser = ArgumentParser("CLI for SN reservation, targeted at Module Assembly")
+parser = ArgumentParser("CLI for reporting (parts stats)")
 parser.add_argument(
     "--testrun",
     dest="testrun",
