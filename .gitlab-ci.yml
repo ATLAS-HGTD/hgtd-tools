@@ -15,4 +15,6 @@ report-stats:
       #git config --list
   script:
     - echo "Testing runner"
+    - touch config_api
+    - echo $hgtdapi_secret >> config_api
     - python report_stats.py
