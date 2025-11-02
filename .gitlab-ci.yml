@@ -1,0 +1,18 @@
+stages:
+  - report
+
+report-stats:
+  stage: report
+  image: registry.cern.ch/docker.io/library/python:3.12
+  needs: [ ]
+  before_script:
+    - pip install -r requirements.txt
+    - |
+      git config --global user.email "hgtd-tools-bot@cern.ch"
+      git config --global user.name "hgtd-tools-bot"
+      # Need expanded token here to push
+      #git remote set-url origin https://hgtdci:$CI_ACCESS_TOKEN@gitlab.cern.ch/$CI_PROJECT_PATH.git
+      #git config --list
+  script:
+    - echo "Testing runner"
+    - python report_stats.py
