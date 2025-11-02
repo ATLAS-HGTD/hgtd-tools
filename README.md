@@ -21,24 +21,30 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 
 ### 1.1 Features
 - API (GET / POST / DELETE)
-  - with dynamic progress bar to see API request status
+  - in GUI with dynamic progress bar to see API request status
   - efficient lookup of information in local files (e.g. static Slot table) and fetching of dynamic information via ProdDB API
-  - allows standalone usage of API client
+  - allows standalone usage of API client (used e.g. in FADAPro)
 - GUI (Linux / Mac / Windows)
   - clickable canvas to get local coordinates easily, conversion to global coordinates done internally where needed
   - buttons to inspect affected parts
-- Modes
-  - Module Assembly (MODULE -> MODULE FLEX, MODULE -> HYBRIDs on HV-side / LV-side)
-  - Module Loading (DU -> MODULE)
-  - Detector Assembly (CERN): DU (DETECTOR -> DU & multiple SLOT -> MODULE)
-  - Detector Assembly (CERN): PEB (DETECTOR -> PEB)
-  - Detector Assembly (CERN): FT (SLOT -> FT; includes global to local coordinate conversion via Slot table)
-- Logic
-  - new relations can overwrite old ones, if user agrees to do so (implementing replacement of existing relations)
-    - for Module Assembly, the above also takes care of two hybrids being allowed per module, separating the side
-  - user can not load / assemble parts that are not allowed to take that spot (implementing constraints for already used positions, and parts not matching the target position by type)
-  - if operation requires subsequent operations (e.g. connecting modules to slots when placing a DU on the detector), perform those subsequent operations in one go, for FT this involves connecting to Slot, Module, Detector Unit and PEB in one go
-  - query selection before choosing parent / child from full list (e.g. DU type, module manufacturer, child not yet connected or all possible children)
+  - GUI Modes
+    - Module Assembly (MODULE -> MODULE FLEX, MODULE -> HYBRIDs on HV-side / LV-side)
+    - Module Loading (DU -> MODULE)
+    - Detector Assembly (CERN): DU (DETECTOR -> DU & multiple SLOT -> MODULE)
+    - Detector Assembly (CERN): PEB (DETECTOR -> PEB)
+    - Detector Assembly (CERN): FT (SLOT -> FT; includes global to local coordinate conversion via Slot table)
+  - Logic
+    - new relations can overwrite old ones, if user agrees to do so (implementing replacement of existing relations)
+      - for Module Assembly, the above also takes care of two hybrids being allowed per module, separating the side
+    - user can not load / assemble parts that are not allowed to take that spot (implementing constraints for already used positions, and parts not matching the target position by type)
+    - if operation requires subsequent operations (e.g. connecting modules to slots when placing a DU on the detector), perform those subsequent operations in one go, for FT this involves connecting to Slot, Module, Detector Unit and PEB in one go
+    - query selection before choosing parent / child from full list (e.g. DU type, module manufacturer, child not yet connected or all possible children)
+- Additional scripts / automation
+  - Serial Number reservation for module assembly
+  - Reporting
+    - prototype notebook to visualize basic part reports
+    - automation with Gitlab CI
+    - runner script producing overviews / reports
 
 ### 1.2 Open points requiring implementation
 New features, bugs, compatibility improvements and other items are collected with the [Issues](https://gitlab.cern.ch/anstein/hgtd-tools/-/issues)
@@ -104,6 +110,21 @@ conda env update --file env-312-minimalLinux.yml  --prune
 depending on your system.
 
 ## 3. Usage
+
+### 3.1 Using the `SN_reservation.py` script for module assembly
+
+When performing module assembly, you can reserve $N$ serial numbers that are available for your use case. The tool makes sure to create suitable SNs that match your prefix, and fill any potential unused counters (holes) with new SNs for you. The optional `--dryrun` argument can be useful when you just want to know what would be created (as in, this recommends the next free SNs for you, without actually storing those new parts in the DB).
+
+Execute the following from the hgtd-tools directory (using either Anaconda Prompt or your preferred shell with which you installed miniconda):
+
+```shell
+conda activate hgtd
+python SN_reservation.py --user-name <your-user-name> --site <some-site> --prod <some-prod> --batch <some-batchNr> --n-reserve <how-many-SNs-to-reserve> (--dryrun True)
+```
+
+### 3.2 Using the `main.py` GUI for Part-to-Part relations, starting from module assembly
+
+If you have done some connections between multi-relation parts, like module assembly, module loading, detector assembly with DUs, PEBs or Flex Tails, or you want to get assistance on what to pick, use the GUI of hgtd-tools.
 
 To open the main window with GUI, execute the following from the hgtd-tools directory (using either Anaconda Prompt or your preferred shell with which you installed miniconda):
 

@@ -1,5 +1,6 @@
 # standard package imports and default ATLAS style
 import json
+from argparse import ArgumentParser
 from collections import Counter
 from datetime import datetime
 
@@ -48,21 +49,38 @@ plt.rcParams["axes.prop_cycle"] = cycler(
 
 
 # === CONFIGURATION FOR DATA ACCESS ===
-categories = [
-    "Sensor",
-    "Wafer",
-    "ASIC",
-    "Hybrid",
-    "Module Flex",
-    "Module",
-    "Support Unit",
-    "Detector Unit",
-    "PEB",
-    "PEB_MUX64",
-    "Flex Tail",
-    "HV_PS",
-    "HV_module",
-]
+parser = ArgumentParser("CLI for SN reservation, targeted at Module Assembly")
+parser.add_argument(
+    "--testrun",
+    dest="testrun",
+    help="[Optional] Only test running with a very limited set of categories.",
+    default=False,
+)
+args = parser.parse_args()
+testrun = args.testrun
+
+categories = (
+    [
+        "Sensor",
+        "Wafer",
+        "ASIC",
+        "Hybrid",
+        "Module Flex",
+        "Module",
+        "Support Unit",
+        "Detector Unit",
+        "PEB",
+        "PEB_MUX64",
+        "Flex Tail",
+        "HV_PS",
+        "HV_module",
+    ]
+    if not testrun
+    else [
+        "HV_PS",
+        "HV_module",
+    ]
+)
 interesting_features = [
     "Location",
     "Manufacturer",
