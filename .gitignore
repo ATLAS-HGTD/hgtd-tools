@@ -23,6 +23,8 @@ app/*
 *.numbers
 *.pages
 *.pdf
+*.png
+*.json
 
 # ================================================================
 # Local docker_tag must not be committed
