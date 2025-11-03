@@ -9,6 +9,8 @@ generate_files:
     - |
       git config --global user.email "hgtd-tools-bot@cern.ch"
       git config --global user.name "hgtd-tools-bot"
+  variables:
+    SECURE_FILES_DOWNLOAD_PATH: './'
   script:
     - echo "🔧  Installing dependencies"
     - pip install -r requirements.txt
