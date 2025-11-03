@@ -1,26 +1,52 @@
 stages:
-  - report
+  - generate
+  - deploy
 
-report-stats:
-  stage: report
+generate_files:
+  stage: generate
   image: registry.cern.ch/docker.io/library/python:3.12
-  needs: [ ]
   before_script:
-    - pip install -r requirements.txt
     - |
       git config --global user.email "hgtd-tools-bot@cern.ch"
       git config --global user.name "hgtd-tools-bot"
-      # Need expanded token here to push
-      #git remote set-url origin https://hgtdci:$CI_ACCESS_TOKEN@gitlab.cern.ch/$CI_PROJECT_PATH.git
-      #git config --list
-  variables:
-    SECURE_FILES_DOWNLOAD_PATH: './'
   script:
+    - echo "🔧  Installing dependencies"
+    - pip install -r requirements.txt
     - curl --silent "https://gitlab.com/gitlab-org/incubation-engineering/mobile-devops/download-secure-files/-/raw/main/installer" | bash
-    - echo "Testing runner"
-    #- touch config_api
-    #- cat config_api
-    #- echo $TESTVAR >> config_api
-    #- cat config_api
-    #- echo $hgtdapi_secret >> config_api
-    - python report_stats.py
+    - echo "🛠️  Running your stats report"
+    - python report_stats.py --testrun True
+  artifacts:
+    paths:
+      - generated/
+    expire_in: 1h
+
+sync_to_sibling:
+  stage: deploy
+  needs: [generate_files]
+  image: alpine/git
+  before_script:
+    - |
+      git config --global user.email "hgtd-tools-bot@cern.ch"
+      git config --global user.name "hgtd-tools-bot"
+  script:
+    - echo "📥  Cloning sibling repository"
+    - |
+      # The token is injected in the URL, it never appears in the job log
+      git clone "https://${SIBLING_REPO_TOKEN}@${SIBLING_REPO_URL#https://}" sibling-repo
+    - cd sibling-repo
+
+    - echo "📂  Copying generated files into sibling repo"
+    - |
+      # Adjust the source and destination paths as required
+      cp -r ../generated/* reports/
+
+    - |
+      # Stage everything, but only create a commit if there are actual changes
+      git add -A
+      if git diff-index --quiet HEAD; then
+        echo "✅  No changes to commit."
+      else
+        git commit -m "Update generated files from ${CI_PROJECT_PATH}@${CI_COMMIT_SHA}"
+        echo "🚀  Pushing changes to ${SIBLING_REPO_URL}"
+        git push origin master
+      fi

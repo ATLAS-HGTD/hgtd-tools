@@ -181,14 +181,14 @@ def get_relevant_parts(
     try:
         if not useLocal:
             if partKoP_shortname == "Slot":
+                slots, responseText = api.fetch_information(
+                    f"/partslistbykop/{KoP_ID}/"
+                )
                 these_parts, responseText = api.fetch_information(
                     f"/partattributelistbykop/{KoP_ID}/"
                 )
                 with open("./local/all_slots.json", "w") as f:
                     json.dump(these_parts, f)
-                slots, responseText = api.fetch_information(
-                    f"/partslistbykop/{KoP_ID}/"
-                )
                 with open("./local/slots.json", "w") as f:
                     json.dump(slots, f)
                 for alSl in these_parts:
