@@ -17,6 +17,12 @@ generate_files:
     - curl --silent "https://gitlab.com/gitlab-org/incubation-engineering/mobile-devops/download-secure-files/-/raw/main/installer" | bash
     - echo "🛠️  Running your stats report"
     - python report_stats.py --testrun True
+    - mkdir generated
+    - cp counts*.pdf generated
+    - cp counts*.png generated
+    - cp fractions*.pdf generated
+    - cp fractions*.png generated
+    - cp report_stats.json generated/report_stats.json
   artifacts:
     paths:
       - generated/
