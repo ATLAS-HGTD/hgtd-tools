@@ -22,7 +22,7 @@ generate_files:
     - cp counts*.png generated
     - cp fractions*.pdf generated
     - cp fractions*.png generated
-    - cp report_stats.json generated/report_stats.json
+    - cp report_stats*.json generated
   artifacts:
     paths:
       - generated/

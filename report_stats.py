@@ -56,8 +56,15 @@ parser.add_argument(
     help="[Optional] Only test running with a very limited set of categories.",
     default=False,
 )
+parser.add_argument(
+    "--skip-data-prep",
+    dest="skipDataPrep",
+    help="[Optional] Do not run the actual requests to the DB, pick existing data.",
+    default=False,
+)
 args = parser.parse_args()
 testrun = args.testrun
+skip_data_prep = args.skipDataPrep
 
 categories = (
     [
@@ -88,132 +95,185 @@ interesting_features = [
     "Uploaded in YYYY-MM",
 ]
 
-parts_in_categories = {c: util.get_relevant_parts(c)[0] for c in categories}
+if not skip_data_prep:
+    parts_in_categories = {c: util.get_relevant_parts(c)[0] for c in categories}
 
-interesting_data_all_cats = {c: dict() for c in categories}
-for c in categories:
-    interesting_data_per_c = {f: [] for f in interesting_features}
-    for p in parts_in_categories[c]:
-        if str(p["serial_number"][:3]) != "20W":
-            continue
-        if "Location" in interesting_features:
-            interesting_data_per_c["Location"].append(p["location"]["location_name"])
-        if "Manufacturer" in interesting_features:
-            interesting_data_per_c["Manufacturer"].append(
-                p["manufacturer"]["manufacturer_name"]
-            )
-        if "Uploaded by" in interesting_features:
-            interesting_data_per_c["Uploaded by"].append(p["record_insertion_user"])
-        if "Uploaded in YYYY-MM" in interesting_features:
-            time = p["record_insertion_time"]
-            if time == None:
-                interesting_data_per_c["Uploaded in YYYY-MM"].append("Unknown")
-            else:
-                interesting_data_per_c["Uploaded in YYYY-MM"].append(
-                    p["record_insertion_time"][:7]
-                )
-    interesting_data_all_cats[c] = interesting_data_per_c
-
-multi_count_dict = {c: {f: dict() for f in interesting_features} for c in categories}
-for c in categories:
-    for f in interesting_features:
-        multi_count_dict[c][f] = dict(Counter(interesting_data_all_cats[c][f]).items())
-
-with open("report_stats.json", "w") as rep_data_f:
-    json.dump(multi_count_dict, rep_data_f)
-
-for f in interesting_features:
-    # merge the legend entries from different categories (i.e. Locations for Sensors, Locations for Modules...)
-
-    all_legend_entries = sorted(
-        list(
-            set(util.flatten([list(multi_count_dict[c][f].keys()) for c in categories]))
-        )
-    )
-
-    # need to fill the set of possible legend entries with new values (old and fill with 0)
-    values = []
-    fractions = []
+    interesting_data_all_cats = {c: dict() for c in categories}
+    interesting_data_all_cats_fakes = {c: dict() for c in categories}
     for c in categories:
-        values_list_this_c = []
-        fractions_list_this_c = []
-        for sc in all_legend_entries:
-            if sc in multi_count_dict[c][f].keys():
-                values_list_this_c.append(multi_count_dict[c][f][sc])
-                fractions_list_this_c.append(
-                    multi_count_dict[c][f][sc] / sum(multi_count_dict[c][f].values())
-                )
+        interesting_data_per_c = {f: [] for f in interesting_features}
+        interesting_data_per_c_fakes = {f: [] for f in interesting_features}
+        for p in parts_in_categories[c]:
+            if str(p["serial_number"][:3]) == "20W":
+                if "Location" in interesting_features:
+                    interesting_data_per_c["Location"].append(
+                        p["location"]["location_name"]
+                    )
+                if "Manufacturer" in interesting_features:
+                    interesting_data_per_c["Manufacturer"].append(
+                        p["manufacturer"]["manufacturer_name"]
+                    )
+                if "Uploaded by" in interesting_features:
+                    interesting_data_per_c["Uploaded by"].append(
+                        p["record_insertion_user"]
+                    )
+                if "Uploaded in YYYY-MM" in interesting_features:
+                    time = p["record_insertion_time"]
+                    if time == None:
+                        interesting_data_per_c["Uploaded in YYYY-MM"].append("Unknown")
+                    else:
+                        interesting_data_per_c["Uploaded in YYYY-MM"].append(
+                            p["record_insertion_time"][:7]
+                        )
             else:
-                values_list_this_c.append(0)
-                fractions_list_this_c.append(0)
-        values.append(values_list_this_c)
-        fractions.append(fractions_list_this_c)
-    values = np.array(values)
-    fractions = np.array(fractions)
+                if "Location" in interesting_features:
+                    interesting_data_per_c_fakes["Location"].append(
+                        p["location"]["location_name"]
+                    )
+                if "Manufacturer" in interesting_features:
+                    interesting_data_per_c_fakes["Manufacturer"].append(
+                        p["manufacturer"]["manufacturer_name"]
+                    )
+                if "Uploaded by" in interesting_features:
+                    interesting_data_per_c_fakes["Uploaded by"].append(
+                        p["record_insertion_user"]
+                    )
+                if "Uploaded in YYYY-MM" in interesting_features:
+                    time = p["record_insertion_time"]
+                    if time == None:
+                        interesting_data_per_c_fakes["Uploaded in YYYY-MM"].append(
+                            "Unknown"
+                        )
+                    else:
+                        interesting_data_per_c_fakes["Uploaded in YYYY-MM"].append(
+                            p["record_insertion_time"][:7]
+                        )
+        interesting_data_all_cats[c] = interesting_data_per_c
+        interesting_data_all_cats_fakes[c] = interesting_data_per_c_fakes
 
-    # ============
+    multi_count_dict = {
+        c: {f: dict() for f in interesting_features} for c in categories
+    }
+    multi_count_dict_fakes = {
+        c: {f: dict() for f in interesting_features} for c in categories
+    }
+    for c in categories:
+        for f in interesting_features:
+            multi_count_dict[c][f] = dict(
+                Counter(interesting_data_all_cats[c][f]).items()
+            )
+            multi_count_dict_fakes[c][f] = dict(
+                Counter(interesting_data_all_cats_fakes[c][f]).items()
+            )
 
-    fig, ax = plt.subplots(figsize=(12, 8))
+    with open("report_stats.json", "w") as rep_data_f:
+        json.dump(multi_count_dict, rep_data_f)
+    with open("report_stats_fakes.json", "w") as rep_data_f:
+        json.dump(multi_count_dict_fakes, rep_data_f)
+else:
+    with open("report_stats.json") as realJson:
+        multi_count_dict = json.load(realJson)
+    with open("report_stats_fakes.json") as fakesJson:
+        multi_count_dict_fakes = json.load(fakesJson)
 
-    bottom_values = np.zeros(len(categories))
 
-    for i, subcategory in enumerate(all_legend_entries):
-        ax.bar(
-            [i * 0.5 for i in range(len(categories))],
-            values[:, i],
-            bottom=bottom_values,
-            label=subcategory,
-            width=0.4,
+def prepare_legend_and_plot(
+    input_dict, postfix="20W", title_prefix="Serial Numbers starting with 20W only. "
+):
+    """
+    Given a multi-dimensional input dictionary (with outer dimension the categories, and inner dimension the features), this creates plots for counts / fractions.
+    """
+    for f in interesting_features:
+        # merge the legend entries from different categories (i.e. Locations for Sensors, Locations for Modules...)
+
+        all_legend_entries = sorted(
+            list(set(util.flatten([list(input_dict[c][f].keys()) for c in categories])))
         )
-        bottom_values += values[:, i]
-        ax.set_xticks([i * 0.5 for i in range(len(categories))], categories)
 
-    for tick in ax.get_xticklabels():
-        tick.set_rotation(90)
+        # need to fill the set of possible legend entries with new values (old and fill with 0)
+        values = []
+        fractions = []
+        for c in categories:
+            values_list_this_c = []
+            fractions_list_this_c = []
+            for sc in all_legend_entries:
+                if sc in input_dict[c][f].keys():
+                    values_list_this_c.append(input_dict[c][f][sc])
+                    fractions_list_this_c.append(
+                        input_dict[c][f][sc] / sum(input_dict[c][f].values())
+                    )
+                else:
+                    values_list_this_c.append(0)
+                    fractions_list_this_c.append(0)
+            values.append(values_list_this_c)
+            fractions.append(fractions_list_this_c)
+        values = np.array(values)
+        fractions = np.array(fractions)
 
-    ax.set_ylabel("Number of parts")
-    ax.legend(title=f)
+        # ============
 
-    hep.label.exp_text(
-        "ATLAS HGTD",
-        "Production Database",
-        f"Serial Numbers starting with 20W only. Generated with anstein/hgtd-tools~master on {datetime.today().strftime('%Y-%m-%d')}",
-        loc=4,
-        italic=(True, False, False),
-    )
-    ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 1.05 * 1.05)
-    fig.savefig(f"counts_{f}.pdf", bbox_inches="tight", facecolor="white", dpi=300)
-    fig.savefig(f"counts_{f}.png", bbox_inches="tight", facecolor="white", dpi=300)
+        def plot(input_array, filename_prefix):
+            fig, ax = plt.subplots(figsize=(12, 8))
 
-    # ============
+            bottom_values = np.zeros(len(categories))
 
-    fig, ax = plt.subplots(figsize=(12, 8))
+            for i, subcategory in enumerate(all_legend_entries):
+                ax.bar(
+                    [i * 0.5 for i in range(len(categories))],
+                    input_array[:, i],
+                    bottom=bottom_values,
+                    label=subcategory,
+                    width=0.4,
+                )
+                bottom_values += input_array[:, i]
+                ax.set_xticks([i * 0.5 for i in range(len(categories))], categories)
 
-    bottom_values = np.zeros(len(categories))
+            for tick in ax.get_xticklabels():
+                tick.set_rotation(90)
 
-    for i, subcategory in enumerate(all_legend_entries):
-        ax.bar(
-            [i * 0.5 for i in range(len(categories))],
-            fractions[:, i],
-            bottom=bottom_values,
-            label=subcategory,
-            width=0.4,
-        )
-        bottom_values += fractions[:, i]
-        ax.set_xticks([i * 0.5 for i in range(len(categories))], categories)
+            if filename_prefix == "counts":
+                ax.set_ylabel("Number of parts")
+                ax.legend(title=f)
+            elif filename_prefix == "fractions":
+                ax.set_ylabel("Fraction of parts")
 
-    for tick in ax.get_xticklabels():
-        tick.set_rotation(90)
+            hep.label.exp_text(
+                "ATLAS HGTD",
+                "Production Database",
+                f"{title_prefix}Generated with anstein/hgtd-tools~master on {datetime.today().strftime('%Y-%m-%d')}",
+                loc=4,
+                italic=(True, False, False),
+            )
+            if filename_prefix == "counts":
+                ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 1.05 * 1.05)
+            elif filename_prefix == "fractions":
+                ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 1.05 * 1.05 * 1.05)
+            fig.savefig(
+                f"{filename_prefix}_{f}_{postfix}.pdf",
+                bbox_inches="tight",
+                facecolor="white",
+                dpi=300,
+            )
+            fig.savefig(
+                f"{filename_prefix}_{f}_{postfix}.png",
+                bbox_inches="tight",
+                facecolor="white",
+                dpi=300,
+            )
 
-    ax.set_ylabel("Fraction of parts")
+        # ============
 
-    hep.label.exp_text(
-        "ATLAS HGTD",
-        "Production Database",
-        f"Serial Numbers starting with 20W only. Generated with anstein/hgtd-tools~master on {datetime.today().strftime('%Y-%m-%d')}",
-        loc=4,
-        italic=(True, False, False),
-    )
-    ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 1.05 * 1.05 * 1.05)
-    fig.savefig(f"fractions_{f}.pdf", bbox_inches="tight", facecolor="white", dpi=300)
-    fig.savefig(f"fractions_{f}.png", bbox_inches="tight", facecolor="white", dpi=300)
+        plot(values, "counts")
+        plot(fractions, "fractions")
+
+
+prepare_legend_and_plot(
+    multi_count_dict,
+    postfix="20W",
+    title_prefix="Serial Numbers starting with 20W only. ",
+)
+prepare_legend_and_plot(
+    multi_count_dict_fakes,
+    postfix="fakes",
+    title_prefix="Serial Numbers NOT starting with 20W only. ",
+)
