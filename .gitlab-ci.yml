@@ -14,7 +14,7 @@ pre-commit:
     - if: $CI_COMMIT_BRANCH == "master"
 
 generate_files:
-  stage: generate
+  stage: generate_reports
   image: registry.cern.ch/docker.io/library/python:3.12
   before_script:
     - |
@@ -40,7 +40,7 @@ generate_files:
     expire_in: 1h
 
 sync_to_sibling:
-  stage: deploy
+  stage: deploy_reports
   needs: [generate_files]
   image: alpine/git
   before_script:
