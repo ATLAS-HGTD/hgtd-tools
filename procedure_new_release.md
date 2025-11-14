@@ -11,9 +11,12 @@
 
 ## Ongoing and closed
 v1.Y.Z: First release cycle for actual users, part of the ProdDB tutorial
+
 v0.Y.Z: early R&D of the tools
 
 ## Plan
 roughly one new planned release X.Y each month, patches in between
+
 v2.0.0: Pre-Production
+
 v3.0.0: Production

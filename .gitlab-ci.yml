@@ -1,6 +1,17 @@
 stages:
-  - generate
-  - deploy
+  - build
+  - generate_reports
+  - deploy_reports
+
+pre-commit:
+  stage: build
+  image: registry.cern.ch/docker.io/library/python:3.12
+  script:
+    - pip install pre-commit
+    - pre-commit run --all-files
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "master"
 
 generate_files:
   stage: generate
