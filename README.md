@@ -235,5 +235,12 @@ And you can run the hooks on all files by
 pre-commit run --all-files
 ```
 
-## 6. Acknowledgements
+## 6. Contributing
+For any problems, do not hesitate to ask on [mattermost](https://mattermost.web.cern.ch/atlas/channels/hgtd-production-database) or open an [Issue](https://gitlab.cern.ch/anstein/hgtd-tools/-/issues) after checking the existing issues.
+
+If you are developing features yourself or want to resolve an issue, please [Fork](https://gitlab.cern.ch/anstein/hgtd-tools/-/forks/new) this repository and then submit a [Merge Request](https://gitlab.cern.ch/anstein/hgtd-tools/-/merge_requests/new) to the [master branch](https://gitlab.cern.ch/anstein/hgtd-tools).
+
+We run a set of basic pre-commit checks for your MR, so be prepared to modify the changed files according to the `.gitlab-ci.yaml` pipeline.
+
+## 7. Acknowledgements
 Thanks to an unknown reddit user who gave me hope when the PyQt6 installation wouldn't want to work with my setup / machine. This [link](https://www.reddit.com/r/Tkinter/comments/snrb1f/comment/hw4bylf/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button) brought me to [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) and the GUI is built on top of the tutorial.
