@@ -65,7 +65,9 @@ sync_to_sibling:
       if git diff-index --quiet HEAD; then
         echo "✅  No changes to commit."
       else
-        git commit -m "Update generated files from ${CI_PROJECT_PATH}@${CI_COMMIT_SHA}"
-        echo "🚀  Pushing changes to ${SIBLING_REPO_URL}"
-        git push origin master
+        # in the future, this will be done by storing the artifacts on eos instead
+        echo "Found changes w.r.t. last report. Would like to store in eos"
+        #git commit -m "Update generated files from ${CI_PROJECT_PATH}@${CI_COMMIT_SHA}"
+        #echo "🚀  Pushing changes to ${SIBLING_REPO_URL}"
+        #git push origin master
       fi

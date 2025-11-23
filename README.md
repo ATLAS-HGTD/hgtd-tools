@@ -87,13 +87,6 @@ This suite is written in python, and a conda environment is recommended. The inc
 
 If you don't like conda (☹️ how? 🤨) or you want to minimize the packages to be installed, make sure to run the tools with a recent python3 environment containing `customtkinter`, `requests`, which can be installed with `pip`. Other used packages of hgtd-tools are already part of the regular python3 lib. Only the provided yml files are tested to stay compatible though. If you only want to use hgtd-tools for its API client without the GUI, `pip install requests` will be enough (see FADAPro).
 
-### 2.2 Necessary preparation to use `SN_reservation.py`
-
-If you want to be able to reserve SNs via the script that is currently WIP (for module assembly sites), create a local folder in the main directory of `hgtd-tools`:
-
-```shell
-mkdir local_info
-```
 
 ### 2.3 Updating your local hgtd-tools if this is not your first time installing:
 
@@ -144,7 +137,7 @@ python main.py
 
 Closing the application works like you would expect from other applications, e.g. you'll find a red button to close hgtd-tools, you could quit the application with shortcuts of your operating system (e.g. MacOS: cmd+Q), or interrupting the python program from command line with ctrl+c.
 
-## 4. Documentation of typical use cases
+## 4. Documentation of typical use cases of the GUI application
 We have a new [documentation page](https://hgtd-database.docs.cern.ch/) for the HGTD Production Database, which contains a [section on hgtd-tools](https://hgtd-database.docs.cern.ch/content/user/parts_tree_hgtd-tools/) as well. From now on, you will find guides to use the tools over there.
 
 ## 5. Developer corner
