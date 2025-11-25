@@ -71,3 +71,15 @@ sync_to_sibling:
         #echo "🚀  Pushing changes to ${SIBLING_REPO_URL}"
         #git push origin master
       fi
+
+sync_to_eos:
+  stage: deploy_reports
+  needs: [generate_files]
+  image: gitlab-registry.cern.ch/ci-tools/ci-web-deployer
+  variables:
+    "EOS_PATH": "/eos/atlas/atlascerngroupdisk/det-hgtd/prdDB/hgtd-tools-reports"
+    "EOS_ACCOUNT_USERNAME": "${EOS_ACCOUNT_USERNAME}"
+    "EOS_ACCOUNT_PASSWORD": "${EOS_ACCOUNT_PASSWORD}"
+    "CI_OUTPUT_DIR": "generated/"
+  script:
+    - deploy-eos
