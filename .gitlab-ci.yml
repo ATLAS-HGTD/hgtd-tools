@@ -18,8 +18,8 @@ generate_files:
   image: registry.cern.ch/docker.io/library/python:3.12
   before_script:
     - |
-      git config --global user.email "hgtd-tools-bot@cern.ch"
-      git config --global user.name "hgtd-tools-bot"
+      git config --global user.email "${EOS_ACCOUNT_USERNAME}@cern.ch"
+      git config --global user.name "${EOS_ACCOUNT_USERNAME}"
   variables:
     SECURE_FILES_DOWNLOAD_PATH: './'
   script:
@@ -39,47 +39,15 @@ generate_files:
       - generated/
     expire_in: 1h
 
-sync_to_sibling:
-  stage: deploy_reports
-  needs: [generate_files]
-  image: alpine/git
-  before_script:
-    - |
-      git config --global user.email "hgtd-tools-bot@cern.ch"
-      git config --global user.name "hgtd-tools-bot"
-  script:
-    - echo "📥  Cloning sibling repository"
-    - |
-      # The token is injected in the URL, it never appears in the job log
-      git clone "https://${SIBLING_REPO_TOKEN}@${SIBLING_REPO_URL#https://}" sibling-repo
-    - cd sibling-repo
-
-    - echo "📂  Copying generated files into sibling repo"
-    - |
-      # Adjust the source and destination paths as required
-      cp -r ../generated/* reports/
-
-    - |
-      # Stage everything, but only create a commit if there are actual changes
-      git add -A
-      if git diff-index --quiet HEAD; then
-        echo "✅  No changes to commit."
-      else
-        # in the future, this will be done by storing the artifacts on eos instead
-        echo "Found changes w.r.t. last report. Would like to store in eos"
-        #git commit -m "Update generated files from ${CI_PROJECT_PATH}@${CI_COMMIT_SHA}"
-        #echo "🚀  Pushing changes to ${SIBLING_REPO_URL}"
-        #git push origin master
-      fi
-
 sync_to_eos:
   stage: deploy_reports
   needs: [generate_files]
   image: gitlab-registry.cern.ch/ci-tools/ci-web-deployer
   variables:
-    "EOS_PATH": "/eos/atlas/atlascerngroupdisk/det-hgtd/prdDB/hgtd-tools-reports"
+    "EOS_PATH": "${EOS_HGTD_PATH}"
     "EOS_ACCOUNT_USERNAME": "${EOS_ACCOUNT_USERNAME}"
     "EOS_ACCOUNT_PASSWORD": "${EOS_ACCOUNT_PASSWORD}"
     "CI_OUTPUT_DIR": "generated/"
   script:
+    - echo "📂 ${EOS_ACCOUNT_USERNAME} will copy generated files into hgtd eos space"
     - deploy-eos
