@@ -42,8 +42,7 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
 - Additional scripts / automation
   - Serial Number reservation for module assembly
   - Reporting
-    - prototype notebook to visualize basic part reports
-    - automation with Gitlab CI
+    - automation with Gitlab CI, using the hgtdbot account
     - runner script producing overviews / reports
 
 ### 1.2 Open points requiring implementation
@@ -52,7 +51,7 @@ New features, bugs, compatibility improvements and other items are collected wit
 Some of them are also bound to [Milestones](https://gitlab.cern.ch/anstein/hgtd-tools/-/milestones)
 
 ## 2. Installation
-This suite is written in python, and a conda environment is recommended. The included yaml file also lists a couple of useful packages assisting with further analysing / interpreting the data and was tested to work in April 2025.
+This suite is written in python, and a conda environment is recommended. The included yaml file also lists a couple of useful packages assisting with further analysing / interpreting the data and was last tested to work in November 2025.
 
 ### 2.1 First time usage / requirements:
 
@@ -70,7 +69,7 @@ This suite is written in python, and a conda environment is recommended. The inc
 3. Install the environment using the given yaml file: `cd hgtd-tools; conda env create -f env-312.yml` (you can find it in the main directory).
 4. Get the api secret from [cernbox](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/config_api) and download the file in the main directory of hgtd-tools. This file is shared with the users-egroup only! Do not distribute it anywhere. If you cannot access the file, you are not in the egroup.
 
-##### 2.1.B.2 When you use homebrew
+##### 2.1.B.2 If you are using homebrew
 1. Install python with the relevant tk graphics `brew install python-tk`
 2. Create an empty virtual environment with the name hgtd `python3 -m venv hgtd`
 3. Activate the so far empty environment `source hgtd/bin/activate`
@@ -86,7 +85,6 @@ This suite is written in python, and a conda environment is recommended. The inc
 
 
 If you don't like conda (☹️ how? 🤨) or you want to minimize the packages to be installed, make sure to run the tools with a recent python3 environment containing `customtkinter`, `requests`, which can be installed with `pip`. Other used packages of hgtd-tools are already part of the regular python3 lib. Only the provided yml files are tested to stay compatible though. If you only want to use hgtd-tools for its API client without the GUI, `pip install requests` will be enough (see FADAPro).
-
 
 ### 2.3 Updating your local hgtd-tools if this is not your first time installing:
 
@@ -137,84 +135,42 @@ python main.py
 
 Closing the application works like you would expect from other applications, e.g. you'll find a red button to close hgtd-tools, you could quit the application with shortcuts of your operating system (e.g. MacOS: cmd+Q), or interrupting the python program from command line with ctrl+c.
 
-## 4. Documentation of typical use cases of the GUI application
-We have a new [documentation page](https://hgtd-database.docs.cern.ch/) for the HGTD Production Database, which contains a [section on hgtd-tools](https://hgtd-database.docs.cern.ch/content/user/parts_tree_hgtd-tools/) as well. From now on, you will find guides to use the tools over there.
+#### 3.2.1 Documentation of typical use cases of the GUI application
+We have a new [documentation page](https://hgtd-database.docs.cern.ch/) for the HGTD Production Database, which contains a [section on hgtd-tools](https://hgtd-database.docs.cern.ch/content/user/parts_tree_hgtd-tools/) as well. You will find guides to use the tools over there.
 
-## 5. Developer corner
-### 5.1 Reusing the included API module
+## 4. Developer corner
+### 4.1 Reusing the included API module
 The `api.py` module can be used standalone as well to make API requests to the HGTD Production Database. Note that the included functions also return the response `status_code` and `reason` and handle a variety of possible errors.
 
 The basic types of requests are:
 
-GET: without payload, fetch some specified record/view etc.
-
-POST: sends a payload (dictionary as json, or more involved types like a tar for measurement data, with another dictionary for human-readable requests)
-
-DELETE: without payload, remove some record
+- **GET**: without payload, fetch some specified record/view etc.
+- **POST**: sends a payload (dictionary as json, or more involved types like a tar for measurement data, with another dictionary for human-readable requests)
+- **DELETE**: without payload, remove some record
 
 Those three variants are implemented as `api.fetch_information`, `api.post_information`, `api.delete_information` handling the endpoint, headers etc. for you so you don't have to worry about anything besides the actual information received, posted or deleted.
 
-#### 5.1.1 Worked out standalone example
-Have a look at the notebook `example_API_usage.ipynb` to see the included API module in action. The notebook shows two use cases for user interaction with the DB that can be implemented as part of scripts (as in FADAPro, for example): adding a value for a single attribute (useful for e.g. module metrology) or complete bulk upload of a tar containing various files (useful for e.g. module electrical measurements). For proper authentication, these preliminary steps to get started are included as well.
+#### 4.1.1 REST API HTTP Status Codes 101
+
+Please refer to this overview of the most common status codes and what you can learn from them:
+
+- **Starts with 2**: good news, wohoo! Your request was successful, e.g. retrieving data (200) or creating new data upstream (201).
+- **Starts with 4**: you sure what you are doing is correct? Likely a typo or bad payload in your request (400) when the endpoint exists, but it does not like your request, or missing authentication / access token (401). Could also be wrong URL (404) which is similar to dialing a phone number that does not exist ("The number you have dialed is not in service.", but in the web edition).
+- **Starts with 5**: server has received your request, but failed to process it internally. Can be an error that is not caught, e.g. the python-portion of our backend had an error while processing (500), not further specified where and what went wrong. Could also be something related to DB / some infrastructure not available or overlaoded (502 / 503), or your request taking too long / timeout (504).
+
+More codes and their explanation are documented for example over at [wikipedia](https://en.wikipedia.org/wiki/List_of_HTTP_status_codes).
+
+#### 4.1.2 Worked out standalone example and the API client in action
+Have a look at the notebook `example_API_usage.ipynb` to see the included API module in action. The notebook shows two use cases for user interaction with the DB that can be implemented as part of scripts (as in FADAPro, for example): adding a value for a single attribute (useful for e.g. module metrology) or complete bulk upload of a tar containing various files (useful for e.g. module electrical measurements). For proper authentication, these steps to get started are included as well.
 
 The interface to FADAPro is implemented in the [MR](https://gitlab.cern.ch/atlas-hgtd/Electronics/fadapro/-/merge_requests/9).
 
-### 5.2 Dockerization
-A deployment of this app to CERN OKD using docker is in preparation.
+In work: interface for flex tail measurement uploads.
 
-There are two relevant registry links, for which a login is needed:
+### 4.2 Dockerization (discontinued)
+A deployment of this app to CERN OKD using docker was attempted, but discontinued because of difficulties getting the graphical part running and deploying the same, while now practically all users are comfortable using the tools standalone on their device. Local docker containers were running well on test platforms (e.g. lxplus with `ssh -XY`), however, due to security measures, buttons that bring you to a special URL in your system's browser were blocked. The instructions for docker development are therefore archived under [development_docs/docker.md](https://gitlab.cern.ch/anstein/hgtd-tools/-/blob/master/development_docs/docker.md?ref_type=heads) and will not be continued.
 
-first one needs a PAT from gitlab with the right to upload to the registry:
-```
-docker login gitlab-registry.cern.ch
-```
-or second one, harbor (see instructions https://atlassoftwaredocs.web.cern.ch/analysis-software/ASWTutorial/softwareEssentials/building_containers/). The secret token can be found from top right click user profile and serves as the password when loggin in:
-```
-docker login registry.cern.ch
-```
-
-The second option is used to deploy to the common registry for the whole hgtddb project.
-
-
-#### 5.2.1 Scripts to build / tag / deploy / run container
-
-Note that all commands involving testing the actual GUI from a remote require an X-server, e.g. start a `ssh -XY` connection from inside XQuartz.
-
-You need Docker installed on your device, e.g. Docker Desktop running in the background.
-
-The `Dockerfile` (or `_lxplus_Dockerfile`) are setup to directly run to the entrypoint that starts the `main.py` with all dependencies already setup.
-
-On Mac: use `bash docker-build_run_on_Mac.sh` if you want to build a new container from the source and run it locally for testing. If you are happy with that, do `bash docker-build_push_for_amd64.sh` to build for the platform that is present at CERN (lxplus, pod -> amd64). You can also run a container on Mac without building a new one, by doing `bash docker-run_on_Mac.sh`.
-
-On linux / lxplus: there is another Dockerfile that pulls the base image from another registry (due to limited number of pulls from the same unauthenticated IP address). You can run a container with an already existing image `bash docker-run_on_lxplus.sh` (see this [source](https://gist.github.com/Moosems/138cfea6fc4e1967e4eae52bd96618ff)) and to build a new image do `bash docker-build_run_on_linux.sh` (does not work yet on lxplus, or you need special rights / uid / gid to perform apt-get install commands).
-
-
-#### 5.2.2 Useful commands to do the build / tag / push / run manually
-
-Build and push a `latest` image to gitlab:
-```
-docker login gitlab-registry.cern.ch
-docker build -t gitlab-registry.cern.ch/anstein/hgtd-tools .
-docker push gitlab-registry.cern.ch/anstein/hgtd-tools
-```
-
-Use an existing image (see above), tag it with version and push these new ones to harbor:
-```
-docker login registry.cern.ch
-
-docker tag gitlab-registry.cern.ch/anstein/hgtd-tools registry.cern.ch/hgtd/hgtd-tools:latest
-docker tag gitlab-registry.cern.ch/anstein/hgtd-tools registry.cern.ch/hgtd/hgtd-tools:1.4.2
-
-docker push registry.cern.ch/hgtd/hgtd-tools:latest
-docker push registry.cern.ch/hgtd/hgtd-tools:1.4.2
-
-docker image tag registry.cern.ch/hgtd/hgtd-tools:x86_64_1.4.2 registry.cern.ch/hgtd/hgtd-tools:latest
-docker push registry.cern.ch/hgtd/hgtd-tools:latest
-docker push registry.cern.ch/hgtd/hgtd-tools:x86_64_1.4.2
-
-```
-
-### 5.3 pre-commit
+### 4.3 pre-commit
 
 We use some standard pre-commit hooks (see `.pre-commit-config.yaml`). If you want to setup this helpful tool as well:
 
@@ -228,12 +184,15 @@ And you can run the hooks on all files by
 pre-commit run --all-files
 ```
 
-## 6. Contributing
+### 4.4 New version policy and process
+The procedure for tagging new versions of this software is outlined in [development_docs/procedure_new_release.md](https://gitlab.cern.ch/anstein/hgtd-tools/-/blob/master/development_docs/procedure_new_release.md?ref_type=heads).
+
+## 5. Contributing
 For any problems, do not hesitate to ask on [mattermost](https://mattermost.web.cern.ch/atlas/channels/hgtd-production-database) or open an [Issue](https://gitlab.cern.ch/anstein/hgtd-tools/-/issues) after checking the existing issues.
 
 If you are developing features yourself or want to resolve an issue, please [Fork](https://gitlab.cern.ch/anstein/hgtd-tools/-/forks/new) this repository and then submit a [Merge Request](https://gitlab.cern.ch/anstein/hgtd-tools/-/merge_requests/new) to the [master branch](https://gitlab.cern.ch/anstein/hgtd-tools).
 
-We run a set of basic pre-commit checks for your MR, so be prepared to modify the changed files according to the `.gitlab-ci.yaml` pipeline.
+We run a set of basic pre-commit checks for your MR, so be prepared to modify the changed files according to the `.gitlab-ci.yaml` pipeline before your MR can be merged. Test your changes locally before pushing (and avoid using unneccessary CI time + core-h), using the instructions outlined in the pre-commit paragraph.
 
-## 7. Acknowledgements
+## 6. Acknowledgements
 Thanks to an unknown reddit user who gave me hope when the PyQt6 installation wouldn't want to work with my setup / machine. This [link](https://www.reddit.com/r/Tkinter/comments/snrb1f/comment/hw4bylf/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button) brought me to [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) and the GUI is built on top of the tutorial.
