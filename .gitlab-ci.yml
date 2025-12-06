@@ -1,3 +1,9 @@
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "push"
+
 stages:
   - build
   - generate_reports
@@ -38,6 +44,11 @@ generate_files:
     paths:
       - generated/
     expire_in: 1h
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: never
 
 sync_to_eos:
   stage: deploy_reports
@@ -51,3 +62,8 @@ sync_to_eos:
   script:
     - echo "📂 ${EOS_ACCOUNT_USERNAME} will copy generated files into hgtd eos space"
     - deploy-eos
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: never
