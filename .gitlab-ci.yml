@@ -17,15 +17,11 @@ pre-commit:
     - pre-commit run --all-files
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == "master"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 generate_files:
   stage: generate_reports
   image: registry.cern.ch/docker.io/library/python:3.12
-  before_script:
-    - |
-      git config --global user.email "${EOS_ACCOUNT_USERNAME}@cern.ch"
-      git config --global user.name "${EOS_ACCOUNT_USERNAME}"
   variables:
     SECURE_FILES_DOWNLOAD_PATH: './'
   script:
@@ -46,9 +42,8 @@ generate_files:
     expire_in: 1h
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
-    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: never
 
 sync_to_eos:
   stage: deploy_reports
@@ -64,6 +59,6 @@ sync_to_eos:
     - deploy-eos
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
-    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: never
