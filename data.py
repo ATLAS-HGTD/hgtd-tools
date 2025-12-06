@@ -57,6 +57,7 @@ MO_site_id = {
     "mainz": "M",
     "mascir": "A",
     "ustc": "U",
+    "test": "T",
 }
 
 MO_prod_id = {
@@ -69,6 +70,16 @@ MO_prod_id = {
 
 
 def get_MO_SN_prefix(site, prod, batch):
+    if site not in MO_site_id.keys():
+        raise RuntimeError(f"Provided site {site} is invalid")
+    if prod not in MO_prod_id.keys():
+        raise RuntimeError(f"Provided prod {prod} is invalid")
+
+    if site == "test":
+        leading = "99"
+    else:
+        leading = "20"
+
     k = MO_site_id[site.lower()]
     p = MO_prod_id[prod.lower()]
     b = str(batch)
@@ -78,7 +89,7 @@ def get_MO_SN_prefix(site, prod, batch):
         )
     if not b.isalnum():
         raise RuntimeError(f"SN : batch should be alphanumeric but you passed {b}")
-    snprefix = f"20WMO{k}{p}{b}"
+    snprefix = f"{leading}WMO{k}{p}{b}"
     return snprefix.upper()
 
 

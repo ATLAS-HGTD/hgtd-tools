@@ -240,8 +240,9 @@ for i in range(how_many_to_reserve):
             "name_label": name_label,
             "comment_description": comment,
             "kind_of_part": str(KoPs["Module"]),
-            "location": str(locs["test"]),
-            "manufacturer": str(manus["test"]),
+            "location": str(locs[my_site]),
+            "manufacturer": str(manus[my_site]),
+            "record_insertion_user": username,
         }
 
         print(
