@@ -86,7 +86,7 @@ This suite is written in python, and a conda environment is recommended. The inc
 
 If you don't like conda (☹️ how? 🤨) or you want to minimize the packages to be installed, make sure to run the tools with a recent python3 environment containing `customtkinter`, `requests`, which can be installed with `pip`. Other used packages of hgtd-tools are already part of the regular python3 lib. Only the provided yml files are tested to stay compatible though. If you only want to use hgtd-tools for its API client without the GUI, `pip install requests` will be enough (see FADAPro).
 
-### 2.3 Updating your local hgtd-tools if this is not your first time installing:
+### 2.2 Updating your local hgtd-tools if this is not your first time installing:
 
 Make sure you get the most recent version, including new features and bugfixes.
 
