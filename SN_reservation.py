@@ -146,7 +146,7 @@ with open(local_folder + "/" + username, "r") as tokenFile:
 
 modules, last_responseText = util.get_relevant_parts("Module")
 module_SNs = util.get_SN_of_parts(modules)
-my_prefix = data.get_MO_SN_prefix(my_site, my_prod, my_batch)
+my_prefix = util.get_MO_SN_prefix(my_site, my_prod, my_batch)
 
 
 def find_matching_SNs(prefix, existing_SNs):

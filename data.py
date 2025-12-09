@@ -68,33 +68,6 @@ MO_prod_id = {
     "test": "T",  # test
     "other": "O",  # other
 }
-
-
-### function to get the first 8 chars of MO SNs
-def get_MO_SN_prefix(site, prod, batch):
-    if site not in MO_site_id.keys():
-        raise RuntimeError(f"Provided site {site} is invalid")
-    if prod not in MO_prod_id.keys():
-        raise RuntimeError(f"Provided prod {prod} is invalid")
-
-    if site == "test":
-        leading = "99"
-    else:
-        leading = "20"
-
-    k = MO_site_id[site.lower()]
-    p = MO_prod_id[prod.lower()]
-    b = str(batch)
-    if len(b) > 1:
-        raise RuntimeError(
-            f"SN : batch should be a single character but you passed {b}"
-        )
-    if not b.isalnum():
-        raise RuntimeError(f"SN : batch should be alphanumeric but you passed {b}")
-    snprefix = f"{leading}WMO{k}{p}{b}"
-    return snprefix.upper()
-
-
 ## Slots and their graphical representation
 ### define module geometry for canvas - not to scale!!!
 modLongSide = 80

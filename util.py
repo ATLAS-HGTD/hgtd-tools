@@ -38,6 +38,31 @@ class CustomTextWrapper(textwrap.TextWrapper):
         return lines
 
 
+### function to get the first 8 chars of MO SNs
+def get_MO_SN_prefix(site, prod, batch):
+    if site not in data.MO_site_id.keys():
+        raise RuntimeError(f"Provided site {site} is invalid")
+    if prod not in data.MO_prod_id.keys():
+        raise RuntimeError(f"Provided prod {prod} is invalid")
+
+    if site == "test":
+        leading = "99"
+    else:
+        leading = "20"
+
+    k = data.MO_site_id[site.lower()]
+    p = data.MO_prod_id[prod.lower()]
+    b = str(batch)
+    if len(b) > 1:
+        raise RuntimeError(
+            f"SN : batch should be a single character but you passed {b}"
+        )
+    if not b.isalnum():
+        raise RuntimeError(f"SN : batch should be alphanumeric but you passed {b}")
+    snprefix = f"{leading}WMO{k}{p}{b}"
+    return snprefix.upper()
+
+
 # === Operations with canvas objects
 def isInSlot(rect, x, y):
     isInSlot = False
