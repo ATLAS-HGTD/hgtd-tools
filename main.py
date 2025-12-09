@@ -150,7 +150,7 @@ class App(customtkinter.CTk):
         self.label_logo.grid(row=0, column=0, padx=20, pady=(20, 5), columnspan=2)
         self.my_version = "1.8.0"
         self.version_full_text = (
-            f"v{self.my_version} - November 2025\nAnnika Stein (JGU Mainz)"
+            f"v{self.my_version} - December 2025\nAnnika Stein (JGU Mainz)"
         )
         self.label_credits = customtkinter.CTkLabel(
             self.frame_sidebar_left, text=self.version_full_text
@@ -162,7 +162,9 @@ class App(customtkinter.CTk):
         )
         self.label_progress.grid(row=2, column=0, padx=20, pady=5, columnspan=2)
         self.progressbar = customtkinter.CTkProgressBar(
-            self.frame_sidebar_left, orientation="horizontal", progress_color="#007711"
+            self.frame_sidebar_left,
+            orientation="horizontal",
+            progress_color=data.progress_color_OK,
         )
         self.progressbar.grid(row=3, column=0, padx=20, pady=5, columnspan=2)
         self.progressbar.set(1)
@@ -173,7 +175,7 @@ class App(customtkinter.CTk):
             row=4, column=0, padx=5, pady=(20, 5), sticky="nsew", columnspan=2
         )
         self.frame_operation_mode.grid_columnconfigure((0, 1), weight=1)
-        self.operation_mode = "Module Assembly"
+        self.operation_mode = "Module Assembly"  # default
 
         self.label_operation_mode = customtkinter.CTkLabel(
             self.frame_operation_mode,
@@ -186,8 +188,8 @@ class App(customtkinter.CTk):
             self.frame_operation_mode,
             text="Module Assembly",
             command=lambda: self.button_mode_event_click("Module Assembly"),
-            fg_color="#339941",
-            hover_color="#228831",
+            fg_color=data.fg_color_standard_but_active,
+            hover_color=data.hover_color_standard_but_active,
         )
         self.button_operation_mode_MA.grid(
             row=1, column=0, padx=5, pady=5, sticky="nsew", columnspan=2
@@ -197,8 +199,8 @@ class App(customtkinter.CTk):
             self.frame_operation_mode,
             text="Module Loading",
             command=lambda: self.button_mode_event_click("Module Loading"),
-            fg_color="#555555",
-            hover_color="#444444",
+            fg_color=data.fg_color_standard_but_inactive,
+            hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_operation_mode_ML.grid(
             row=2, column=0, padx=5, pady=5, sticky="nsew", columnspan=2
@@ -210,8 +212,8 @@ class App(customtkinter.CTk):
             command=lambda: self.button_mode_event_click(
                 "Detector Assembly (CERN): DU"
             ),
-            fg_color="#555555",
-            hover_color="#444444",
+            fg_color=data.fg_color_standard_but_inactive,
+            hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_operation_mode_DA_DU.grid(
             row=3, column=0, padx=5, pady=5, sticky="nsew", columnspan=2
@@ -223,8 +225,8 @@ class App(customtkinter.CTk):
             command=lambda: self.button_mode_event_click(
                 "Detector Assembly (CERN): PEB"
             ),
-            fg_color="#555555",
-            hover_color="#444444",
+            fg_color=data.fg_color_standard_but_inactive,
+            hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_operation_mode_DA_PEB.grid(
             row=4, column=0, padx=5, pady=5, sticky="nsew", columnspan=2
@@ -236,8 +238,8 @@ class App(customtkinter.CTk):
             command=lambda: self.button_mode_event_click(
                 "Detector Assembly (CERN): FT"
             ),
-            fg_color="#555555",
-            hover_color="#444444",
+            fg_color=data.fg_color_standard_but_inactive,
+            hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_operation_mode_DA_FT.grid(
             row=5, column=0, padx=5, pady=5, sticky="nsew", columnspan=2
@@ -263,8 +265,8 @@ class App(customtkinter.CTk):
             command=lambda: util.open_webbrowser_with_url(
                 api.frontendUrlPrefix, noExtraPrefix=True
             ),
-            fg_color="#555555",
-            hover_color="#444444",
+            fg_color=data.fg_color_standard_but_inactive,
+            hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_useful_links_Frontend.grid(
             row=1, column=0, padx=5, pady=(5, 0), sticky="nsew", columnspan=2
@@ -277,8 +279,8 @@ class App(customtkinter.CTk):
                 "https://annika-stein.web.cern.ch/module_mockup/serialnumber.html",
                 noExtraPrefix=True,
             ),
-            fg_color="#555555",
-            hover_color="#444444",
+            fg_color=data.fg_color_standard_but_inactive,
+            hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_useful_links_Mockup.grid(
             row=2, column=0, padx=5, pady=(5, 0), sticky="nsew", columnspan=2
@@ -290,8 +292,8 @@ class App(customtkinter.CTk):
             command=lambda: util.open_webbrowser_with_url(
                 "https://hgtd-database.docs.cern.ch/", noExtraPrefix=True
             ),
-            fg_color="#555555",
-            hover_color="#444444",
+            fg_color=data.fg_color_standard_but_inactive,
+            hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_useful_links_Docs.grid(
             row=3, column=0, padx=5, pady=(5, 0), sticky="nsew", columnspan=2
@@ -304,8 +306,8 @@ class App(customtkinter.CTk):
                 "https://mattermost.web.cern.ch/atlas/channels/hgtd-production-database",
                 noExtraPrefix=True,
             ),
-            fg_color="#555555",
-            hover_color="#444444",
+            fg_color=data.fg_color_standard_but_inactive,
+            hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_useful_links_MM.grid(
             row=4, column=0, padx=5, pady=(5, 0), sticky="nsew", columnspan=2
@@ -317,8 +319,8 @@ class App(customtkinter.CTk):
             command=lambda: util.open_webbrowser_with_url(
                 "https://indico.cern.ch/category/9458/", noExtraPrefix=True
             ),
-            fg_color="#555555",
-            hover_color="#444444",
+            fg_color=data.fg_color_standard_but_inactive,
+            hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_useful_links_meetings.grid(
             row=5, column=0, padx=5, pady=(5, 0), sticky="nsew", columnspan=2
@@ -330,8 +332,8 @@ class App(customtkinter.CTk):
             command=lambda: util.open_webbrowser_with_url(
                 "https://gitlab.cern.ch/anstein/hgtd-tools", noExtraPrefix=True
             ),
-            fg_color="#555555",
-            hover_color="#444444",
+            fg_color=data.fg_color_standard_but_inactive,
+            hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_useful_links_GL_repo.grid(
             row=6, column=0, padx=5, pady=(5, 0), sticky="nsew", columnspan=2
@@ -385,8 +387,8 @@ class App(customtkinter.CTk):
             image=self.help_image,
             text="Help",
             compound="left",
-            fg_color="#339941",
-            hover_color="#228831",
+            fg_color=data.fg_color_standard_but_active,
+            hover_color=data.hover_color_standard_but_active,
             command=self.help,
             width=60,
         )
@@ -401,8 +403,8 @@ class App(customtkinter.CTk):
             image=self.exit_image,
             text="Close",
             compound="left",
-            fg_color="#cf352e",
-            hover_color="#B02B25",
+            fg_color=data.fg_color_standard_but_red,
+            hover_color=data.hover_color_standard_but_red,
             command=self.exit,
             width=60,
         )
@@ -722,8 +724,8 @@ class App(customtkinter.CTk):
             text="UNLOAD CLICKED MODULE",
             command=self.button_delete_clicked_event_click,
             state="disabled",
-            fg_color="#cf352e",
-            hover_color="#B02B25",
+            fg_color=data.fg_color_standard_but_red,
+            hover_color=data.hover_color_standard_but_red,
         )
         self.button_delete_clicked.grid(row=0, column=0, padx=20, pady=(20, 10))
 
@@ -975,8 +977,8 @@ class App(customtkinter.CTk):
             self.frame_module_flex_child,
             text="CONNECT MODULE FLEX\nTO MODULE ABOVE",
             command=self.button_add_child_module_flex_event_click,
-            fg_color="#339941",
-            hover_color="#228831",
+            fg_color=data.fg_color_standard_but_active,
+            hover_color=data.hover_color_standard_but_active,
         )
         self.button_add_child_module_flex.grid(
             row=8, column=0, padx=5, pady=5, columnspan=2
@@ -986,8 +988,8 @@ class App(customtkinter.CTk):
             text="DISCONNECT MODULE FLEX\nFROM ITS PARENT",
             command=self.button_delete_child_module_flex_event_click,
             state="disabled",
-            fg_color="#cf352e",
-            hover_color="#B02B25",
+            fg_color=data.fg_color_standard_but_red,
+            hover_color=data.hover_color_standard_but_red,
         )
         self.button_delete_child_MF.grid(row=9, column=0, padx=5, pady=5, columnspan=2)
 
@@ -1100,8 +1102,8 @@ class App(customtkinter.CTk):
             self.frame_HY_HV_child,
             text="CONNECT HY HV-side\nTO MODULE ABOVE",
             command=self.button_add_child_HY_HV_event_click,
-            fg_color="#339941",
-            hover_color="#228831",
+            fg_color=data.fg_color_standard_but_active,
+            hover_color=data.hover_color_standard_but_active,
         )
         self.button_add_child_HY_HV.grid(row=10, column=0, padx=5, pady=5, columnspan=2)
         self.button_delete_child_HY_HV = customtkinter.CTkButton(
@@ -1109,8 +1111,8 @@ class App(customtkinter.CTk):
             text="DISCONNECT HY HV-side\nFROM ITS PARENT",
             command=self.button_delete_child_HY_HV_event_click,
             state="disabled",
-            fg_color="#cf352e",
-            hover_color="#B02B25",
+            fg_color=data.fg_color_standard_but_red,
+            hover_color=data.hover_color_standard_but_red,
         )
         self.button_delete_child_HY_HV.grid(
             row=11, column=0, padx=5, pady=5, columnspan=2
@@ -1225,8 +1227,8 @@ class App(customtkinter.CTk):
             self.frame_HY_LV_child,
             text="CONNECT HY LV-side\nTO MODULE ABOVE",
             command=self.button_add_child_HY_LV_event_click,
-            fg_color="#339941",
-            hover_color="#228831",
+            fg_color=data.fg_color_standard_but_active,
+            hover_color=data.hover_color_standard_but_active,
         )
         self.button_add_child_HY_LV.grid(row=10, column=0, padx=5, pady=5, columnspan=2)
         self.button_delete_child_HY_LV = customtkinter.CTkButton(
@@ -1234,8 +1236,8 @@ class App(customtkinter.CTk):
             text="DISCONNECT HY LV-side\nFROM ITS PARENT",
             command=self.button_delete_child_HY_LV_event_click,
             state="disabled",
-            fg_color="#cf352e",
-            hover_color="#B02B25",
+            fg_color=data.fg_color_standard_but_red,
+            hover_color=data.hover_color_standard_but_red,
         )
         self.button_delete_child_HY_LV.grid(
             row=11, column=0, padx=5, pady=5, columnspan=2
@@ -1452,8 +1454,8 @@ class App(customtkinter.CTk):
             text="DISCONNECT SELECTED FT",
             command=self.button_delete_connected_ft_event_click,
             state="disabled",
-            fg_color="#cf352e",
-            hover_color="#B02B25",
+            fg_color=data.fg_color_standard_but_red,
+            hover_color=data.hover_color_standard_but_red,
         )
         self.button_delete_connected_ft.grid(row=5, column=1, padx=20, pady=(20, 10))
 
@@ -1590,7 +1592,6 @@ class App(customtkinter.CTk):
 
         # Get first parents and children for default operating mode
         try:
-            # ToDo: use this as long as the token is valid self.access_token = util.get_access_token()
             self.manufacturers, self.last_responseText = util.get_manufacturers()
             self.locations, self.last_responseText = util.get_locations()
             self.possible_MA_mod_par, self.last_responseText = util.get_relevant_parts(
@@ -1627,7 +1628,7 @@ class App(customtkinter.CTk):
 
         if self.last_responseText[:3] != "200":
             self.api_status = 0
-            self.progressbar.configure(progress_color="#ff0000")
+            self.progressbar.configure(progress_color=data.progress_color_ERROR)
             info_text = wrapped_text.fill(
                 f"Error: Parents / Children could not be loaded from ProdDB API.\n{self.last_responseText}"
             )
@@ -1635,7 +1636,7 @@ class App(customtkinter.CTk):
             self.label_info.configure(text=info_text)
         else:
             self.api_status = 1
-            self.progressbar.configure(progress_color="#007711")
+            self.progressbar.configure(progress_color=data.progress_color_OK)
 
             self.combobox_child_manu.configure(
                 values=["All manufacturers"]
@@ -1759,7 +1760,7 @@ class App(customtkinter.CTk):
     def authenticate_return_function(self, result, response):
         if response[:2] != "20":
             self.api_status = 0
-            self.progressbar.configure(progress_color="#ff0000")
+            self.progressbar.configure(progress_color=data.progress_color_ERROR)
 
             info_text = wrapped_text.fill(
                 f"Error: New user could not be authenticated.\n{response}"
@@ -1770,7 +1771,7 @@ class App(customtkinter.CTk):
             self.optionmenu_user.set("None")
         else:
             self.api_status = 1
-            self.progressbar.configure(progress_color="#007711")
+            self.progressbar.configure(progress_color=data.progress_color_OK)
 
             self.label_info.configure(text=" ")
 
@@ -1892,7 +1893,7 @@ class App(customtkinter.CTk):
 
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
-                    self.progressbar.configure(progress_color="#ff0000")
+                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
                     info_text = wrapped_text.fill(
                         f"Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}"
                     )
@@ -1900,7 +1901,7 @@ class App(customtkinter.CTk):
                     self.label_info.configure(text=info_text)
                 else:
                     self.api_status = 1
-                    self.progressbar.configure(progress_color="#007711")
+                    self.progressbar.configure(progress_color=data.progress_color_OK)
 
                     if len(parents_of_target_MF) == 0 and (
                         (occupied == False)
@@ -2045,7 +2046,7 @@ class App(customtkinter.CTk):
 
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
-                    self.progressbar.configure(progress_color="#ff0000")
+                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
                     info_text = wrapped_text.fill(
                         f"Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}"
                     )
@@ -2053,7 +2054,7 @@ class App(customtkinter.CTk):
                     self.label_info.configure(text=info_text)
                 else:
                     self.api_status = 1
-                    self.progressbar.configure(progress_color="#007711")
+                    self.progressbar.configure(progress_color=data.progress_color_OK)
 
                     if posted_new_rel:
                         self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
@@ -2195,7 +2196,7 @@ class App(customtkinter.CTk):
 
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
-                    self.progressbar.configure(progress_color="#ff0000")
+                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
                     info_text = wrapped_text.fill(
                         f"Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}"
                     )
@@ -2203,7 +2204,7 @@ class App(customtkinter.CTk):
                     self.label_info.configure(text=info_text)
                 else:
                     self.api_status = 1
-                    self.progressbar.configure(progress_color="#007711")
+                    self.progressbar.configure(progress_color=data.progress_color_OK)
 
                     if posted_new_rel:
                         self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
@@ -2411,7 +2412,7 @@ class App(customtkinter.CTk):
 
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
-                    self.progressbar.configure(progress_color="#ff0000")
+                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
                     info_text = wrapped_text.fill(
                         f"Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}"
                     )
@@ -2419,7 +2420,7 @@ class App(customtkinter.CTk):
                     self.label_info.configure(text=info_text)
                 else:
                     self.api_status = 1
-                    self.progressbar.configure(progress_color="#007711")
+                    self.progressbar.configure(progress_color=data.progress_color_OK)
 
                     self.combobox_ft.set("- Select -")
                     self.this_FT_relations_SLOT = []
@@ -2779,7 +2780,7 @@ class App(customtkinter.CTk):
 
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
-                    self.progressbar.configure(progress_color="#ff0000")
+                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
                     info_text = wrapped_text.fill(
                         f"Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}"
                     )
@@ -2787,7 +2788,7 @@ class App(customtkinter.CTk):
                     self.label_info.configure(text=info_text)
                 else:
                     self.api_status = 1
-                    self.progressbar.configure(progress_color="#007711")
+                    self.progressbar.configure(progress_color=data.progress_color_OK)
 
                     if (
                         self.operation_mode == "Detector Assembly (CERN): DU"
@@ -3016,7 +3017,7 @@ class App(customtkinter.CTk):
 
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
-                    self.progressbar.configure(progress_color="#ff0000")
+                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
                     info_text = wrapped_text.fill(
                         f"Error: Existing FT relation could not be deleted (disconnected from slot) with ProdDB API.\n{self.last_responseText}"
                     )
@@ -3024,7 +3025,7 @@ class App(customtkinter.CTk):
                     self.label_info.configure(text=info_text)
                 else:
                     self.api_status = 1
-                    self.progressbar.configure(progress_color="#007711")
+                    self.progressbar.configure(progress_color=data.progress_color_OK)
                     self.label_info.configure(text=" ")
                     self.this_FT_relations_SLOT = []
                     self.button_delete_connected_ft.configure(state="disabled")
@@ -3053,7 +3054,7 @@ class App(customtkinter.CTk):
 
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
-                    self.progressbar.configure(progress_color="#ff0000")
+                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
                     info_text = wrapped_text.fill(
                         f"Error: Existing module relation could not be deleted (unloaded) with ProdDB API.\n{self.last_responseText}"
                     )
@@ -3061,7 +3062,7 @@ class App(customtkinter.CTk):
                     self.label_info.configure(text=info_text)
                 else:
                     self.api_status = 1
-                    self.progressbar.configure(progress_color="#007711")
+                    self.progressbar.configure(progress_color=data.progress_color_OK)
 
                     # reload DU etc.
                     self.displayedDUtype = "None"
@@ -3114,7 +3115,7 @@ class App(customtkinter.CTk):
 
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
-                    self.progressbar.configure(progress_color="#ff0000")
+                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
                     info_text = wrapped_text.fill(
                         f"Error: Existing MF relation could not be deleted (disconnected from module) with ProdDB API.\n{self.last_responseText}"
                     )
@@ -3122,7 +3123,7 @@ class App(customtkinter.CTk):
                     self.label_info.configure(text=info_text)
                 else:
                     self.api_status = 1
-                    self.progressbar.configure(progress_color="#007711")
+                    self.progressbar.configure(progress_color=data.progress_color_OK)
                     self.label_info.configure(text=" ")
                     self.this_MF_relations_MOD = []
                     self.button_delete_child_MF.configure(state="disabled")
@@ -3152,7 +3153,7 @@ class App(customtkinter.CTk):
 
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
-                    self.progressbar.configure(progress_color="#ff0000")
+                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
                     info_text = wrapped_text.fill(
                         f"Error: Existing HY HV-side relation could not be deleted (disconnected from module) with ProdDB API.\n{self.last_responseText}"
                     )
@@ -3160,7 +3161,7 @@ class App(customtkinter.CTk):
                     self.label_info.configure(text=info_text)
                 else:
                     self.api_status = 1
-                    self.progressbar.configure(progress_color="#007711")
+                    self.progressbar.configure(progress_color=data.progress_color_OK)
                     self.label_info.configure(text=" ")
                     self.this_HY_HV_relations_MOD = []
                     self.button_delete_child_HY_HV.configure(state="disabled")
@@ -3190,7 +3191,7 @@ class App(customtkinter.CTk):
 
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
-                    self.progressbar.configure(progress_color="#ff0000")
+                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
                     info_text = wrapped_text.fill(
                         f"Error: Existing HY LV-side relation could not be deleted (disconnected from module) with ProdDB API.\n{self.last_responseText}"
                     )
@@ -3198,7 +3199,7 @@ class App(customtkinter.CTk):
                     self.label_info.configure(text=info_text)
                 else:
                     self.api_status = 1
-                    self.progressbar.configure(progress_color="#007711")
+                    self.progressbar.configure(progress_color=data.progress_color_OK)
                     self.label_info.configure(text=" ")
                     self.this_HY_LV_relations_MOD = []
                     self.button_delete_child_HY_LV.configure(state="disabled")
@@ -3405,19 +3406,24 @@ class App(customtkinter.CTk):
         self.canvas.delete("all")
         if self.operation_mode == "Module Assembly":
             self.button_operation_mode_MA.configure(
-                fg_color="#339941", hover_color="#228831"
+                fg_color=data.fg_color_standard_but_active,
+                hover_color=data.hover_color_standard_but_active,
             )
             self.button_operation_mode_ML.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_DA_DU.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_DA_PEB.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_DA_FT.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
 
             self.frame_ma.grid()
@@ -3438,19 +3444,24 @@ class App(customtkinter.CTk):
 
         elif self.operation_mode == "Module Loading":
             self.button_operation_mode_MA.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_ML.configure(
-                fg_color="#339941", hover_color="#228831"
+                fg_color=data.fg_color_standard_but_active,
+                hover_color=data.hover_color_standard_but_active,
             )
             self.button_operation_mode_DA_DU.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_DA_PEB.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_DA_FT.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
 
             self.frame_ma.grid_remove()
@@ -3488,19 +3499,24 @@ class App(customtkinter.CTk):
             self.update_progressbar(self.loading_wheel)
         elif self.operation_mode == "Detector Assembly (CERN): DU":
             self.button_operation_mode_MA.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_ML.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_DA_DU.configure(
-                fg_color="#339941", hover_color="#228831"
+                fg_color=data.fg_color_standard_but_active,
+                hover_color=data.hover_color_standard_but_active,
             )
             self.button_operation_mode_DA_PEB.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_DA_FT.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
 
             self.frame_ma.grid_remove()
@@ -3548,19 +3564,24 @@ class App(customtkinter.CTk):
             self.update_progressbar(self.loading_wheel)
         elif self.operation_mode == "Detector Assembly (CERN): PEB":
             self.button_operation_mode_MA.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_ML.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_DA_DU.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_DA_PEB.configure(
-                fg_color="#339941", hover_color="#228831"
+                fg_color=data.fg_color_standard_but_active,
+                hover_color=data.hover_color_standard_but_active,
             )
             self.button_operation_mode_DA_FT.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
 
             self.frame_ma.grid_remove()
@@ -3608,19 +3629,24 @@ class App(customtkinter.CTk):
             self.update_progressbar(self.loading_wheel)
         elif self.operation_mode == "Detector Assembly (CERN): FT":
             self.button_operation_mode_MA.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_ML.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_DA_DU.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_DA_PEB.configure(
-                fg_color="#555555", hover_color="#444444"
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
             )
             self.button_operation_mode_DA_FT.configure(
-                fg_color="#339941", hover_color="#228831"
+                fg_color=data.fg_color_standard_but_active,
+                hover_color=data.hover_color_standard_but_active,
             )
 
             self.frame_ma.grid_remove()
@@ -3948,7 +3974,7 @@ class App(customtkinter.CTk):
 
             if self.last_responseText[:2] != "20":
                 self.api_status = 0
-                self.progressbar.configure(progress_color="#ff0000")
+                self.progressbar.configure(progress_color=data.progress_color_ERROR)
                 info_text = wrapped_text.fill(
                     f"Error: New user could not be authenticated.\n{self.last_responseText}"
                 )
@@ -3956,7 +3982,7 @@ class App(customtkinter.CTk):
                 self.label_info.configure(text=info_text)
             else:
                 self.api_status = 1
-                self.progressbar.configure(progress_color="#007711")
+                self.progressbar.configure(progress_color=data.progress_color_OK)
         else:
             self.user = selected_user
 
@@ -4126,7 +4152,7 @@ class App(customtkinter.CTk):
 
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
-                    self.progressbar.configure(progress_color="#ff0000")
+                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
                     info_text = wrapped_text.fill(
                         f"Error: Parents could not be loaded from ProdDB API.\n{self.last_responseText}"
                     )
@@ -4134,7 +4160,7 @@ class App(customtkinter.CTk):
                     self.label_info.configure(text=info_text)
                 else:
                     self.api_status = 1
-                    self.progressbar.configure(progress_color="#007711")
+                    self.progressbar.configure(progress_color=data.progress_color_OK)
 
                     for r in parents_of_child_module:
                         try:
@@ -4153,7 +4179,9 @@ class App(customtkinter.CTk):
 
                         if self.last_responseText[:2] != "20":
                             self.api_status = 0
-                            self.progressbar.configure(progress_color="#ff0000")
+                            self.progressbar.configure(
+                                progress_color=data.progress_color_ERROR
+                            )
                             info_text = wrapped_text.fill(
                                 f"Error: Record could not be deleted from ProdDB API.\n{self.last_responseText}"
                             )
@@ -4161,7 +4189,9 @@ class App(customtkinter.CTk):
                             self.label_info.configure(text=info_text)
                         else:
                             self.api_status = 1
-                            self.progressbar.configure(progress_color="#007711")
+                            self.progressbar.configure(
+                                progress_color=data.progress_color_OK
+                            )
                     if self.api_status == 1:
                         if debug:
                             print(entry)
@@ -4214,7 +4244,9 @@ class App(customtkinter.CTk):
 
                                 if self.last_responseText[:2] != "20":
                                     self.api_status = 0
-                                    self.progressbar.configure(progress_color="#ff0000")
+                                    self.progressbar.configure(
+                                        progress_color=data.progress_color_ERROR
+                                    )
                                     info_text = wrapped_text.fill(
                                         f"Error: Parent / Child relation could not be patched to ProdDB API.\n{self.last_responseText}"
                                     )
@@ -4222,7 +4254,9 @@ class App(customtkinter.CTk):
                                     self.label_info.configure(text=info_text)
                                 else:
                                     self.api_status = 1
-                                    self.progressbar.configure(progress_color="#007711")
+                                    self.progressbar.configure(
+                                        progress_color=data.progress_color_OK
+                                    )
 
     def exit(self):
         self.destroy()
@@ -4273,7 +4307,7 @@ class App(customtkinter.CTk):
 
                 if self.last_responseText[:3] != "200":
                     self.api_status = 0
-                    self.progressbar.configure(progress_color="#ff0000")
+                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
                     info_text = wrapped_text.fill(
                         f"Error: Module relations could not be loaded from ProdDB API.\n{self.last_responseText}"
                     )
@@ -4283,7 +4317,7 @@ class App(customtkinter.CTk):
                     self.this_MODULE_relations_SLOT = []
                 else:
                     self.api_status = 1
-                    self.progressbar.configure(progress_color="#007711")
+                    self.progressbar.configure(progress_color=data.progress_color_OK)
                     for r in self.module_parents:
                         if debug:
                             print(r)
@@ -4377,7 +4411,7 @@ class App(customtkinter.CTk):
 
                 if self.last_responseText[:3] != "200":
                     self.api_status = 0
-                    self.progressbar.configure(progress_color="#ff0000")
+                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
                     info_text = wrapped_text.fill(
                         f"Error: DU relations could not be loaded from ProdDB API.\n{self.last_responseText}"
                     )
@@ -4387,7 +4421,7 @@ class App(customtkinter.CTk):
                     break
                 else:
                     self.api_status = 1
-                    self.progressbar.configure(progress_color="#007711")
+                    self.progressbar.configure(progress_color=data.progress_color_OK)
                     self.this_DU_fully_loaded = False
                     for r in self.partstree:
                         if str(r["part_parent"]["part_id"]) == str(parentDU_partID):
@@ -4457,7 +4491,7 @@ class App(customtkinter.CTk):
 
         if self.last_responseText[:3] != "200":
             self.api_status = 0
-            self.progressbar.configure(progress_color="#ff0000")
+            self.progressbar.configure(progress_color=data.progress_color_ERROR)
             info_text = wrapped_text.fill(
                 f"Error: FT relations could not be loaded from ProdDB API.\n{self.last_responseText}"
             )
@@ -4466,7 +4500,7 @@ class App(customtkinter.CTk):
             self.this_FT_relations_SLOT = []
         else:
             self.api_status = 1
-            self.progressbar.configure(progress_color="#007711")
+            self.progressbar.configure(progress_color=data.progress_color_OK)
 
             if ft_par != []:
                 # this FT is already connected to some slot!!
@@ -4477,7 +4511,7 @@ class App(customtkinter.CTk):
                     print(f">>> {info_text}")
                     self.label_info.configure(text=info_text)
                     self.this_FT_relations_SLOT.append(r)
-                    self.button_delete_connected_ft.configure(state="enabled")
+                    self.button_delete_connected_ft.configure(state="normal")
 
     def fetch_loaded_PEB(self, childSNIn, parentSNIn, debug=False):
         PEB_SN = childSNIn
@@ -4516,7 +4550,7 @@ class App(customtkinter.CTk):
 
                 if self.last_responseText[:3] != "200":
                     self.api_status = 0
-                    self.progressbar.configure(progress_color="#ff0000")
+                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
                     info_text = wrapped_text.fill(
                         f"Error: PEB relations could not be loaded from ProdDB API.\n{self.last_responseText}"
                     )
@@ -4525,7 +4559,7 @@ class App(customtkinter.CTk):
                     break
                 else:
                     self.api_status = 1
-                    self.progressbar.configure(progress_color="#007711")
+                    self.progressbar.configure(progress_color=data.progress_color_OK)
 
                     if detector != []:
                         # this PEB was already placed somewhere in the detector!!
@@ -4559,7 +4593,7 @@ class App(customtkinter.CTk):
 
         if self.last_responseText[:3] != "200":
             self.api_status = 0
-            self.progressbar.configure(progress_color="#ff0000")
+            self.progressbar.configure(progress_color=data.progress_color_ERROR)
             info_text = wrapped_text.fill(
                 f"Error: Slots / FT could not be loaded from ProdDB API.\n{self.last_responseText}"
             )
@@ -4567,7 +4601,7 @@ class App(customtkinter.CTk):
             self.label_info.configure(text=info_text)
         else:
             self.api_status = 1
-            self.progressbar.configure(progress_color="#007711")
+            self.progressbar.configure(progress_color=data.progress_color_OK)
 
             if self.ft_filter != "":
                 gen = self.ft_filter.split("+")[0].split("/")  # multiple generations
@@ -4690,7 +4724,7 @@ class App(customtkinter.CTk):
 
         if self.last_responseText[:3] != "200":
             self.api_status = 0
-            self.progressbar.configure(progress_color="#ff0000")
+            self.progressbar.configure(progress_color=data.progress_color_ERROR)
             info_text = wrapped_text.fill(
                 f"Error: Parents / Children could not be loaded from ProdDB API.\n{self.last_responseText}"
             )
@@ -4698,7 +4732,7 @@ class App(customtkinter.CTk):
             self.label_info.configure(text=info_text)
         else:
             self.api_status = 1
-            self.progressbar.configure(progress_color="#007711")
+            self.progressbar.configure(progress_color=data.progress_color_OK)
 
             if update == "all" or update == "Module":
                 if (
@@ -4946,7 +4980,7 @@ class App(customtkinter.CTk):
 
         if self.last_responseText[:3] != "200":
             self.api_status = 0
-            self.progressbar.configure(progress_color="#ff0000")
+            self.progressbar.configure(progress_color=data.progress_color_ERROR)
             info_text = wrapped_text.fill(
                 f"Error: Module relations could not be loaded from ProdDB API.\n{self.last_responseText}"
             )
@@ -4958,7 +4992,7 @@ class App(customtkinter.CTk):
             self.this_MOD_relations_HY_unknownPosition = []
         else:
             self.api_status = 1
-            self.progressbar.configure(progress_color="#007711")
+            self.progressbar.configure(progress_color=data.progress_color_OK)
 
             if par != []:
                 # this Module is already connected to some children!!
@@ -5033,7 +5067,7 @@ class App(customtkinter.CTk):
 
         if self.last_responseText[:3] != "200":
             self.api_status = 0
-            self.progressbar.configure(progress_color="#ff0000")
+            self.progressbar.configure(progress_color=data.progress_color_ERROR)
             info_text = wrapped_text.fill(
                 f"Error: MF relations could not be loaded from ProdDB API.\n{self.last_responseText}"
             )
@@ -5042,7 +5076,7 @@ class App(customtkinter.CTk):
             self.this_MF_relations_MOD = []
         else:
             self.api_status = 1
-            self.progressbar.configure(progress_color="#007711")
+            self.progressbar.configure(progress_color=data.progress_color_OK)
 
             if par != []:
                 # this MF is already connected to some module!!
@@ -5053,7 +5087,7 @@ class App(customtkinter.CTk):
                     print(f">>> {info_text}")
                     self.label_info.configure(text=info_text)
                     self.this_MF_relations_MOD.append(r)
-                    self.button_delete_child_MF.configure(state="enabled")
+                    self.button_delete_child_MF.configure(state="normal")
 
     def fetch_MA_HY_HV(self, SN, debug=False):
         # this happens when a child SN is selected
@@ -5081,7 +5115,7 @@ class App(customtkinter.CTk):
 
         if self.last_responseText[:3] != "200":
             self.api_status = 0
-            self.progressbar.configure(progress_color="#ff0000")
+            self.progressbar.configure(progress_color=data.progress_color_ERROR)
             info_text = wrapped_text.fill(
                 f"Error: HY HV-side relations could not be loaded from ProdDB API.\n{self.last_responseText}"
             )
@@ -5090,7 +5124,7 @@ class App(customtkinter.CTk):
             self.this_HY_HV_relations_MOD = []
         else:
             self.api_status = 1
-            self.progressbar.configure(progress_color="#007711")
+            self.progressbar.configure(progress_color=data.progress_color_OK)
 
             if par != []:
                 # this HY HV-side is already connected to some module!!
@@ -5101,7 +5135,7 @@ class App(customtkinter.CTk):
                     print(f">>> {info_text}")
                     self.label_info.configure(text=info_text)
                     self.this_HY_HV_relations_MOD.append(r)
-                    self.button_delete_child_HY_HV.configure(state="enabled")
+                    self.button_delete_child_HY_HV.configure(state="normal")
 
     def fetch_MA_HY_LV(self, SN, debug=False):
         # this happens when a child SN is selected
@@ -5129,7 +5163,7 @@ class App(customtkinter.CTk):
 
         if self.last_responseText[:3] != "200":
             self.api_status = 0
-            self.progressbar.configure(progress_color="#ff0000")
+            self.progressbar.configure(progress_color=data.progress_color_ERROR)
             info_text = wrapped_text.fill(
                 f"Error: HY LV-side relations could not be loaded from ProdDB API.\n{self.last_responseText}"
             )
@@ -5138,7 +5172,7 @@ class App(customtkinter.CTk):
             self.this_HY_LV_relations_MOD = []
         else:
             self.api_status = 1
-            self.progressbar.configure(progress_color="#007711")
+            self.progressbar.configure(progress_color=data.progress_color_OK)
 
             if par != []:
                 # this HY LV-side is already connected to some module!!
@@ -5149,7 +5183,7 @@ class App(customtkinter.CTk):
                     print(f">>> {info_text}")
                     self.label_info.configure(text=info_text)
                     self.this_HY_LV_relations_MOD.append(r)
-                    self.button_delete_child_HY_LV.configure(state="enabled")
+                    self.button_delete_child_HY_LV.configure(state="normal")
 
     def fetch_p_c(self, p, c):
         try:
@@ -5171,7 +5205,7 @@ class App(customtkinter.CTk):
 
         if self.last_responseText[:3] != "200":
             self.api_status = 0
-            self.progressbar.configure(progress_color="#ff0000")
+            self.progressbar.configure(progress_color=data.progress_color_ERROR)
             info_text = wrapped_text.fill(
                 f"Error: Parents / Children could not be loaded from ProdDB API.\n{self.last_responseText}"
             )
@@ -5179,7 +5213,7 @@ class App(customtkinter.CTk):
             self.label_info.configure(text=info_text)
         else:
             self.api_status = 1
-            self.progressbar.configure(progress_color="#007711")
+            self.progressbar.configure(progress_color=data.progress_color_OK)
 
             if p == "Detector Unit" and c == "Module":
                 if self.par_type != None and self.par_type != "All DU types":
@@ -5296,7 +5330,7 @@ class App(customtkinter.CTk):
 
         if self.last_responseText[:3] != "200":
             self.api_status = 0
-            self.progressbar.configure(progress_color="#ff0000")
+            self.progressbar.configure(progress_color=data.progress_color_ERROR)
             info_text = wrapped_text.fill(
                 f"Error: Slots could not be loaded from ProdDB API.\n{self.last_responseText}"
             )
@@ -5304,7 +5338,7 @@ class App(customtkinter.CTk):
             self.label_info.configure(text=info_text)
         else:
             self.api_status = 1
-            self.progressbar.configure(progress_color="#007711")
+            self.progressbar.configure(progress_color=data.progress_color_OK)
 
     def help(self):
         if self.help_window is None or not self.help_window.winfo_exists():
@@ -5319,13 +5353,13 @@ class App(customtkinter.CTk):
             # update progressbar
             self.progressbar.step()
             self.after(250, self.update_progressbar, thread)
-            self.progressbar.configure(progress_color="#BBAA00")
+            self.progressbar.configure(progress_color=data.progress_color_wait)
         else:
             self.progressbar.set(1)
             if self.api_status == 0:
-                self.progressbar.configure(progress_color="#ff0000")
+                self.progressbar.configure(progress_color=data.progress_color_ERROR)
             else:
-                self.progressbar.configure(progress_color="#007711")
+                self.progressbar.configure(progress_color=data.progress_color_OK)
 
 
 if __name__ == "__main__":

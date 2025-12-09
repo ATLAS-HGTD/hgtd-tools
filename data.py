@@ -1,4 +1,6 @@
-# ======== IDs stored in DB
+# This file contains all hardcoded constants
+## DB internal IDs
+### human-readable KoP name map to internal KoP-ID
 KoPID_from_partKoPName = {
     "Sensor": 1000,
     "Wafer": 1001,
@@ -17,16 +19,15 @@ KoPID_from_partKoPName = {
     "HV_PS": 2416,
     "HV_module": 2417,
 }
-
-# hardcoded part ids for testing parts (HGTD Database test)
+### hardcoded part ids for testing parts (HGTD Database test)
 partIDs_for_Testing = {
     "Detector Unit": 28815,
     "Detector": 6553,
     "Module": 6573,
-    #'Slot' :
 }
+### real detector parent part (its part_id)
 partID_parent_Detector = 28833
-
+### human-readable locations map to ID
 relevant_location_IDs_by_shortname = {
     "ifae": 1,
     "ihep": 1401,
@@ -38,7 +39,7 @@ relevant_location_IDs_by_shortname = {
     "cern": 1541,  # clean room, where tests are done
     "test": 1521,
 }
-
+### human-readable manufacturers map to ID
 relevant_manufacturer_IDs_by_shortname = {
     "ifae": 1003,
     "ihep": 1004,
@@ -48,8 +49,8 @@ relevant_manufacturer_IDs_by_shortname = {
     "ustc": 1261,
     "test": 1161,
 }
-
-# ======== Defintion of chars in SNs
+## Serial Number decoding / encoding helpers
+### defintion of chars in MO SNs: site
 MO_site_id = {
     "ifae": "F",
     "ihep": "H",
@@ -59,7 +60,7 @@ MO_site_id = {
     "ustc": "U",
     "test": "T",
 }
-
+### defintion of chars in MO SNs: prod
 MO_prod_id = {
     "prod": "M",  # main production
     "preprod": "P",  # preproduction
@@ -69,6 +70,7 @@ MO_prod_id = {
 }
 
 
+### function to get the first 8 chars of MO SNs
 def get_MO_SN_prefix(site, prod, batch):
     if site not in MO_site_id.keys():
         raise RuntimeError(f"Provided site {site} is invalid")
@@ -93,11 +95,11 @@ def get_MO_SN_prefix(site, prod, batch):
     return snprefix.upper()
 
 
-# define module geometry for canvas - not to scale!!!
+## Slots and their graphical representation
+### define module geometry for canvas - not to scale!!!
 modLongSide = 80
 modShortSide = 40
-
-# define slots - not to scale!!!
+### define slots - not to scale!!!
 modR1M1 = {"slot": "R1M1", "x": 60, "y": 60, "w": modLongSide, "h": modShortSide}
 modR2M1 = {"slot": "R2M1", "x": 160, "y": 60, "w": modLongSide, "h": modShortSide}
 modR3M1 = {"slot": "R3M1", "x": 260, "y": 60, "w": modLongSide, "h": modShortSide}
@@ -140,8 +142,7 @@ modROTATER2M2 = {
     "w": modShortSide,
     "h": modLongSide,
 }
-
-# define DUs - not to scale!!!
+### define DUs - not to scale!!!
 allDUs = {
     "BI01": [
         modR1M1,
@@ -665,19 +666,38 @@ allDUs = {
     ],
 }
 
+## Keys for DU, PEB
+
+### DU keys
 totalNModules = 0
 allDUkeysStr = ""
 for key in allDUs.keys():
     allDUkeysStr += f"{key},"
     totalNModules += len(allDUs[key])
 allDUkeysList = list(allDUs.keys())
-
+### PEB keys
 allPEBs = ["1F", "1B", "2F", "2B", "3F", "3B"]
 F_PEBs = ["1F", "1B", "2F", "2B", "3F"]
 B_PEBs = ["1F", "1B", "2F", "2B", "3B"]
 
+## Color scheme for GUI
+
+### slot colors in DU view
 fillColor_SU = "#f4f4bb"
 fillColor_Slot = "#ffffff"
 fillColor_SU_Text = "#aaaaaa"
 fillColor_AlreadyLoadedSlot = "#00ddff"
 fillColor_ActiveSlot = "#33ff33"
+
+### standard buttons
+fg_color_standard_but_active = "#339941"
+hover_color_standard_but_active = "#228831"
+fg_color_standard_but_inactive = "#555555"
+hover_color_standard_but_inactive = "#444444"
+fg_color_standard_but_red = "#cf352e"
+hover_color_standard_but_red = "#B02B25"
+
+### progress bar
+progress_color_OK = "#007711"
+progress_color_wait = "#BBAA00"
+progress_color_ERROR = "#ff0000"
