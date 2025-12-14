@@ -632,12 +632,34 @@ class App(customtkinter.CTk):
             self.frame_child, text="Child Part SN"
         )
         self.label_combobox_child.grid(
-            row=2, column=0, padx=20, pady=(10, 10), sticky="nsew"
+            row=2, column=0, padx=20, pady=(10, 10), columnspan=2, sticky="nsew"
         )
+
+        self.frame_sn_filter = customtkinter.CTkFrame(self.frame_child)
+        self.frame_sn_filter.grid(
+            row=3, column=0, padx=20, pady=(10, 10), sticky="nsew"
+        )
+        self.sn_filter_variable = customtkinter.StringVar(value="")
+        self.sn_filter_entry = customtkinter.CTkEntry(
+            self.frame_sn_filter, textvariable=self.sn_filter_variable
+        )
+        self.sn_filter_entry.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        self.filter_image = customtkinter.CTkImage(
+            Image.open("searchIcon.png"), size=(20, 20)
+        )
+        self.btnFilterSN = customtkinter.CTkButton(
+            self.frame_sn_filter,
+            image=self.filter_image,
+            text="Filter SN",
+            compound="left",
+            command=self.button_filter_child_SN_event,
+            width=60,
+        )
+        self.btnFilterSN.grid(row=0, column=1, padx=5, pady=5, columnspan=2)
 
         self.combobox_child_paginationFrame = customtkinter.CTkFrame(self.frame_child)
         self.combobox_child_paginationFrame.grid(
-            row=2, column=1, padx=20, pady=(10, 10), sticky="nsew"
+            row=3, column=1, padx=20, pady=(10, 10), sticky="nsew"
         )
         self.label_combobox_child_paginationFrame = customtkinter.CTkLabel(
             self.combobox_child_paginationFrame, text="page 0/0"
@@ -678,7 +700,7 @@ class App(customtkinter.CTk):
             text="INSPECT CHILD",
             command=self.button_inspect_child_event_click,
         )
-        self.button_inspect_child.grid(row=3, column=1, padx=20, pady=(10, 10))
+        self.button_inspect_child.grid(row=4, column=1, padx=20, pady=(10, 10))
 
         # position / click
         self.frame_position = customtkinter.CTkFrame(self.frame_combobox)
@@ -1524,6 +1546,7 @@ class App(customtkinter.CTk):
         self.chi_type = None
         self.child_conn = None
         self.child_manu = None
+        self.filter_sn_chi = ""
         self.ft_conn = None
 
         # Module Assembly
@@ -3203,6 +3226,24 @@ class App(customtkinter.CTk):
                     self.label_info.configure(text=" ")
                     self.this_HY_LV_relations_MOD = []
                     self.button_delete_child_HY_LV.configure(state="disabled")
+
+    def button_filter_child_SN_event(self):
+        self.combobox_child.set("- Select -")
+
+        if self.operation_mode == "Module Loading":
+            self.loading_wheel = threading.Thread(
+                target=self.fetch_p_c, args=("Detector Unit", "Module")
+            )
+        elif self.operation_mode == "Detector Assembly (CERN): DU":
+            self.loading_wheel = threading.Thread(
+                target=self.fetch_p_c, args=("Detector", "Detector Unit")
+            )
+        elif self.operation_mode == "Detector Assembly (CERN): PEB":
+            self.loading_wheel = threading.Thread(
+                target=self.fetch_p_c, args=("Detector", "PEB")
+            )
+        self.loading_wheel.start()
+        self.update_progressbar(self.loading_wheel)
 
     def button_find_slot_event_click(self):
         self.label_info.configure(text=" ")
@@ -5245,6 +5286,15 @@ class App(customtkinter.CTk):
                         for pc in self.possible_children
                         if self.chi_type in pc["Type"]
                     ]
+
+            # child SN filter input
+            self.filter_sn_chi = self.sn_filter_entry.get()
+            if self.filter_sn_chi != "":
+                self.possible_children = [
+                    pc
+                    for pc in self.possible_children
+                    if self.filter_sn_chi in str(pc["serial_number"])
+                ]
 
             # do the most expensive part last (when easy filters on existing data have already been applied)
             # expensive meaning need to make calls to the API for each part in the list that survived the previous cuts
