@@ -635,27 +635,27 @@ class App(customtkinter.CTk):
             row=2, column=0, padx=20, pady=(10, 10), columnspan=2, sticky="nsew"
         )
 
-        self.frame_sn_filter = customtkinter.CTkFrame(self.frame_child)
-        self.frame_sn_filter.grid(
+        self.frame_child_SN_filter = customtkinter.CTkFrame(self.frame_child)
+        self.frame_child_SN_filter.grid(
             row=3, column=0, padx=20, pady=(10, 10), sticky="nsew"
         )
-        self.sn_filter_variable = customtkinter.StringVar(value="")
-        self.sn_filter_entry = customtkinter.CTkEntry(
-            self.frame_sn_filter, textvariable=self.sn_filter_variable
+        self.variable_child_SN_filter = customtkinter.StringVar(value="")
+        self.entry_child_SN_filter = customtkinter.CTkEntry(
+            self.frame_child_SN_filter, textvariable=self.variable_child_SN_filter
         )
-        self.sn_filter_entry.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        self.entry_child_SN_filter.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
         self.filter_image = customtkinter.CTkImage(
             Image.open("searchIcon.png"), size=(20, 20)
         )
-        self.btnFilterSN = customtkinter.CTkButton(
-            self.frame_sn_filter,
+        self.btn_child_filter_SN = customtkinter.CTkButton(
+            self.frame_child_SN_filter,
             image=self.filter_image,
             text="Filter SN",
             compound="left",
-            command=self.button_filter_child_SN_event,
+            command=lambda: self.button_onclick_event_filter_child_SN("generic child"),
             width=60,
         )
-        self.btnFilterSN.grid(row=0, column=1, padx=5, pady=5, columnspan=2)
+        self.btn_child_filter_SN.grid(row=0, column=1, padx=5, pady=5, columnspan=2)
 
         self.combobox_child_paginationFrame = customtkinter.CTkFrame(self.frame_child)
         self.combobox_child_paginationFrame.grid(
@@ -947,11 +947,32 @@ class App(customtkinter.CTk):
             row=5, column=0, padx=5, pady=5, columnspan=2
         )
 
+        self.frame_child0_SN_filter = customtkinter.CTkFrame(
+            self.frame_module_flex_child
+        )
+        self.frame_child0_SN_filter.grid(
+            row=6, column=0, padx=20, pady=(10, 10), columnspan=2, sticky="nsew"
+        )
+        self.variable_child0_SN_filter = customtkinter.StringVar(value="")
+        self.entry_child0_SN_filter = customtkinter.CTkEntry(
+            self.frame_child0_SN_filter, textvariable=self.variable_child0_SN_filter
+        )
+        self.entry_child0_SN_filter.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        self.btn_child0_filter_SN = customtkinter.CTkButton(
+            self.frame_child0_SN_filter,
+            image=self.filter_image,
+            text="Filter SN",
+            compound="left",
+            command=lambda: self.button_onclick_event_filter_child_SN("Module Flex"),
+            width=60,
+        )
+        self.btn_child0_filter_SN.grid(row=0, column=1, padx=5, pady=5)
+
         self.combobox_MA_MF_chi_paginationFrame = customtkinter.CTkFrame(
             self.frame_module_flex_child
         )
         self.combobox_MA_MF_chi_paginationFrame.grid(
-            row=6, column=0, padx=20, pady=10, sticky="nsew", columnspan=2
+            row=7, column=0, padx=20, pady=10, sticky="nsew", columnspan=2
         )
         self.label_combobox_MA_MF_chi_paginationFrame = customtkinter.CTkLabel(
             self.combobox_MA_MF_chi_paginationFrame, text="page 0/0"
@@ -993,7 +1014,7 @@ class App(customtkinter.CTk):
             command=self.button_inspect_child_module_flex_event_click,
         )
         self.button_inspect_child_module_flex.grid(
-            row=7, column=0, padx=5, pady=5, columnspan=2
+            row=8, column=0, padx=5, pady=5, columnspan=2
         )
         self.button_add_child_module_flex = customtkinter.CTkButton(
             self.frame_module_flex_child,
@@ -1003,7 +1024,7 @@ class App(customtkinter.CTk):
             hover_color=data.hover_color_standard_but_active,
         )
         self.button_add_child_module_flex.grid(
-            row=8, column=0, padx=5, pady=5, columnspan=2
+            row=9, column=0, padx=5, pady=5, columnspan=2
         )
         self.button_delete_child_MF = customtkinter.CTkButton(
             self.frame_module_flex_child,
@@ -1013,7 +1034,7 @@ class App(customtkinter.CTk):
             fg_color=data.fg_color_standard_but_red,
             hover_color=data.hover_color_standard_but_red,
         )
-        self.button_delete_child_MF.grid(row=9, column=0, padx=5, pady=5, columnspan=2)
+        self.button_delete_child_MF.grid(row=10, column=0, padx=5, pady=5, columnspan=2)
 
         #
         # === Hybrid HV-side ===
@@ -1072,11 +1093,30 @@ class App(customtkinter.CTk):
         )
         self.label_HY_HV_child_SN.grid(row=7, column=0, padx=5, pady=5, columnspan=2)
 
+        self.frame_child1_SN_filter = customtkinter.CTkFrame(self.frame_HY_HV_child)
+        self.frame_child1_SN_filter.grid(
+            row=8, column=0, padx=20, pady=(10, 10), columnspan=2, sticky="nsew"
+        )
+        self.variable_child1_SN_filter = customtkinter.StringVar(value="")
+        self.entry_child1_SN_filter = customtkinter.CTkEntry(
+            self.frame_child1_SN_filter, textvariable=self.variable_child1_SN_filter
+        )
+        self.entry_child1_SN_filter.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        self.btn_child1_filter_SN = customtkinter.CTkButton(
+            self.frame_child1_SN_filter,
+            image=self.filter_image,
+            text="Filter SN",
+            compound="left",
+            command=lambda: self.button_onclick_event_filter_child_SN("HY_LV"),
+            width=60,
+        )
+        self.btn_child1_filter_SN.grid(row=0, column=1, padx=5, pady=5, columnspan=2)
+
         self.combobox_HY_HV_paginationFrame = customtkinter.CTkFrame(
             self.frame_HY_HV_child
         )
         self.combobox_HY_HV_paginationFrame.grid(
-            row=8, column=0, padx=20, pady=10, sticky="nsew", columnspan=2
+            row=9, column=0, padx=20, pady=10, sticky="nsew", columnspan=2
         )
         self.label_combobox_HY_HV_paginationFrame = customtkinter.CTkLabel(
             self.combobox_HY_HV_paginationFrame, text="page 0/0"
@@ -1118,7 +1158,7 @@ class App(customtkinter.CTk):
             command=self.button_inspect_child_HY_HV_event_click,
         )
         self.button_inspect_child_HY_HV.grid(
-            row=9, column=0, padx=5, pady=5, columnspan=2
+            row=10, column=0, padx=5, pady=5, columnspan=2
         )
         self.button_add_child_HY_HV = customtkinter.CTkButton(
             self.frame_HY_HV_child,
@@ -1127,7 +1167,7 @@ class App(customtkinter.CTk):
             fg_color=data.fg_color_standard_but_active,
             hover_color=data.hover_color_standard_but_active,
         )
-        self.button_add_child_HY_HV.grid(row=10, column=0, padx=5, pady=5, columnspan=2)
+        self.button_add_child_HY_HV.grid(row=11, column=0, padx=5, pady=5, columnspan=2)
         self.button_delete_child_HY_HV = customtkinter.CTkButton(
             self.frame_HY_HV_child,
             text="DISCONNECT HY HV-side\nFROM ITS PARENT",
@@ -1137,7 +1177,7 @@ class App(customtkinter.CTk):
             hover_color=data.hover_color_standard_but_red,
         )
         self.button_delete_child_HY_HV.grid(
-            row=11, column=0, padx=5, pady=5, columnspan=2
+            row=12, column=0, padx=5, pady=5, columnspan=2
         )
 
         #
@@ -1197,11 +1237,30 @@ class App(customtkinter.CTk):
         )
         self.label_HY_LV_child_SN.grid(row=7, column=0, padx=5, pady=5, columnspan=2)
 
+        self.frame_child2_SN_filter = customtkinter.CTkFrame(self.frame_HY_LV_child)
+        self.frame_child2_SN_filter.grid(
+            row=8, column=0, padx=20, pady=(10, 10), columnspan=2, sticky="nsew"
+        )
+        self.variable_child2_SN_filter = customtkinter.StringVar(value="")
+        self.entry_child2_SN_filter = customtkinter.CTkEntry(
+            self.frame_child2_SN_filter, textvariable=self.variable_child2_SN_filter
+        )
+        self.entry_child2_SN_filter.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        self.btn_child2_filter_SN = customtkinter.CTkButton(
+            self.frame_child2_SN_filter,
+            image=self.filter_image,
+            text="Filter SN",
+            compound="left",
+            command=lambda: self.button_onclick_event_filter_child_SN("HY_LV"),
+            width=60,
+        )
+        self.btn_child2_filter_SN.grid(row=0, column=1, padx=5, pady=5, columnspan=2)
+
         self.combobox_HY_LV_paginationFrame = customtkinter.CTkFrame(
             self.frame_HY_LV_child
         )
         self.combobox_HY_LV_paginationFrame.grid(
-            row=8, column=0, padx=20, pady=10, sticky="nsew", columnspan=2
+            row=9, column=0, padx=20, pady=10, sticky="nsew", columnspan=2
         )
         self.label_combobox_HY_LV_paginationFrame = customtkinter.CTkLabel(
             self.combobox_HY_LV_paginationFrame, text="page 0/0"
@@ -1243,7 +1302,7 @@ class App(customtkinter.CTk):
             command=self.button_inspect_child_HY_LV_event_click,
         )
         self.button_inspect_child_HY_LV.grid(
-            row=9, column=0, padx=5, pady=5, columnspan=2
+            row=10, column=0, padx=5, pady=5, columnspan=2
         )
         self.button_add_child_HY_LV = customtkinter.CTkButton(
             self.frame_HY_LV_child,
@@ -1252,7 +1311,7 @@ class App(customtkinter.CTk):
             fg_color=data.fg_color_standard_but_active,
             hover_color=data.hover_color_standard_but_active,
         )
-        self.button_add_child_HY_LV.grid(row=10, column=0, padx=5, pady=5, columnspan=2)
+        self.button_add_child_HY_LV.grid(row=11, column=0, padx=5, pady=5, columnspan=2)
         self.button_delete_child_HY_LV = customtkinter.CTkButton(
             self.frame_HY_LV_child,
             text="DISCONNECT HY LV-side\nFROM ITS PARENT",
@@ -1262,7 +1321,7 @@ class App(customtkinter.CTk):
             hover_color=data.hover_color_standard_but_red,
         )
         self.button_delete_child_HY_LV.grid(
-            row=11, column=0, padx=5, pady=5, columnspan=2
+            row=12, column=0, padx=5, pady=5, columnspan=2
         )
 
         # ******************************************
@@ -1421,13 +1480,37 @@ class App(customtkinter.CTk):
         )
         self.label_combobox_ft.grid(row=4, column=0, padx=20, pady=10, sticky="nsew")
 
+        self.frame_childFT_SN_filter = customtkinter.CTkFrame(self.frame_ft_rel)
+        self.frame_childFT_SN_filter.grid(
+            row=3, column=1, padx=20, pady=(10, 10), sticky="nsew"
+        )
+        self.variable_childFT_SN_filter = customtkinter.StringVar(value="")
+        self.entry_childFT_SN_filter = customtkinter.CTkEntry(
+            self.frame_childFT_SN_filter, textvariable=self.variable_childFT_SN_filter
+        )
+        self.entry_childFT_SN_filter.grid(
+            row=0, column=0, padx=5, pady=5, sticky="nsew"
+        )
+        self.filter_image = customtkinter.CTkImage(
+            Image.open("searchIcon.png"), size=(20, 20)
+        )
+        self.btn_childFT_filter_SN = customtkinter.CTkButton(
+            self.frame_childFT_SN_filter,
+            image=self.filter_image,
+            text="Filter SN",
+            compound="left",
+            command=lambda: self.button_onclick_event_filter_child_SN("generic child"),
+            width=60,
+        )
+        self.btn_childFT_filter_SN.grid(row=0, column=1, padx=5, pady=5)
+
         self.optionmenu_ft_conn = customtkinter.CTkOptionMenu(
             self.frame_ft_rel,
             values=["Not yet connected FTs", "All FTs"],
             command=self.change_ft_conn_event,
             width=250,
         )
-        self.optionmenu_ft_conn.grid(row=3, column=0, padx=20, pady=10)
+        self.optionmenu_ft_conn.grid(row=4, column=0, padx=20, pady=10)
         self.optionmenu_ft_conn.set("All FTs")
 
         self.combobox_ft_paginationFrame = customtkinter.CTkFrame(self.frame_ft_rel)
@@ -1546,7 +1629,11 @@ class App(customtkinter.CTk):
         self.chi_type = None
         self.child_conn = None
         self.child_manu = None
-        self.filter_sn_chi = ""
+        self.child_SN_filter = ""
+        self.child0_SN_filter = ""
+        self.child1_SN_filter = ""
+        self.child2_SN_filter = ""
+        self.childFT_SN_filter = ""
         self.ft_conn = None
 
         # Module Assembly
@@ -1592,26 +1679,42 @@ class App(customtkinter.CTk):
         self.combobox_par_type.configure(values=self.possible_par_types_chunked[0])
         self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[0])
 
-        upstream_version, upstream_version_last_responseText = api.get_version()
         print("=" * 80)
         print(f"Welcome to hgtd-tools!")
         print("-" * 80)
-        if self.my_version != upstream_version:
-            print(f"You are not running the most recent version of hgtd-tools.")
+        try:
+            upstream_version, upstream_version_last_responseText = api.get_version()
+        except (
+            requests.exceptions.HTTPError,
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.RequestException,
+        ) as e:
+            upstream_version_last_responseText = str(e)
+        except ValueError as e:
+            upstream_version_last_responseText = str(e)
+
+        if upstream_version_last_responseText[:3] != "200":
             print(
-                f"Your release: {self.my_version} / latest published release: {upstream_version}."
+                f"Version of hgtd-tools could not be compared to upstream, check your web connection!"
             )
-            print(
-                f"Consider updating to a new release, either via git workflow (pull) or by downloading a specific release archive from gitlab."
-            )
-            self.version_full_text = (
-                self.version_full_text + f"\noutdated release, please update"
-            )
-            self.label_credits.configure(text=self.version_full_text)
         else:
-            print(
-                f"You are running version {self.my_version}, the most recent release of hgtd-tools. Enjoy!"
-            )
+            if self.my_version != upstream_version:
+                print(f"You are not running the most recent version of hgtd-tools.")
+                print(
+                    f"Your release: {self.my_version} / latest published release: {upstream_version}."
+                )
+                print(
+                    f"Consider updating to a new release, either via git workflow (pull) or by downloading a specific release archive from gitlab."
+                )
+                self.version_full_text = (
+                    self.version_full_text + f"\noutdated release, please update"
+                )
+                self.label_credits.configure(text=self.version_full_text)
+            else:
+                print(
+                    f"You are running version {self.my_version}, the most recent release of hgtd-tools. Enjoy!"
+                )
 
         # Get first parents and children for default operating mode
         try:
@@ -3227,21 +3330,35 @@ class App(customtkinter.CTk):
                     self.this_HY_LV_relations_MOD = []
                     self.button_delete_child_HY_LV.configure(state="disabled")
 
-    def button_filter_child_SN_event(self):
-        self.combobox_child.set("- Select -")
+    def button_onclick_event_filter_child_SN(self, childIdentifier="Module Flex"):
+        if self.operation_mode == "Module Assembly":
+            if childIdentifier == "Module Flex":
+                self.combobox_MA_MF_chi.set("- Select -")
+            elif childIdentifier == "HY_HV":
+                self.combobox_MA_HY_HV_chi.set("- Select -")
+            elif childIdentifier == "HY_LV":
+                self.combobox_MA_HY_LV_chi.set("- Select -")
+            self.loading_wheel = threading.Thread(
+                target=self.fetch_MA_p_c, args=(childIdentifier)
+            )
+        elif self.operation_mode == "Detector Assembly (CERN): FT":
+            self.combobox_ft.set("- Select -")
+            self.loading_wheel = threading.Thread(target=self.fetch_ft)
+        else:
+            self.combobox_child.set("- Select -")
+            if self.operation_mode == "Module Loading":
+                self.loading_wheel = threading.Thread(
+                    target=self.fetch_p_c, args=("Detector Unit", "Module")
+                )
+            elif self.operation_mode == "Detector Assembly (CERN): DU":
+                self.loading_wheel = threading.Thread(
+                    target=self.fetch_p_c, args=("Detector", "Detector Unit")
+                )
+            elif self.operation_mode == "Detector Assembly (CERN): PEB":
+                self.loading_wheel = threading.Thread(
+                    target=self.fetch_p_c, args=("Detector", "PEB")
+                )
 
-        if self.operation_mode == "Module Loading":
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_p_c, args=("Detector Unit", "Module")
-            )
-        elif self.operation_mode == "Detector Assembly (CERN): DU":
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_p_c, args=("Detector", "Detector Unit")
-            )
-        elif self.operation_mode == "Detector Assembly (CERN): PEB":
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_p_c, args=("Detector", "PEB")
-            )
         self.loading_wheel.start()
         self.update_progressbar(self.loading_wheel)
 
@@ -4655,6 +4772,14 @@ class App(customtkinter.CTk):
                     and int(pft["serial_number"][9:11]) == int(cat)
                 ]
 
+            # HY_LV child SN filter input
+            self.childFT_SN_filter = self.entry_childFT_SN_filter.get()
+            if self.childFT_SN_filter != "":
+                self.possible_ft = [
+                    pft
+                    for pft in self.possible_ft
+                    if self.childFT_SN_filter in str(pft["serial_number"])
+                ]
             # do the most expensive part last (when easy filters on existing data have already been applied)
             # expensive meaning need to make calls to the API for each part in the list that survived the previous cuts
             if self.ft_conn != None and self.ft_conn != "All FTs":
@@ -4809,6 +4934,15 @@ class App(customtkinter.CTk):
                         == str(pp["location"]["location_name"])
                     ]
 
+                # MF child SN filter input
+                self.child0_SN_filter = self.entry_child0_SN_filter.get()
+                if self.child0_SN_filter != "":
+                    self.possible_MF = [
+                        pc
+                        for pc in self.possible_MF
+                        if self.child0_SN_filter in str(pc["serial_number"])
+                    ]
+
                 if self.MF_child_conn != None and self.MF_child_conn != "All children":
                     self.possible_MF = [
                         pp
@@ -4826,6 +4960,15 @@ class App(customtkinter.CTk):
                         pp
                         for pp in self.possible_HY_HV
                         if self.HY_HV_child_loc == str(pp["location"]["location_name"])
+                    ]
+
+                # HY_HV child SN filter input
+                self.child1_SN_filter = self.entry_child1_SN_filter.get()
+                if self.child1_SN_filter != "":
+                    self.possible_HY_HV = [
+                        pc
+                        for pc in self.possible_HY_HV
+                        if self.child1_SN_filter in str(pc["serial_number"])
                     ]
 
                 if (
@@ -4855,6 +4998,15 @@ class App(customtkinter.CTk):
                         pp
                         for pp in self.possible_HY_LV
                         if self.HY_LV_child_loc == str(pp["location"]["location_name"])
+                    ]
+
+                # HY_LV child SN filter input
+                self.child2_SN_filter = self.entry_child2_SN_filter.get()
+                if self.child2_SN_filter != "":
+                    self.possible_HY_LV = [
+                        pc
+                        for pc in self.possible_HY_LV
+                        if self.child2_SN_filter in str(pc["serial_number"])
                     ]
 
                 if (
@@ -5288,12 +5440,12 @@ class App(customtkinter.CTk):
                     ]
 
             # child SN filter input
-            self.filter_sn_chi = self.sn_filter_entry.get()
-            if self.filter_sn_chi != "":
+            self.child_SN_filter = self.entry_child_SN_filter.get()
+            if self.child_SN_filter != "":
                 self.possible_children = [
                     pc
                     for pc in self.possible_children
-                    if self.filter_sn_chi in str(pc["serial_number"])
+                    if self.child_SN_filter in str(pc["serial_number"])
                 ]
 
             # do the most expensive part last (when easy filters on existing data have already been applied)
