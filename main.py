@@ -3339,7 +3339,7 @@ class App(customtkinter.CTk):
             elif childIdentifier == "HY_LV":
                 self.combobox_MA_HY_LV_chi.set("- Select -")
             self.loading_wheel = threading.Thread(
-                target=self.fetch_MA_p_c, args=(childIdentifier)
+                target=self.fetch_MA_p_c, args=(childIdentifier,)
             )
         elif self.operation_mode == "Detector Assembly (CERN): FT":
             self.combobox_ft.set("- Select -")
