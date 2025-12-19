@@ -1,5 +1,6 @@
 # standard package imports and default ATLAS style
 import json
+import os
 from argparse import ArgumentParser
 from collections import Counter
 from datetime import datetime
@@ -96,34 +97,72 @@ interesting_features = [
 ]
 
 if not skip_data_prep:
+    if os.path.exists("output_invalid.txt"):
+        os.remove("output_invalid.txt")
+    #    invalid_textfile = open("output_invalid.txt", "x")
     parts_in_categories = {c: util.get_relevant_parts(c)[0] for c in categories}
 
     interesting_data_all_cats = {c: dict() for c in categories}
+    interesting_data_all_cats_valid = {c: dict() for c in categories}
     interesting_data_all_cats_fakes = {c: dict() for c in categories}
     for c in categories:
         interesting_data_per_c = {f: [] for f in interesting_features}
+        interesting_data_per_c_valid = {f: [] for f in interesting_features}
         interesting_data_per_c_fakes = {f: [] for f in interesting_features}
         for p in parts_in_categories[c]:
             if str(p["serial_number"][:3]) == "20W":
-                if "Location" in interesting_features:
-                    interesting_data_per_c["Location"].append(
-                        p["location"]["location_name"]
-                    )
-                if "Manufacturer" in interesting_features:
-                    interesting_data_per_c["Manufacturer"].append(
-                        p["manufacturer"]["manufacturer_name"]
-                    )
-                if "Uploaded by" in interesting_features:
-                    interesting_data_per_c["Uploaded by"].append(
-                        p["record_insertion_user"]
-                    )
-                if "Uploaded in YYYY-MM" in interesting_features:
-                    time = p["record_insertion_time"]
-                    if time == None:
-                        interesting_data_per_c["Uploaded in YYYY-MM"].append("Unknown")
-                    else:
-                        interesting_data_per_c["Uploaded in YYYY-MM"].append(
-                            p["record_insertion_time"][:7]
+                check_SN_boolean, check_SN_message = util.check_SN_valid(
+                    str(p["serial_number"][:])
+                )
+                if check_SN_boolean:
+                    if "Location" in interesting_features:
+                        interesting_data_per_c_valid["Location"].append(
+                            p["location"]["location_name"]
+                        )
+                    if "Manufacturer" in interesting_features:
+                        interesting_data_per_c_valid["Manufacturer"].append(
+                            p["manufacturer"]["manufacturer_name"]
+                        )
+                    if "Uploaded by" in interesting_features:
+                        interesting_data_per_c_valid["Uploaded by"].append(
+                            p["record_insertion_user"]
+                        )
+                    if "Uploaded in YYYY-MM" in interesting_features:
+                        time = p["record_insertion_time"]
+                        if time == None:
+                            interesting_data_per_c_valid["Uploaded in YYYY-MM"].append(
+                                "Unknown"
+                            )
+                        else:
+                            interesting_data_per_c_valid["Uploaded in YYYY-MM"].append(
+                                p["record_insertion_time"][:7]
+                            )
+                else:
+                    if "Location" in interesting_features:
+                        interesting_data_per_c["Location"].append(
+                            p["location"]["location_name"]
+                        )
+                    if "Manufacturer" in interesting_features:
+                        interesting_data_per_c["Manufacturer"].append(
+                            p["manufacturer"]["manufacturer_name"]
+                        )
+                    if "Uploaded by" in interesting_features:
+                        interesting_data_per_c["Uploaded by"].append(
+                            p["record_insertion_user"]
+                        )
+                    if "Uploaded in YYYY-MM" in interesting_features:
+                        time = p["record_insertion_time"]
+                        if time == None:
+                            interesting_data_per_c["Uploaded in YYYY-MM"].append(
+                                "Unknown"
+                            )
+                        else:
+                            interesting_data_per_c["Uploaded in YYYY-MM"].append(
+                                p["record_insertion_time"][:7]
+                            )
+                    with open("output_invalid.txt", "a") as invalid_txt:
+                        invalid_txt.write(
+                            str(p["serial_number"][:]) + ": " + check_SN_message + "\n"
                         )
             else:
                 if "Location" in interesting_features:
@@ -149,9 +188,13 @@ if not skip_data_prep:
                             p["record_insertion_time"][:7]
                         )
         interesting_data_all_cats[c] = interesting_data_per_c
+        interesting_data_all_cats_valid[c] = interesting_data_per_c_valid
         interesting_data_all_cats_fakes[c] = interesting_data_per_c_fakes
 
     multi_count_dict = {
+        c: {f: dict() for f in interesting_features} for c in categories
+    }
+    multi_count_dict_valid = {
         c: {f: dict() for f in interesting_features} for c in categories
     }
     multi_count_dict_fakes = {
@@ -162,17 +205,24 @@ if not skip_data_prep:
             multi_count_dict[c][f] = dict(
                 Counter(interesting_data_all_cats[c][f]).items()
             )
+            multi_count_dict_valid[c][f] = dict(
+                Counter(interesting_data_all_cats_valid[c][f]).items()
+            )
             multi_count_dict_fakes[c][f] = dict(
                 Counter(interesting_data_all_cats_fakes[c][f]).items()
             )
 
     with open("report_stats.json", "w") as rep_data_f:
         json.dump(multi_count_dict, rep_data_f)
+    with open("report_stats_valid.json", "w") as rep_data_f:
+        json.dump(multi_count_dict_valid, rep_data_f)
     with open("report_stats_fakes.json", "w") as rep_data_f:
         json.dump(multi_count_dict_fakes, rep_data_f)
 else:
     with open("report_stats.json") as realJson:
         multi_count_dict = json.load(realJson)
+    with open("report_stats_valid.json") as validJson:
+        multi_count_dict_valid = json.load(validJson)
     with open("report_stats_fakes.json") as fakesJson:
         multi_count_dict_fakes = json.load(fakesJson)
 
@@ -270,10 +320,15 @@ def prepare_legend_and_plot(
 prepare_legend_and_plot(
     multi_count_dict,
     postfix="20W",
-    title_prefix="Serial Numbers starting with 20W only. ",
+    title_prefix="Serial Numbers starting with 20W, NOT fulfilling the ATLAS convention. ",
 )
 prepare_legend_and_plot(
     multi_count_dict_fakes,
     postfix="fakes",
-    title_prefix="Serial Numbers NOT starting with 20W only. ",
+    title_prefix="Serial Numbers NOT starting with 20W. ",
+)
+prepare_legend_and_plot(
+    multi_count_dict_valid,
+    postfix="valid",
+    title_prefix="Serial Numbers starting with 20W, fulfilling the ATLAS convention. ",
 )
