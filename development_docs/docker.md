@@ -1,3 +1,9 @@
+# All docker support for hgtd-tools deprecated on Dec 20th, 2025, in favor of user's python environments.
+
+The following is kept only for archival purposes. The last version containing a Dockerfile is v1.8.1, up to commit 902e9cb9c8f7bdb3aed780c13201041f1db9d246.
+
+---
+
 There are two relevant registry links, for which a login is needed:
 
 first one needs a PAT from gitlab with the right to upload to the registry:
