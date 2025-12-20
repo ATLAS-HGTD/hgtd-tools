@@ -99,7 +99,6 @@ interesting_features = [
 if not skip_data_prep:
     if os.path.exists("output_invalid.txt"):
         os.remove("output_invalid.txt")
-    #    invalid_textfile = open("output_invalid.txt", "x")
     parts_in_categories = {c: util.get_relevant_parts(c)[0] for c in categories}
 
     interesting_data_all_cats = {c: dict() for c in categories}

@@ -36,6 +36,7 @@ generate_files:
     - cp fractions*.pdf generated
     - cp fractions*.png generated
     - cp report_stats*.json generated
+    - cp output_invalid.txt generated
   artifacts:
     paths:
       - generated/
