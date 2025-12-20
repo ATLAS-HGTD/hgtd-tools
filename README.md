@@ -7,7 +7,7 @@
 
 <div align="center">
 
-![Static Badge](https://img.shields.io/badge/python-3.12-blue) [![Release](https://gitlab.cern.ch/anstein/hgtd-tools/-/badges/release.svg)](https://gitlab.cern.ch/anstein/hgtd-tools/-/releases) [![Pipeline](https://gitlab.cern.ch/anstein/hgtd-tools/badges/master/pipeline.svg)](https://gitlab.cern.ch/anstein/hgtd-tools/-/commits/master) [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit) <br>
+![Static Badge](https://img.shields.io/badge/python-3.12-blue) [![Release](https://gitlab.cern.ch/anstein/hgtd-tools/-/badges/release.svg)](https://gitlab.cern.ch/anstein/hgtd-tools/-/releases) [![Pipeline](https://gitlab.cern.ch/anstein/hgtd-tools/badges/master/pipeline.svg)](https://gitlab.cern.ch/anstein/hgtd-tools/-/commits/master) [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit) [![Static Badge](https://img.shields.io/badge/view-nightly--reports-blue)](https://hgtd-tools-reports.web.cern.ch/) [![Static Badge](https://img.shields.io/badge/read-documentation-blue)](https://hgtd-database.docs.cern.ch/) <br>
 
 ![Static Badge](https://img.shields.io/badge/tested_on-Linux_|_MacOS_|_Windows-green)
 </div>
@@ -194,7 +194,7 @@ If you are developing features yourself or want to resolve an issue, please [For
 
 We run a set of basic pre-commit checks for your MR, so be prepared to modify the changed files according to the `.gitlab-ci.yaml` pipeline before your MR can be merged. Test your changes locally before pushing (and avoid using unneccessary CI time + core-h), using the instructions outlined in the pre-commit paragraph.
 
-Not every minor commit needs to trigger a CI pipeline, for example clerical changes or something that only affects documentation but no logic. In that case, please adapt your commit message as follows to skip the CI for a specific commit:
+Not every minor commit needs to trigger a CI pipeline, for example clerical changes or something that only affects documentation but no logic. In that case, please adapt your regular commit message as follows to skip the CI for a specific commit:
 
 ```bash
 git commit -m 'here is my regular commit message [skip ci]'
