@@ -101,11 +101,11 @@ if not skip_data_prep:
         os.remove("output_invalid.txt")
     parts_in_categories = {c: util.get_relevant_parts(c)[0] for c in categories}
 
-    interesting_data_all_cats = {c: dict() for c in categories}
+    interesting_data_all_cats_invalid = {c: dict() for c in categories}
     interesting_data_all_cats_valid = {c: dict() for c in categories}
     interesting_data_all_cats_fakes = {c: dict() for c in categories}
     for c in categories:
-        interesting_data_per_c = {f: [] for f in interesting_features}
+        interesting_data_per_c_invalid = {f: [] for f in interesting_features}
         interesting_data_per_c_valid = {f: [] for f in interesting_features}
         interesting_data_per_c_fakes = {f: [] for f in interesting_features}
         for p in parts_in_categories[c]:
@@ -138,27 +138,27 @@ if not skip_data_prep:
                             )
                 else:
                     if "Location" in interesting_features:
-                        interesting_data_per_c["Location"].append(
+                        interesting_data_per_c_invalid["Location"].append(
                             p["location"]["location_name"]
                         )
                     if "Manufacturer" in interesting_features:
-                        interesting_data_per_c["Manufacturer"].append(
+                        interesting_data_per_c_invalid["Manufacturer"].append(
                             p["manufacturer"]["manufacturer_name"]
                         )
                     if "Uploaded by" in interesting_features:
-                        interesting_data_per_c["Uploaded by"].append(
+                        interesting_data_per_c_invalid["Uploaded by"].append(
                             p["record_insertion_user"]
                         )
                     if "Uploaded in YYYY-MM" in interesting_features:
                         time = p["record_insertion_time"]
                         if time == None:
-                            interesting_data_per_c["Uploaded in YYYY-MM"].append(
-                                "Unknown"
-                            )
+                            interesting_data_per_c_invalid[
+                                "Uploaded in YYYY-MM"
+                            ].append("Unknown")
                         else:
-                            interesting_data_per_c["Uploaded in YYYY-MM"].append(
-                                p["record_insertion_time"][:7]
-                            )
+                            interesting_data_per_c_invalid[
+                                "Uploaded in YYYY-MM"
+                            ].append(p["record_insertion_time"][:7])
                     with open("output_invalid.txt", "a") as invalid_txt:
                         invalid_txt.write(
                             str(p["serial_number"][:]) + ": " + check_SN_message + "\n"
@@ -186,11 +186,14 @@ if not skip_data_prep:
                         interesting_data_per_c_fakes["Uploaded in YYYY-MM"].append(
                             p["record_insertion_time"][:7]
                         )
-        interesting_data_all_cats[c] = interesting_data_per_c
+        interesting_data_all_cats_invalid[c] = interesting_data_per_c_invalid
         interesting_data_all_cats_valid[c] = interesting_data_per_c_valid
         interesting_data_all_cats_fakes[c] = interesting_data_per_c_fakes
 
-    multi_count_dict = {
+    multi_count_dict_invalid = {
+        c: {f: dict() for f in interesting_features} for c in categories
+    }
+    multi_count_dict_valid = {
         c: {f: dict() for f in interesting_features} for c in categories
     }
     multi_count_dict_valid = {
@@ -201,8 +204,11 @@ if not skip_data_prep:
     }
     for c in categories:
         for f in interesting_features:
-            multi_count_dict[c][f] = dict(
-                Counter(interesting_data_all_cats[c][f]).items()
+            multi_count_dict_invalid[c][f] = dict(
+                Counter(interesting_data_all_cats_invalid[c][f]).items()
+            )
+            multi_count_dict_valid[c][f] = dict(
+                Counter(interesting_data_all_cats_valid[c][f]).items()
             )
             multi_count_dict_valid[c][f] = dict(
                 Counter(interesting_data_all_cats_valid[c][f]).items()
@@ -211,15 +217,15 @@ if not skip_data_prep:
                 Counter(interesting_data_all_cats_fakes[c][f]).items()
             )
 
-    with open("report_stats.json", "w") as rep_data_f:
-        json.dump(multi_count_dict, rep_data_f)
+    with open("report_stats_invalid.json", "w") as rep_data_f:
+        json.dump(multi_count_dict_invalid, rep_data_f)
     with open("report_stats_valid.json", "w") as rep_data_f:
         json.dump(multi_count_dict_valid, rep_data_f)
     with open("report_stats_fakes.json", "w") as rep_data_f:
         json.dump(multi_count_dict_fakes, rep_data_f)
 else:
-    with open("report_stats.json") as realJson:
-        multi_count_dict = json.load(realJson)
+    with open("report_stats_invalid.json") as invalidJson:
+        multi_count_dict_invalid = json.load(invalidJson)
     with open("report_stats_valid.json") as validJson:
         multi_count_dict_valid = json.load(validJson)
     with open("report_stats_fakes.json") as fakesJson:
@@ -317,8 +323,8 @@ def prepare_legend_and_plot(
 
 
 prepare_legend_and_plot(
-    multi_count_dict,
-    postfix="20W",
+    multi_count_dict_invalid,
+    postfix="invalid",
     title_prefix="Serial Numbers starting with 20W, NOT fulfilling the ATLAS convention. ",
 )
 prepare_legend_and_plot(
