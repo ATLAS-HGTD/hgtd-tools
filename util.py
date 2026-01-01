@@ -647,26 +647,44 @@ def check_SN_valid(snIn):
                 except Exception:
                     messageOut = "Failed to decode Module SN, check if you used this pattern: 20WMOKPBNNNNNN"
                     return False, messageOut
-            elif snIn[3] == "H" and snIn[4] == "Y":
+            elif snIn[3] == "H":
                 messageOut = "Attempting to decode Hybrid SN"
                 try:
-                    manu = snIn[5]
-                    if manu == "F" or manu == "1":
-                        manuExplainer = "IFAE"
-                    elif manu == "H" or manu == "2":
-                        manuExplainer = "IHEP"
-                    elif manu == "J" or manu == "3":
-                        manuExplainer = "IJCLab"
-                    elif manu == "M" or manu == "4":
-                        manuExplainer = "Mainz"
-                    elif manu == "A" or manu == "5":
-                        manuExplainer = "MAScIR"
-                    elif manu == "U" or manu == "6":
-                        manuExplainer = "USTC"
+                    manu_step2 = snIn[4]
+                    if manu_step2 == "N":
+                        manu_step2Explainer = "NCAP"
+                    elif manu_step2 == "P":
+                        manu_step2Explainer = "Patech"
                     else:
-                        manuExplainer = "Unknown Assembly site attribute!"
-                        return False, manuExplainer
-                    prod = snIn[6]
+                        manu_step2Explainer = (
+                            "Unknown Assembly site attribute for Step 2!"
+                        )
+                        return False, manu_step2Explainer
+                    manu_step3 = snIn[5]
+                    if manu_step3 == "N":
+                        manu_step3Explainer = "NCAP"
+                    elif manu_step3 == "D":
+                        manu_step3Explainer = "Disco"
+                    elif manu_step3 == "M":
+                        manu_step3Explainer = "micropack"
+                    else:
+                        manu_step3Explainer = (
+                            "Unknown Assembly site attribute for Step 3!"
+                        )
+                        return False, manu_step3Explainer
+                    manu_step4 = snIn[6]
+                    if manu_step4 == "N":
+                        manu_step4Explainer = "NCAP"
+                    elif manu_step4 == "I":
+                        manu_step4Explainer = "IFAE"
+                    elif manu_step4 == "C":
+                        manu_step4Explainer = "CNM"
+                    else:
+                        manu_step4Explainer = (
+                            "Unknown Assembly site attribute for Step 4!"
+                        )
+                        return False, manu_step4Explainer
+                    prod = snIn[7]
                     if prod == "M" or prod == "0":
                         prodExplainer = "Main production"
                     elif prod == "P":
@@ -680,14 +698,15 @@ def check_SN_valid(snIn):
                     else:
                         prodExplainer = "Unknown Production attribute!"
                         return False, prodExplainer
-                    counter = "".join(snIn[7:14])
-                    propertiesOut = f"Manufacturer / Vendor: {manu} ({manuExplainer}), Production: {prod} ({prodExplainer}), Counter: {counter}"
+                    batchn = f"{snIn[8]}{snIn[9]}"
+                    counter = "".join(snIn[10:14])
+                    propertiesOut = f"Manufacturer / Vendor (Step 2): {manu_step2} ({manu_step2Explainer}), Manufacturer / Vendor (Step 3): {manu_step3} ({manu_step3Explainer}), Manufacturer / Vendor (Step 4): {manu_step4} ({manu_step4Explainer}), Production: {prod} ({prodExplainer}), Batch number: {batchn}, Counter: {counter}"
                     if lengthMessageOut == "":
                         messageOut = "Successfully decoded Hybrid SN"
                     else:
                         messageOut = ""
                 except Exception:
-                    messageOut = "Failed to decode Hybrid SN, check if you used this pattern: 20WHYMPNNNNNNN"
+                    messageOut = "Failed to decode Hybrid SN, check if you used this pattern: 20WHMMMPBBNNNN"
                     return False, messageOut
             elif snIn[3] == "A" and snIn[4] == "S":
                 messageOut = "Attempting to decode ASIC SN"
