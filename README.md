@@ -44,6 +44,7 @@ These tools interact with the HGTD Production Database for the HGTD Phase-II Upg
   - Reporting
     - automation with Gitlab CI, using the hgtdbot account
     - runner script producing overviews / reports
+  - Flex Tail upload provided by `upload_FlexTail_measurements.py`
 
 ### 1.2 Open points requiring implementation
 New features, bugs, compatibility improvements and other items are collected with the [Issues](https://gitlab.cern.ch/anstein/hgtd-tools/-/issues)
@@ -137,6 +138,18 @@ Closing the application works like you would expect from other applications, e.g
 
 #### 3.2.1 Documentation of typical use cases of the GUI application
 We have a new [documentation page](https://hgtd-database.docs.cern.ch/) for the HGTD Production Database, which contains a [section on hgtd-tools](https://hgtd-database.docs.cern.ch/content/user/parts_tree_hgtd-tools/) as well. You will find guides to use the tools over there.
+
+
+### 3.3 Using the `upload_FlexTail_measurement.py` script for uploading flex tail measurements
+
+After performing all electrical and mechanical measurements of a batch of flex tails, upload the folder containing all measurements to the database. The optional `--dryrun` argument can be useful to test if the upload will succeed or not. For more information on the uploading procedure, please read `FT_upload_instructions.md`.
+
+Execute the following from the hgtd-tools directory:
+
+```shell
+conda activate hgtd
+python upload_FlexTail_measurement.py --analysis-folder FT_Measurements --user-name myName --meas_location test --meas_start_date YYYY-MM-DD --meas_end_date YYYY-MM-DD --run_type FT_characterisation_test (--dryrun True)
+```
 
 ## 4. Developer corner
 ### 4.1 Reusing the included API module
