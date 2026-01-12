@@ -11,6 +11,7 @@ repos:
         exclude: local
     -   id: trailing-whitespace
         exclude: local
+        args: [--markdown-linebreak-ext=md]
     -   id: requirements-txt-fixer
 -   repo: https://github.com/asottile/reorder-python-imports
     rev: v3.15.0

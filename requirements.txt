@@ -6,3 +6,4 @@ mplhep
 numpy
 pre-commit
 pyyaml
+zensical

@@ -8,6 +8,7 @@ stages:
   - build
   - generate_reports
   - deploy_reports
+  - deploy_docs
 
 pre-commit:
   stage: build
@@ -63,3 +64,20 @@ sync_to_eos:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: never
+
+
+.job-script: &job-script
+  - pip install zensical
+  - zensical build --clean
+
+pages:
+  stage: deploy_docs
+  image: registry.cern.ch/docker.io/library/python:latest
+  script: [*job-script, "if [[ -f _redirects ]]; then cp _redirects public; fi;"]
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 hour
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: always
