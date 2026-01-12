@@ -8,6 +8,13 @@ import api
 import data
 
 
+# from : https://svn.blender.org/svnroot/bf-blender/trunk/blender/build_files/scons/tools/bcolors.py
+class bcolors:
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+
+
 # === Operations with standard objects (lists, dicts, strings etc.)
 def flatten(xss):
     return [x for xs in xss for x in xs]
