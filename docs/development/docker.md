@@ -1,4 +1,6 @@
-# All docker support for hgtd-tools deprecated on Dec 20th, 2025, in favor of user's python environments.
+# Docker (deprecated)
+
+All docker support for hgtd-tools deprecated on Dec 20th, 2025, in favor of user's python environments.
 
 The following is kept only for archival purposes. The last version containing a Dockerfile is v1.8.1, up to commit 902e9cb9c8f7bdb3aed780c13201041f1db9d246.
 
@@ -10,7 +12,7 @@ first one needs a PAT from gitlab with the right to upload to the registry:
 ```
 docker login gitlab-registry.cern.ch
 ```
-or second one, harbor (see instructions https://atlassoftwaredocs.web.cern.ch/analysis-software/ASWTutorial/softwareEssentials/building_containers/). The secret token can be found from top right click user profile and serves as the password when loggin in:
+or second one, harbor (see instructions [in ATLAS Software docs](https://atlassoftwaredocs.web.cern.ch/analysis-software/ASWTutorial/softwareEssentials/building_containers/){target="_blank"}). The secret token can be found from top right click user profile and serves as the password when loggin in:
 ```
 docker login registry.cern.ch
 ```
@@ -28,7 +30,7 @@ The `Dockerfile` (or `_lxplus_Dockerfile`) are setup to directly run to the entr
 
 On Mac: use `bash docker-build_run_on_Mac.sh` if you want to build a new container from the source and run it locally for testing. If you are happy with that, do `bash docker-build_push_for_amd64.sh` to build for the platform that is present at CERN (lxplus, pod -> amd64). You can also run a container on Mac without building a new one, by doing `bash docker-run_on_Mac.sh`.
 
-On linux / lxplus: there is another Dockerfile that pulls the base image from another registry (due to limited number of pulls from the same unauthenticated IP address). You can run a container with an already existing image `bash docker-run_on_lxplus.sh` (see this [source](https://gist.github.com/Moosems/138cfea6fc4e1967e4eae52bd96618ff)) and to build a new image do `bash docker-build_run_on_linux.sh` (does not work yet on lxplus, or you need special rights / uid / gid to perform apt-get install commands).
+On linux / lxplus: there is another Dockerfile that pulls the base image from another registry (due to limited number of pulls from the same unauthenticated IP address). You can run a container with an already existing image `bash docker-run_on_lxplus.sh` (see this [source](https://gist.github.com/Moosems/138cfea6fc4e1967e4eae52bd96618ff){target="_blank"}) and to build a new image do `bash docker-build_run_on_linux.sh` (does not work yet on lxplus, or you need special rights / uid / gid to perform apt-get install commands).
 
 
 #### X.2.2 Useful commands to do the build / tag / push / run manually
