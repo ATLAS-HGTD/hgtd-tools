@@ -49,7 +49,7 @@ The operation modes of hgtd-tools and what relations are affected:
 | Detector Assembly (CERN): FT | Detector Unit       | Flex Tail  | local coordinates of form `RxMy` |
 | Detector Assembly (CERN): FT | PEB       | Flex Tail  | local coordinates of form `RxMy` |
 
-If you do not find the relation you wish to enter in this table, refer to the [alternative strategy with the main frontend single or bulk upload](/https://hgtd-database.docs.cern.ch/content/user/fill_parts_tree/){target="_blank"} instead.
+If you do not find the relation you wish to enter in this table, refer to the [alternative strategy with the main frontend single or bulk upload](https://hgtd-database.docs.cern.ch/content/user/fill_parts_tree/){target="_blank"} instead.
 
 !!! success "Get ready to use hgtd-tools"
     Please follow the [install guide](../getting_started/install.md) to learn more about how you can install hgtd-tools
