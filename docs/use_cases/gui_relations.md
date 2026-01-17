@@ -67,8 +67,10 @@ contains the actual user input and buttons to perform the parts tree operations.
     be used to relate your new additions in the database to your username. In
     case there are questions to those records, we will know whom to contact!
     Since version v1.7.2 and later, user login is mandatory for operations
-    that add or delete relations. Just fetching data is still possible without
-    login.
+    that add or delete relations. Just fetching data is still possible without login.
+
+    Without login and attempting to perform POST/DELETE DB operations, e.g. adding relations, the GUI will error and abort the operation:
+    ![error_login.png](../images/for_user/hgtd-tools/error_login.png)
 
     **How to login to hgtd-tools:**
     When you click on the User dropdown menu (which originally says "None"),
