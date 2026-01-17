@@ -59,6 +59,24 @@ edit_uri = "blob/master/docs/"
 #   { "Get started" = "index.md" },
 #   { "Markdown in 5min" = "markdown.md" },
 # ]
+nav = [
+    {"Welcome to hgtd-tools!" = "index.md"},
+    {"Getting started" = [
+        "getting_started/install.md",
+        "getting_started/update.md",
+    ]},
+    {"Use cases" = [
+        "use_cases/SN_reservation.md",
+        "use_cases/gui_relations.md",
+        "use_cases/FT_upload_instructions.md",
+    ]},
+    {"Development" = [
+        "development/dev.md",
+        "development/procedure_new_release.md",
+        "development/docker.md",
+        "development/dev_help.md",
+    ]}
+]
 
 # With the "extra_css" option you can add your own CSS styling to customize
 # your Zensical project according to your needs. You can add any number of
