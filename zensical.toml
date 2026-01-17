@@ -68,7 +68,7 @@ edit_uri = "blob/master/docs/"
 #
 # Read more: https://zensical.org/docs/customization/#additional-css
 #
-#extra_css = ["stylesheets/extra.css"]
+extra_css = ["stylesheets/extra.css"]
 
 # With the `extra_javascript` option you can add your own JavaScript to your
 # project to customize the behavior according to your needs.
@@ -262,6 +262,9 @@ features = [
     #"toc.integrate",
 ]
 
+# do not load fonts from google
+font = false
+
 # ----------------------------------------------------------------------------
 # In the "palette" subsection you can configure options for the color scheme.
 # You can configure different color # schemes, e.g., to turn on dark mode,
@@ -284,17 +287,6 @@ media = "(prefers-color-scheme: dark)"
 scheme = "slate"
 toggle.icon = "lucide/moon"
 toggle.name = "Switch to light mode"
-
-
-# ----------------------------------------------------------------------------
-# In the "font" subsection you can configure the fonts used. By default, fonts
-# are loaded from Google Fonts, giving you a wide range of choices from a set
-# of suitably licensed fonts. There are options for a normal text font and for
-# a monospaced font used in code blocks.
-# ----------------------------------------------------------------------------
-#[project.theme.font]
-#text = "Inter"
-#code = "Jetbrains Mono"
 
 # ----------------------------------------------------------------------------
 # You can configure your own logo to be shown in the header using the "logo"
