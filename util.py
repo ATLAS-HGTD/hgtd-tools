@@ -205,6 +205,87 @@ def get_SN_of_parts(parts):
     return [part["serial_number"] for part in parts]
 
 
+def select_parts(
+    parts,
+    location_shortname=None,
+    location_name=None,
+    location_id=None,
+    manu_shortname=None,
+    manu_name=None,
+    manu_id=None,
+    check_valid_SN_latest_spec=False,
+    no_parents_ofKind=None,
+    no_children_ofKind=None,
+    has_parents_ofKind=None,
+    has_children_ofKind=None,
+):
+    if location_shortname != None:
+        parts = [
+            iP
+            for iP in parts
+            if str(iP["location"]["location_id"])
+            == str(data.relevant_location_IDs_by_shortname[location_shortname])
+        ]
+    if location_name != None:
+        parts = [
+            iP
+            for iP in parts
+            if str(iP["location"]["location_name"]) == str(location_name)
+        ]
+    if location_id != None:
+        parts = [
+            iP for iP in parts if str(iP["location"]["location_id"]) == str(location_id)
+        ]
+    if manu_shortname != None:
+        parts = [
+            iP
+            for iP in parts
+            if str(iP["manufacturer"]["manufacturer_id"])
+            == str(data.relevant_manufacturer_IDs_by_shortname[manu_shortname])
+        ]
+    if manu_name != None:
+        parts = [
+            iP
+            for iP in parts
+            if str(iP["manufacturer"]["manufacturer_name"]) == str(manu_name)
+        ]
+    if manu_id != None:
+        parts = [
+            iP
+            for iP in parts
+            if str(iP["manufacturer"]["manufacturer_id"]) == str(manu_id)
+        ]
+    if check_valid_SN_latest_spec == True:
+        parts = [
+            iP for iP in parts if check_SN_valid(str(iP["serial_number"]))[0] == True
+        ]
+    if no_parents_ofKind != None:
+        parts = [
+            iP
+            for iP in parts
+            if get_parents(iP["part_id"], ofKind=no_parents_ofKind)[0] == []
+        ]
+    if no_children_ofKind != None:
+        parts = [
+            iP
+            for iP in parts
+            if get_children(iP["part_id"], ofKind=no_children_ofKind)[0] == []
+        ]
+    if has_parents_ofKind != None:
+        parts = [
+            iP
+            for iP in parts
+            if len(get_parents(iP["part_id"], ofKind=has_parents_ofKind)[0]) > 0
+        ]
+    if has_children_ofKind != None:
+        parts = [
+            iP
+            for iP in parts
+            if len(get_children(iP["part_id"], ofKind=has_children_ofKind)[0]) > 0
+        ]
+    return parts
+
+
 def get_relevant_parts(
     partKoP_shortname, onlyNonDeleted=True, getFullAttributes=False, useLocal=False
 ):
@@ -416,7 +497,7 @@ def check_SN_valid(snIn):
     messageOut = "Invalid Serial Number"
     lengthMessageOut = ""
     propertiesOut = ""
-    if snIn[:3] == "99W":
+    if (snIn[:3] == "99W") or (snIn[:3] == "98W"):
         messageOut = "This is a test SN only / dummy placeholder for DB development."
         return False, messageOut
     elif snIn[:3] == "20W":
@@ -826,9 +907,9 @@ def check_SN_valid(snIn):
                     else:
                         ringExplainer = "Unknown Ring attribute!"
                         return False, ringExplainer
-                    type = str(snIn[9]) + str(snIn[10])
+                    numerictype = str(snIn[9]) + str(snIn[10])
                     counter = str(snIn[11]) + str(snIn[12]) + str(snIn[13])
-                    propertiesOut = f"Manufacturer / Vendor: {manu} ({manuExplainer}), Production: {prod} ({prodExplainer}), F or B type: {side} ({sideExplainer}), Ring: {ring} ({ringExplainer}), Type: {type}, Counter: {counter}"
+                    propertiesOut = f"Manufacturer / Vendor: {manu} ({manuExplainer}), Production: {prod} ({prodExplainer}), F or B type: {side} ({sideExplainer}), Ring: {ring} ({ringExplainer}), Type: {numerictype}, Counter: {counter}"
                     if lengthMessageOut == "":
                         messageOut = "Successfully decoded Support Unit SN"
                     else:
@@ -887,9 +968,9 @@ def check_SN_valid(snIn):
                     else:
                         ringExplainer = "Unknown Ring attribute!"
                         return False, ringExplainer
-                    type = str(snIn[9]) + str(snIn[10])
+                    numerictype = str(snIn[9]) + str(snIn[10])
                     counter = str(snIn[11]) + str(snIn[12]) + str(snIn[13])
-                    propertiesOut = f"Sites that install modules on SU: {manu} ({manuExplainer}), Production: {prod} ({prodExplainer}), F or B type: {side} ({sideExplainer}), Ring: {ring} ({ringExplainer}), Type: {type}, Counter: {counter}"
+                    propertiesOut = f"Sites that install modules on SU: {manu} ({manuExplainer}), Production: {prod} ({prodExplainer}), F or B type: {side} ({sideExplainer}), Ring: {ring} ({ringExplainer}), Type: {numerictype}, Counter: {counter}"
                     if lengthMessageOut == "":
                         messageOut = "Successfully decoded Detector Unit SN"
                     else:
@@ -966,9 +1047,9 @@ def check_SN_valid(snIn):
                         return False, prodExplainer
                     batchn = str(snIn[7])
                     grounding = str(snIn[8])
-                    type = str(snIn[9]) + str(snIn[10])
+                    numerictype = str(snIn[9]) + str(snIn[10])
                     counter = str(snIn[11]) + str(snIn[12]) + str(snIn[13])
-                    propertiesOut = f"Manufacturer / Vendor: {manu} ({manuExplainer}), Production: {prod} ({prodExplainer}), Batch number: {batchn}, Grounding scheme: {grounding}, Type: {type}, Counter: {counter}"
+                    propertiesOut = f"Manufacturer / Vendor: {manu} ({manuExplainer}), Production: {prod} ({prodExplainer}), Batch number: {batchn}, Grounding scheme: {grounding}, Type: {numerictype}, Counter: {counter}"
                     if lengthMessageOut == "":
                         messageOut = "Successfully decoded PEB SN"
                     else:
