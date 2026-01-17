@@ -51,6 +51,16 @@ The following overview lists the implemented features of `hgtd-tools` and links 
 
 If you walked through the [install](getting_started/install.md) guide, are currently in the `hgtd-tools` dir and you activated the environment with `conda activate hgtd`, the following tools will be available:
 
+??? tip "Using the `SN_reservation.py` script for module serial number reservation"
+
+    When doing module assembly, you may want to reserve serial numbers (e.g. for a new week of module production) that no one else can pick after you reserved them. For more information on the reservation process, please read [SN_reservation](use_cases/SN_reservation.md).
+
+    Execute the following from the hgtd-tools directory:
+
+    ```shell
+    python SN_reservation.py --user-name <your-user-name> --site <some-site> --prod <some-prod> --batch <some-batchNr> --n-reserve <how-many-SNs-to-reserve> (--dryrun True)
+    ```
+
 ??? tip "Using the `main.py` GUI for Part-to-Part relations, starting from module assembly"
 
     If you have done some connections between multi-relation parts, like module assembly, module loading, detector assembly with DUs, PEBs or Flex Tails, or you want to get assistance on what to pick, use the GUI of hgtd-tools.
@@ -77,16 +87,6 @@ If you walked through the [install](getting_started/install.md) guide, are curre
 
     ```shell
     python upload_FlexTail_measurement.py --analysis-folder FT_Measurements --user-name myName --meas_location test --meas_start_date YYYY-MM-DD --meas_end_date YYYY-MM-DD --run_type FT_characterisation_test (--dryrun True)
-    ```
-
-??? tip "Using the `SN_reservation.py` script for module serial number reservation"
-
-    When doing module assembly, you may want to reserve serial numbers (e.g. for a new week of module production) that no one else can pick after you reserved them. For more information on the reservation process, please read [SN_reservation](use_cases/SN_reservation.md).
-
-    Execute the following from the hgtd-tools directory:
-
-    ```shell
-    python SN_reservation.py --user-name <your-user-name> --site <some-site> --prod <some-prod> --batch <some-batchNr> --n-reserve <how-many-SNs-to-reserve> (--dryrun True)
     ```
 
 ## Contributing
