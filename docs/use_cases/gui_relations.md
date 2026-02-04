@@ -32,9 +32,9 @@ operations with relations to other KoPs (most importantly: Slot table).
 The operation modes of hgtd-tools and what relations are affected:
 
 | Mode      | Parent KoP        | Child KoP                  | Position|
-| ----------- | ----------- | ------------------------------------ | ----- |
+| ----------- | ----------- | ------------------------- | ----- |
 |  |  |  |  |
-| Module Assembly | Module | Module Flex | empty |
+| Module Assembly | Module | Module Flex | empty |
 | Module Assembly | Module | Hybrid | one of either `HV` or `LV` |
 |  |  |  |  |
 | Module Loading | Detector Unit       | Module  | local coordinates of form `RxMy` |

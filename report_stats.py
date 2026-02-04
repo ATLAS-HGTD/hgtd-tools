@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
 from cycler import cycler
+from matplotlib import rcParams
 
 import data
 import util
@@ -63,9 +64,23 @@ parser.add_argument(
     help="[Optional] Do not run the actual requests to the DB, pick existing data.",
     default=False,
 )
+parser.add_argument(
+    "--subtitle",
+    dest="subtitle",
+    help="[Optional] Add a subtitle with SN category and commit + date of generation.",
+    default=True,
+)
+parser.add_argument(
+    "--custom-text",
+    dest="customText",
+    help="[Optional] Replace Production Database text in plot label with your custom text (e.g. Preliminary, Internal...).",
+    default=None,
+)
 args = parser.parse_args()
-testrun = args.testrun
-skip_data_prep = args.skipDataPrep
+testrun = util.str2bool(args.testrun)
+skip_data_prep = util.str2bool(args.skipDataPrep)
+subtitle = util.str2bool(args.subtitle)
+exp_text = args.customText if args.customText != None else "Production Database"
 
 categories = (
     [
@@ -294,10 +309,20 @@ def prepare_legend_and_plot(
 
             hep.label.exp_text(
                 "ATLAS HGTD",
-                "Production Database",
-                f"{title_prefix}Generated with anstein/hgtd-tools~master on {datetime.today().strftime('%Y-%m-%d')}",
+                " " + exp_text,
+                (
+                    f"{title_prefix}Generated with anstein/hgtd-tools~master on {datetime.today().strftime('%Y-%m-%d')}"
+                    if subtitle
+                    else ""
+                ),
                 loc=4,
-                italic=(True, False, False),
+                fontsize=(
+                    rcParams["font.size"] * 1.3,
+                    rcParams["font.size"] * 1.3,
+                    rcParams["font.size"],
+                    rcParams["font.size"] / 1.7,
+                ),
+                fontstyle=("italic", "normal", "italic", "normal"),
             )
             if filename_prefix == "counts":
                 ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 1.05 * 1.05)
