@@ -53,10 +53,10 @@ plt.rcParams["axes.prop_cycle"] = cycler(
 # === CONFIGURATION FOR DATA ACCESS ===
 parser = ArgumentParser("CLI for reporting (parts stats)")
 parser.add_argument(
-    "--testrun",
-    dest="testrun",
-    help="[Optional] Only test running with a very limited set of categories.",
-    default=False,
+    "--categories",
+    dest="categories",
+    help="[Optional] Use all or a limited set of categories [None, public, test].",
+    default=None,
 )
 parser.add_argument(
     "--skip-data-prep",
@@ -76,34 +76,59 @@ parser.add_argument(
     help="[Optional] Replace Production Database text in plot label with your custom text (e.g. Preliminary, Internal...).",
     default=None,
 )
+parser.add_argument(
+    "--log-axis",
+    dest="logAxis",
+    help="[Optional] Use logarithmic y-axis instead of linear.",
+    default=False,
+)
 args = parser.parse_args()
-testrun = util.str2bool(args.testrun)
+
+all_cats = [
+    "Sensor",
+    "Wafer",
+    "ASIC",
+    "Hybrid",
+    "Module Flex",
+    "Module",
+    "Support Unit",
+    "Detector Unit",
+    "PEB",
+    "PEB_MUX64",
+    "Flex Tail",
+    "HV_PS",
+    "HV_module",
+]
+public_cats = [
+    "Sensor",
+    "Wafer",
+    # "ASIC", add them back when significant portion is uploaded
+    "Hybrid",
+    "Module Flex",
+    "Module",
+    "Support Unit",
+    "Detector Unit",
+    "PEB",
+    # "PEB_MUX64", add them back when significant portion is uploaded
+    "Flex Tail",
+    "HV_PS",
+    "HV_module",
+]
+test_cats = [
+    "HV_PS",
+    "HV_module",
+]
+if args.categories == None:
+    categories = all_cats
+elif args.categories == "public":
+    categories = public_cats
+elif args.categories == "test":
+    categories = test_cats
 skip_data_prep = util.str2bool(args.skipDataPrep)
 subtitle = util.str2bool(args.subtitle)
 exp_text = args.customText if args.customText != None else "Production Database"
+log_axis = util.str2bool(args.logAxis)
 
-categories = (
-    [
-        "Sensor",
-        "Wafer",
-        "ASIC",
-        "Hybrid",
-        "Module Flex",
-        "Module",
-        "Support Unit",
-        "Detector Unit",
-        "PEB",
-        "PEB_MUX64",
-        "Flex Tail",
-        "HV_PS",
-        "HV_module",
-    ]
-    if not testrun
-    else [
-        "HV_PS",
-        "HV_module",
-    ]
-)
 interesting_features = [
     "Location",
     "Manufacturer",
@@ -263,6 +288,7 @@ def prepare_legend_and_plot(
         # need to fill the set of possible legend entries with new values (old and fill with 0)
         values = []
         fractions = []
+        n_categories = len(categories)
         for c in categories:
             values_list_this_c = []
             fractions_list_this_c = []
@@ -285,25 +311,33 @@ def prepare_legend_and_plot(
         def plot(input_array, filename_prefix):
             fig, ax = plt.subplots(figsize=(12, 8))
 
-            bottom_values = np.zeros(len(categories))
+            bottom_values = np.zeros(n_categories)
 
             for i, subcategory in enumerate(all_legend_entries):
                 ax.bar(
-                    [i * 0.5 for i in range(len(categories))],
+                    [i * 0.5 for i in range(n_categories)],
                     input_array[:, i],
                     bottom=bottom_values,
                     label=subcategory,
                     width=0.4,
                 )
                 bottom_values += input_array[:, i]
-                ax.set_xticks([i * 0.5 for i in range(len(categories))], categories)
+                ax.set_xticks([i * 0.5 for i in range(n_categories)], categories)
 
             for tick in ax.get_xticklabels():
                 tick.set_rotation(90)
 
             if filename_prefix == "counts":
                 ax.set_ylabel("Number of parts")
-                ax.legend(title=f)
+                if f == "Location":
+                    ax.legend(
+                        title=f,
+                        ncol=2,
+                        loc="center right",
+                        fontsize=rcParams["font.size"] / 1.3,
+                    )
+                else:
+                    ax.legend(title=f, ncol=2, fontsize=rcParams["font.size"] / 1.3)
             elif filename_prefix == "fractions":
                 ax.set_ylabel("Fraction of parts")
 
@@ -325,9 +359,15 @@ def prepare_legend_and_plot(
                 fontstyle=("italic", "normal", "italic", "normal"),
             )
             if filename_prefix == "counts":
-                ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 1.05 * 1.05)
-            elif filename_prefix == "fractions":
-                ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 1.05 * 1.05 * 1.05)
+                if log_axis:
+                    ax.set_yscale("log")
+                # if f == "Location":
+                #    ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 1.05 * 1.05)
+            hep.utils.mpl_magic(ax, soft_fail=True)
+            ax.set_xlim(
+                ax.get_xlim()[0] - n_categories * 0.025,
+                ax.get_xlim()[-1] + n_categories * 0.025,
+            )
             fig.savefig(
                 f"{filename_prefix}_{f}_{postfix}.pdf",
                 bbox_inches="tight",
