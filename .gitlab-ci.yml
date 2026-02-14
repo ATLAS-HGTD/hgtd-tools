@@ -25,13 +25,12 @@ pre-commit:
 generate_files:
   stage: generate_reports
   image: registry.cern.ch/docker.io/library/python:3.12
-  variables:
-    SECURE_FILES_DOWNLOAD_PATH: './'
   script:
     - echo "🔧  Installing dependencies"
     - pip install -r requirements.txt
-    - curl --silent "https://gitlab.com/gitlab-org/incubation-engineering/mobile-devops/download-secure-files/-/raw/main/installer" | bash
-    - echo "🛠️  Running your stats report"
+    - glab auth login --hostname $CI_SERVER_FQDN --job-token $CI_JOB_TOKEN
+    - glab securefile download --all
+    - echo "🛠️  Running your yields report"
     - python report_stats.py
     - mkdir generated
     - cp counts*.pdf generated
