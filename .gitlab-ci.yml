@@ -33,7 +33,7 @@ get_secret:
     - glab securefile download --all
   artifacts:
     paths:
-      - ./
+      - ./config_api
     expire_in: 10 min
     access: 'maintainer'
 

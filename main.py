@@ -98,6 +98,7 @@ class AuthenticateWindow(customtkinter.CTkToplevel):
 
     def auth(self):
         try:
+            # this authentication method survives for as long as the GUI is open
             self.auth_user, self.last_responseText = api.get_user(
                 self.username_variable.get(),
                 self.password_variable.get(),

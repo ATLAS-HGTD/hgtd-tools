@@ -3,51 +3,12 @@ import json
 import os
 from argparse import ArgumentParser
 from collections import Counter
-from datetime import datetime
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import mplhep as hep
 import numpy as np
-from cycler import cycler
-from matplotlib import rcParams
 
 import data
+import plotter
 import util
-
-color_sequence1 = [
-    "#3f90da",
-    "#ffa90e",
-    "#bd1f01",
-    "#94a4a2",
-    "#832db6",
-    "#a96b59",
-    "#e76300",
-    "#b9ac70",
-    "#717581",
-    "#92dadd",
-]
-color_sequence2 = [
-    "#d55e00",
-    "#56b4e9",
-    "#e69f00",
-    "#f0e442",
-    "#009e73",
-    "#cc79a7",
-    "#0072b2",
-]
-combination_color_sequence = color_sequence1 + color_sequence2
-
-
-colors_tab20c = mpl.color_sequences["tab20c"]
-
-
-# ATLAS plot style
-hep.style.use("ATLAS1")
-plt.rcParams["axes.axisbelow"] = True
-plt.rcParams["axes.prop_cycle"] = cycler(
-    "color", colors_tab20c + combination_color_sequence
-)
 
 
 # === CONFIGURATION FOR DATA ACCESS ===
@@ -124,6 +85,7 @@ elif args.categories == "public":
     categories = public_cats
 elif args.categories == "test":
     categories = test_cats
+
 skip_data_prep = util.str2bool(args.skipDataPrep)
 subtitle = util.str2bool(args.subtitle)
 exp_text = args.customText if args.customText != None else "Production Database"
@@ -272,31 +234,44 @@ else:
         multi_count_dict_fakes = json.load(fakesJson)
 
 
-def prepare_legend_and_plot(
-    input_dict, postfix="20W", title_prefix="Serial Numbers starting with 20W only. "
+def batch_yield_plot(
+    input_dict, postfix="valid", title_prefix="Serial Numbers starting with 20W only. "
 ):
     """
-    Given a multi-dimensional input dictionary (with outer dimension the categories, and inner dimension the features), this creates plots for counts / fractions.
+    Given a multi-dimensional input dictionary (with outer dimension the
+    categories, and inner dimension the features), this creates plots for counts
+     / fractions.
     """
-    for f in interesting_features:
-        # merge the legend entries from different categories (i.e. Locations for Sensors, Locations for Modules...)
+    for feature_legend_title in interesting_features:
+        # merge the legend entries from different categories (i.e. Locations
+        # for Sensors, Locations for Modules...)
 
         all_legend_entries = sorted(
-            list(set(util.flatten([list(input_dict[c][f].keys()) for c in categories])))
+            list(
+                set(
+                    util.flatten(
+                        [
+                            list(input_dict[c][feature_legend_title].keys())
+                            for c in categories
+                        ]
+                    )
+                )
+            )
         )
 
-        # need to fill the set of possible legend entries with new values (old and fill with 0)
+        # need to fill the set of possible legend entries with new values (old
+        # and fill with 0)
         values = []
         fractions = []
-        n_categories = len(categories)
         for c in categories:
             values_list_this_c = []
             fractions_list_this_c = []
             for sc in all_legend_entries:
-                if sc in input_dict[c][f].keys():
-                    values_list_this_c.append(input_dict[c][f][sc])
+                if sc in input_dict[c][feature_legend_title].keys():
+                    values_list_this_c.append(input_dict[c][feature_legend_title][sc])
                     fractions_list_this_c.append(
-                        input_dict[c][f][sc] / sum(input_dict[c][f].values())
+                        input_dict[c][feature_legend_title][sc]
+                        / sum(input_dict[c][feature_legend_title].values())
                     )
                 else:
                     values_list_this_c.append(0)
@@ -306,99 +281,44 @@ def prepare_legend_and_plot(
         values = np.array(values)
         fractions = np.array(fractions)
 
-        # ============
-
-        def plot(input_array, filename_prefix):
-            fig, ax = plt.subplots(figsize=(12, 8))
-
-            bottom_values = np.zeros(n_categories)
-
-            for i, subcategory in enumerate(all_legend_entries):
-                ax.bar(
-                    [i * 0.5 for i in range(n_categories)],
-                    input_array[:, i],
-                    bottom=bottom_values,
-                    label=subcategory,
-                    width=0.4,
-                )
-                bottom_values += input_array[:, i]
-                ax.set_xticks([i * 0.5 for i in range(n_categories)], categories)
-
-            for tick in ax.get_xticklabels():
-                tick.set_rotation(90)
-
-            if filename_prefix == "counts":
-                ax.set_ylabel("Number of parts")
-                if f == "Location":
-                    ax.legend(
-                        title=f,
-                        ncol=2,
-                        loc="center right",
-                        fontsize=rcParams["font.size"] / 1.3,
-                    )
-                else:
-                    ax.legend(title=f, ncol=2, fontsize=rcParams["font.size"] / 1.3)
-            elif filename_prefix == "fractions":
-                ax.set_ylabel("Fraction of parts")
-
-            hep.label.exp_text(
-                "ATLAS HGTD",
-                " " + exp_text,
-                (
-                    f"{title_prefix}Generated with anstein/hgtd-tools~master on {datetime.today().strftime('%Y-%m-%d')}"
-                    if subtitle
-                    else ""
-                ),
-                loc=4,
-                fontsize=(
-                    rcParams["font.size"] * 1.3,
-                    rcParams["font.size"] * 1.3,
-                    rcParams["font.size"],
-                    rcParams["font.size"] / 1.7,
-                ),
-                fontstyle=("italic", "normal", "italic", "normal"),
-            )
-            if filename_prefix == "counts":
-                if log_axis:
-                    ax.set_yscale("log")
-                # if f == "Location":
-                #    ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 1.05 * 1.05)
-            hep.utils.mpl_magic(ax, soft_fail=True)
-            ax.set_xlim(
-                ax.get_xlim()[0] - n_categories * 0.025,
-                ax.get_xlim()[-1] + n_categories * 0.025,
-            )
-            fig.savefig(
-                f"{filename_prefix}_{f}_{postfix}.pdf",
-                bbox_inches="tight",
-                facecolor="white",
-                dpi=300,
-            )
-            fig.savefig(
-                f"{filename_prefix}_{f}_{postfix}.png",
-                bbox_inches="tight",
-                facecolor="white",
-                dpi=300,
-            )
-
-        # ============
-
-        plot(values, "counts")
-        plot(fractions, "fractions")
+        plotter.plot_categorical_bar_stack(
+            values,
+            "counts",
+            categories,
+            all_legend_entries,
+            feature_legend_title,
+            exp_text,
+            title_prefix,
+            subtitle,
+            log_axis,
+            postfix,
+        )
+        plotter.plot_categorical_bar_stack(
+            fractions,
+            "fractions",
+            categories,
+            all_legend_entries,
+            feature_legend_title,
+            exp_text,
+            title_prefix,
+            subtitle,
+            log_axis,
+            postfix,
+        )
 
 
-prepare_legend_and_plot(
-    multi_count_dict_invalid,
+batch_yield_plot(
+    input_dict=multi_count_dict_invalid,
     postfix="invalid",
     title_prefix="Serial Numbers starting with 20W, NOT fulfilling the ATLAS convention. ",
 )
-prepare_legend_and_plot(
-    multi_count_dict_fakes,
+batch_yield_plot(
+    input_dict=multi_count_dict_fakes,
     postfix="fakes",
     title_prefix="Serial Numbers NOT starting with 20W. ",
 )
-prepare_legend_and_plot(
-    multi_count_dict_valid,
+batch_yield_plot(
+    input_dict=multi_count_dict_valid,
     postfix="valid",
     title_prefix="Serial Numbers starting with 20W, fulfilling the ATLAS convention. ",
 )
