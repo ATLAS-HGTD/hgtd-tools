@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-import datetime
-import getpass
 import os.path
 import shutil
 import tarfile
@@ -83,48 +81,6 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-def authenticate(u_name, pw, totp, localFolder_path):
-    try:
-        auth_user, last_responseText = api.get_user(u_name, pw, totp)
-    except (
-        requests.exceptions.HTTPError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
-        requests.exceptions.RequestException,
-    ) as e:
-        last_responseText = str(e)
-    except ValueError as e:
-        last_responseText = str(e)
-
-    if last_responseText[:2] != "20":
-        print(ERROR + "New user could not be authenticated." + f"\n{last_responseText}")
-        raise RuntimeError("User authentication failed")
-    else:
-        print(
-            INFO
-            + "User authenticated."
-            + "\nPreparing an access token, valid for the next 20 minutes."
-        )
-        token = api.get_access_token()
-        # write token and valid user name to localFolder,
-        with open(localFolder_path + "/" + u_name, "w") as outfile:
-            outfile.write(token)
-
-
-def test_for_existing_token_file(username):
-    """check the existance of token file and that its last modification was not too long ago
-    conservative timedelta of 18min because submission of the tar and cross-check of user might take a minute or two
-    """
-    if os.path.isfile(localFolder + "/" + username):
-        if datetime.datetime.now() - datetime.datetime.fromtimestamp(
-            os.path.getmtime(localFolder + "/" + username)
-        ) < datetime.timedelta(minutes=18):
-            return True
-        else:
-            return False
-    return False
-
-
 def check_existing(sn):
     for ft in existing_flextails:
         if str(ft["serial_number"]) == str(sn):
@@ -174,22 +130,10 @@ runType, measurementLocation, measurementStartDate, measurementEndDate = (
 )
 dryrun = args.dryrun
 
-# get existing token, search through the local folder to get file with username as filename
-# if existing token found, check validity, otherwise let user re-auth
-if not test_for_existing_token_file(username):
-    # authenticate user, request input from CLI
-    password = getpass.getpass("Type password, confirm with [Enter]: ")
-    sixdigit = input(
-        "Type 6-digit verification code if you have 2FA setup. "
-        "Confirm with [Enter]: "
-    )
 
-    authenticate(username, password, sixdigit, localFolder)
-
-
-# after this step, we definitely have a valid token stored
-with open(localFolder + "/" + username, "r") as tokenFile:
-    myToken = tokenFile.readlines()[0]
+# disentangle user auth from DB token, always get a new DB one
+api.user_auth_cli(username, local_folder)
+myToken = api.get_access_token()
 
 
 # create a directory with all measurements as .tar-archives

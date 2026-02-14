@@ -1,5 +1,3 @@
-import datetime
-import getpass
 import os.path
 import time
 from argparse import ArgumentParser
@@ -72,77 +70,26 @@ parser.add_argument(
 args = parser.parse_args()
 
 # read the arguments submitted from user by CLI
-username, comment, local_folder, how_many_to_reserve = (
+# required fields
+username, my_site, my_prod, my_batch, how_many_to_reserve = (
     args.userName,
-    args.comment,
-    args.localFolder,
+    args.site,
+    args.prod,
+    args.batch,
     int(args.nToReserve),
 )
-my_site, my_prod, my_batch, dryrun = args.site, args.prod, args.batch, args.dryrun
+# optional fields
+comment, local_folder = args.comment, args.localFolder
+# boolean flag
+dryrun = util.str2bool(args.dryrun)
 
 if comment == None:
     comment = "part SN reserved via hgtd-tools"
 
 
-def authenticate(u_name, pw, totp, local_folder):
-    try:
-        auth_user, last_responseText = api.get_user(u_name, pw, totp)
-    except (
-        requests.exceptions.HTTPError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
-        requests.exceptions.RequestException,
-    ) as e:
-        last_responseText = str(e)
-    except ValueError as e:
-        last_responseText = str(e)
-
-    if last_responseText[:2] != "20":
-        print("[ERROR] New user could not be authenticated." + f"\n{last_responseText}")
-        raise RuntimeError("User authentication failed")
-    else:
-        print(
-            "[INFO]"
-            + "User authenticated."
-            + "\nPreparing an access token, valid for the next 20 minutes."
-        )
-        token = api.get_access_token()
-        # write token and valid user name to localFolder,
-        # this overwrites if a previous one existed
-        with open(local_folder + "/" + u_name, "w") as outfile:
-            outfile.write(token)
-
-
-def test_for_existing_token_file(username):
-    """check the existance of token file and that its last modification was not too long ago
-    conservative timedelta of 10min because manual inputs and cross-check of user might take a couple minutes
-    """
-    if os.path.isfile(local_folder + "/" + username):
-        if datetime.datetime.now() - datetime.datetime.fromtimestamp(
-            os.path.getmtime(local_folder + "/" + username)
-        ) < datetime.timedelta(minutes=10):
-            return True
-        else:
-            return False
-    return False
-
-
-# get existing token, search through the db folder to get file with username as filename
-# if existing token found, check validity, otherwise let user re-auth
-if not test_for_existing_token_file(username):
-    # authenticate user, request input from CLI
-    password = getpass.getpass("Type password, confirm with [Enter]: ")
-    sixdigit = input(
-        "Type 6-digit verification code if you have 2FA setup. "
-        "Confirm with [Enter]: "
-    )
-
-    authenticate(username, password, sixdigit, local_folder)
-
-# after this step, we definitely have a valid token stored
-with open(local_folder + "/" + username, "r") as tokenFile:
-    myToken = tokenFile.readlines()[0]
-
+# disentangle user auth from DB token, always get a new DB one later on
+api.user_auth_cli(username, local_folder)
+myToken = api.get_access_token()
 
 modules, last_responseText = util.get_relevant_parts("Module")
 module_SNs = util.get_SN_of_parts(modules)
@@ -257,13 +204,13 @@ for i in range(how_many_to_reserve):
 
     if dryrun:
         last_responseText = api.post_information(
-            "/partslist", part_to_upload, dryrun=True
+            "/partslist", part_to_upload, dryrun=True, existing_token=myToken
         )
         print("Concluding dryrun without uploading.")
 
     else:
         last_responseText = api.post_information(
-            "/partslist", part_to_upload, dryrun=False
+            "/partslist", part_to_upload, dryrun=False, existing_token=myToken
         )
         if last_responseText[:2] != "20":
             print("Data was not uploaded successfully." + f"\n{last_responseText}")

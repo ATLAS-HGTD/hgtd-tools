@@ -35,6 +35,7 @@ get_secret:
     paths:
       - ./
     expire_in: 10 min
+    access: 'maintainer'
 
 generate_files:
   stage: generate_reports

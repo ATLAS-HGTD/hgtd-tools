@@ -1,3 +1,4 @@
+import datetime
 import getpass
 import json
 import os
@@ -95,6 +96,63 @@ def get_user(us, pw, to, debug=False):
         if debug:
             print("OOps: Something Else", err)
         raise requests.exceptions.RequestException("OOps: Something Else", err)
+
+
+def authenticate(u_name, pw, totp, local_folder):
+    try:
+        auth_user, last_responseText = get_user(u_name, pw, totp)
+    except (
+        requests.exceptions.HTTPError,
+        requests.exceptions.ConnectionError,
+        requests.exceptions.Timeout,
+        requests.exceptions.RequestException,
+    ) as e:
+        last_responseText = str(e)
+    except ValueError as e:
+        last_responseText = str(e)
+
+    if last_responseText[:2] != "20":
+        print("[ERROR] New user could not be authenticated." + f"\n{last_responseText}")
+        raise RuntimeError("User authentication failed")
+    else:
+        print(
+            "[INFO]"
+            + "User authenticated."
+            + "\nPreparing an access token, valid for the next 480 minutes."
+        )
+        token = get_access_token()
+        # write token and valid user name to localFolder,
+        # this overwrites if a previous one existed
+        with open(local_folder + "/" + u_name, "w") as outfile:
+            outfile.write(token)
+
+
+def test_for_existing_token_file(username, local_folder):
+    """check the existance of token file and that its last modification was not too long ago
+    not strictly respecting actual lifetime of token, but timedelta of 480min (one work day)
+    """
+    if os.path.isfile(local_folder + "/" + username):
+        if datetime.datetime.now() - datetime.datetime.fromtimestamp(
+            os.path.getmtime(local_folder + "/" + username)
+        ) < datetime.timedelta(minutes=480):
+            return True
+        else:
+            return False
+    return False
+
+
+def user_auth_cli(username, local_folder):
+    # get existing token, search through the db folder to get file with username as filename
+    # if existing user file found, get DB token, otherwise let user re-auth
+    if not test_for_existing_token_file(username, local_folder):
+        # authenticate user, request input from CLI
+        password = getpass.getpass("Type password, confirm with [Enter]: ")
+        sixdigit = input(
+            "Type 6-digit verification code if you have 2FA setup. "
+            "Confirm with [Enter]: "
+        )
+
+        authenticate(username, password, sixdigit, local_folder)
 
 
 def get_access_token(grant_type="client_credentials", debug=False):
