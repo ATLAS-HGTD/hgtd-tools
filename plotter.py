@@ -37,9 +37,6 @@ colors_tab20c = mpl.color_sequences["tab20c"]
 # ATLAS plot style
 hep.style.use("ATLAS1")
 plt.rcParams["axes.axisbelow"] = True
-plt.rcParams["axes.prop_cycle"] = cycler(
-    "color", colors_tab20c + combination_color_sequence
-)
 
 
 def plot_categorical_bar_stack(
@@ -54,6 +51,9 @@ def plot_categorical_bar_stack(
     log_axis,
     postfix,
 ):
+    plt.rcParams["axes.prop_cycle"] = cycler(
+        "color", colors_tab20c + combination_color_sequence
+    )
     n_categories = len(categories)
     fig, ax = plt.subplots(figsize=(12, 8))
 
@@ -124,6 +124,88 @@ def plot_categorical_bar_stack(
     )
     fig.savefig(
         f"{filename_prefix}_{feature_legend_title}_{postfix}.png",
+        bbox_inches="tight",
+        facecolor="white",
+        dpi=300,
+    )
+    plt.close()
+
+
+def plot_multi_categorical_time_trend(
+    x_values,
+    y_values,
+    filename_prefix,
+    categories,
+    all_months_for_x_axis,
+    exp_text,
+    title_prefix,
+    subtitle,
+    log_axis,
+    postfix,
+):
+    plt.rcParams["axes.prop_cycle"] = cycler("color", combination_color_sequence)
+    n_all_months_for_x_axis = len(all_months_for_x_axis)
+    fig, ax = plt.subplots(figsize=(12, 8))
+
+    for f, feature in enumerate(categories):
+        ax.plot(x_values[f], y_values[f], label=feature, linestyle="-", marker="o")
+    ax.set_xticks([i for i in range(n_all_months_for_x_axis)], all_months_for_x_axis)
+    for tick in ax.get_xticklabels():
+        tick.set_rotation(90)
+
+    if filename_prefix == "newly_uploaded":
+        ax.set_ylabel("Number of parts uploaded over time")
+    elif filename_prefix == "cumulative_counts":
+        ax.set_ylabel("Cumulative number of parts over time")
+    ax.set_xlabel("Year and Month (YYYY-MM)")
+    ax.legend(
+        title="Kind of Part",
+        ncol=3,
+        loc="upper right",
+        fontsize=rcParams["font.size"] / 1.3,
+    )
+    ax.grid(alpha=0.5)
+    ax.grid(which="minor", alpha=0.25)
+    hep.label.exp_text(
+        "ATLAS HGTD",
+        " " + exp_text,
+        (
+            f"{title_prefix}Generated with anstein/hgtd-tools~master on {datetime.today().strftime('%Y-%m-%d')}"
+            if subtitle
+            else ""
+        ),
+        loc=4,
+        fontsize=(
+            rcParams["font.size"] * 1.3,
+            rcParams["font.size"] * 1.3,
+            rcParams["font.size"],
+            rcParams["font.size"] / 1.7,
+        ),
+        fontstyle=("italic", "normal", "italic", "normal"),
+    )
+    if log_axis:
+        ax.set_yscale("log")
+    # ax.set_xlim(
+    #     ax.get_xlim()[0] - n_all_months_for_x_axis * 0.025,
+    #     ax.get_xlim()[-1] + n_all_months_for_x_axis * 0.025,
+    # )
+    ax.set_ylim(
+        8e-1,
+        ax.get_ylim()[-1] * 1.05 * 1.05 * 1.05 * 1.05 * 1.05,
+    )
+    ax.set_xlim(
+        -1,
+        n_all_months_for_x_axis,
+    )
+    hep.utils.mpl_magic(ax, soft_fail=True, N=20)
+    fig.savefig(
+        f"{filename_prefix}_time_trend_by_KoP_{postfix}.pdf",
+        bbox_inches="tight",
+        facecolor="white",
+        dpi=300,
+    )
+    fig.savefig(
+        f"{filename_prefix}_time_trend_by_KoP_{postfix}.png",
         bbox_inches="tight",
         facecolor="white",
         dpi=300,

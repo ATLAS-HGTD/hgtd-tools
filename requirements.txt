@@ -4,6 +4,7 @@ jupyterlab
 matplotlib
 mplhep
 numpy
+pandas
 pre-commit
 pyyaml
 zensical

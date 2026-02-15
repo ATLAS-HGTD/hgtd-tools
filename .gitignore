@@ -21,7 +21,6 @@ app/*
 # ================================================================
 # Generated static webpage files (e.g. mkdocs, zensical)
 # ================================================================
-
 public/
 site/
 
@@ -48,7 +47,7 @@ config_api
 *config_api*
 
 # ================================================================
-# Names of testing dirs and local files
+# Names of testing dirs and local files, reporting output
 # ================================================================
 208FMA05*
 SixModuleBoardTest8Lug*
@@ -58,6 +57,7 @@ analysis/*
 local/*
 local_info/*
 archived/*
+output_invalid.txt
 
 # ================================================================
 # Other files that should not be committed

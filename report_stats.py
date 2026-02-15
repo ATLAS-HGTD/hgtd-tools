@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 from collections import Counter
 
 import numpy as np
+import pandas as pd
 
 import data
 import plotter
@@ -305,6 +306,83 @@ def batch_yield_plot(
             log_axis,
             postfix,
         )
+
+        if feature_legend_title == "Uploaded in YYYY-MM":
+            # set of sorted months
+            if all_legend_entries[-1] == "Unknown":
+                consecutive_months = (
+                    pd.date_range(
+                        all_legend_entries[0], all_legend_entries[-2], freq="MS"
+                    )
+                    .strftime("%Y-%m")
+                    .tolist()
+                )
+            else:
+                consecutive_months = (
+                    pd.date_range(
+                        all_legend_entries[0], all_legend_entries[-1], freq="MS"
+                    )
+                    .strftime("%Y-%m")
+                    .tolist()
+                )
+
+            x_values = []
+            newly_uploaded = []
+            cumulative_counts = []
+            for c in categories:
+                x_values_list_this_c = []
+                newly_uploaded_list_this_c = []
+                # add the number of parts which have unknown entry date first
+                # to populate first real entry, then add consecutively on top
+                if "Unknown" in list(input_dict[c]["Uploaded in YYYY-MM"].keys()):
+                    # extreme edge case for sensors, developed early without
+                    # all part details we have nowadays (item without date)
+                    cumulative_counts_list_this_c = [
+                        input_dict[c]["Uploaded in YYYY-MM"]["Unknown"]
+                    ]
+                # if all entry dates known, add 0 as first item to which
+                # more gets added month by month
+                else:
+                    cumulative_counts_list_this_c = [0]
+                for sc in reversed(input_dict[c]["Uploaded in YYYY-MM"].keys()):
+                    if sc in consecutive_months:
+                        x_values_list_this_c.append(consecutive_months.index(sc))
+                        newly_uploaded_list_this_c.append(
+                            input_dict[c]["Uploaded in YYYY-MM"][sc]
+                        )
+                        cumulative_counts_list_this_c.append(
+                            cumulative_counts_list_this_c[-1]
+                            + newly_uploaded_list_this_c[-1]
+                        )
+                x_values.append(x_values_list_this_c)
+                newly_uploaded.append(newly_uploaded_list_this_c)
+                cumulative_counts.append(cumulative_counts_list_this_c[1:])
+
+            # also create a time trend, as PDF and CDF (i.e. cumulative as well)
+            plotter.plot_multi_categorical_time_trend(
+                x_values,
+                newly_uploaded,
+                "newly_uploaded",
+                categories,
+                consecutive_months,
+                exp_text,
+                title_prefix + "\n",
+                subtitle,
+                log_axis,
+                postfix,
+            )
+            plotter.plot_multi_categorical_time_trend(
+                x_values,
+                cumulative_counts,
+                "cumulative_counts",
+                categories,
+                consecutive_months,
+                exp_text,
+                title_prefix + "\n",
+                subtitle,
+                log_axis,
+                postfix,
+            )
 
 
 batch_yield_plot(
