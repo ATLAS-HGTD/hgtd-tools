@@ -45,12 +45,16 @@ generate_files:
     - echo "🔧  Installing dependencies"
     - pip install -r requirements.txt
     - echo "🛠️  Running your yields report"
-    - python report_stats.py
+    - python report_stats.py --log-axis True
     - mkdir generated
     - cp counts*.pdf generated
     - cp counts*.png generated
     - cp fractions*.pdf generated
     - cp fractions*.png generated
+    - cp newly_uploaded*.pdf generated
+    - cp newly_uploaded*.png generated
+    - cp cumulative_counts*.pdf generated
+    - cp cumulative_counts*.png generated
     - cp report_stats*.json generated
     - cp output_invalid.txt generated
   artifacts:
