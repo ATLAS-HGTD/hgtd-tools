@@ -608,6 +608,8 @@ def check_SN_valid(snIn):
                         manuExplainer = "China"
                     elif manu == "S":
                         manuExplainer = "Slovenia"
+                    elif manu == "M":
+                        manuExplainer = "Morocco"
                     elif manu == "1":
                         snGeneration = 0
                         manuExplainer = "Germany"
