@@ -164,13 +164,14 @@ def plot_multi_categorical_time_trend(
         loc="upper right",
         fontsize=rcParams["font.size"] / 1.3,
     )
+    today = datetime.today().strftime("%Y-%m-%d")
     ax.grid(alpha=0.5)
     ax.grid(which="minor", alpha=0.25)
     hep.label.exp_text(
         "ATLAS HGTD",
         " " + exp_text,
         (
-            f"{title_prefix}Generated with anstein/hgtd-tools~master on {datetime.today().strftime('%Y-%m-%d')}"
+            f"{title_prefix}Generated with anstein/hgtd-tools~master on {today}"
             if subtitle
             else ""
         ),
@@ -185,10 +186,6 @@ def plot_multi_categorical_time_trend(
     )
     if log_axis:
         ax.set_yscale("log")
-    # ax.set_xlim(
-    #     ax.get_xlim()[0] - n_all_months_for_x_axis * 0.025,
-    #     ax.get_xlim()[-1] + n_all_months_for_x_axis * 0.025,
-    # )
     ax.set_ylim(
         8e-1,
         ax.get_ylim()[-1] * 1.05 * 1.05 * 1.05 * 1.05 * 1.05,
@@ -206,6 +203,98 @@ def plot_multi_categorical_time_trend(
     )
     fig.savefig(
         f"{filename_prefix}_time_trend_by_KoP_{postfix}.png",
+        bbox_inches="tight",
+        facecolor="white",
+        dpi=300,
+    )
+    plt.close()
+
+
+def iv_curves_for_sns(
+    voltages,
+    currents,
+    labels,
+    KoPs,
+    exp_text,
+    subtitle,
+    postfix,
+    lineThreshold,
+    spanLabelBackground,
+):
+    plt.rcParams["axes.prop_cycle"] = cycler("color", combination_color_sequence)
+    if len(list(set(KoPs))) > 1:
+        KoP_legend = "Serial Numbers"
+    else:
+        if "Module" in KoPs:
+            KoP_legend = "Modules"
+        elif "Hybrid" in KoPs:
+            KoP_legend = "Hybrids"
+        elif "Sensor" in KoPs:
+            KoP_legend = "Sensors"
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+    for i, label in enumerate(labels):
+        ax.plot(voltages[i], currents[i], label=label, linestyle="-", marker="o")
+
+    ax.legend(
+        title=KoP_legend,
+        fontsize=rcParams["font.size"] / 1.3,
+        facecolor="white",
+        edgecolor="white",
+        framealpha=1,
+        frameon=True,
+    )
+    ax.set_xlabel("Voltage [V]")
+    ax.set_ylabel("Current [A]")
+    ax.set_yscale("log")
+    if lineThreshold:
+        ax.axhline(y=5e-5, color="gray", linestyle="-", zorder=0)
+    _SNs = "_" + "_".join(labels)
+    today = datetime.today().strftime("%Y-%m-%d")
+    _postfix = "_" + postfix if postfix != "" else "_" + today
+    ax.grid(alpha=0.5)
+    ax.grid(which="minor", alpha=0.25)
+    hep.label.exp_text(
+        "ATLAS HGTD",
+        " " + exp_text,
+        (f"Generated with anstein/hgtd-tools~master on {today}" if subtitle else ""),
+        loc=4,
+        fontsize=(
+            rcParams["font.size"] * 1.3,
+            rcParams["font.size"] * 1.3,
+            rcParams["font.size"],
+            rcParams["font.size"] / 1.7,
+        ),
+        fontstyle=("italic", "normal", "italic", "normal"),
+    )
+
+    ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 1.05 * 1.05)
+    max_x = max([max(v) for v in voltages])
+    ax.set_xlim(-10, max_x + 10)
+    hep.utils.mpl_magic(ax, soft_fail=True)
+    if spanLabelBackground:
+        ax.axhspan(
+            10
+            ** (
+                np.log(ax.get_ylim()[-1]) / np.log(10)
+                + (
+                    np.log(ax.get_ylim()[0]) / np.log(10)
+                    - np.log(ax.get_ylim()[-1]) / np.log(10)
+                )
+                * 0.11
+            ),
+            ax.get_ylim()[-1],
+            alpha=1,
+            color="white",
+        )
+    fig.savefig(
+        f"hybrid_ivs{_SNs}{_postfix}.pdf",
+        bbox_inches="tight",
+        facecolor="white",
+        dpi=300,
+    )
+    fig.savefig(
+        f"hybrid_ivs{_SNs}{_postfix}.png",
         bbox_inches="tight",
         facecolor="white",
         dpi=300,
