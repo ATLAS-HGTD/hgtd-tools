@@ -1456,8 +1456,9 @@ class App(customtkinter.CTk):
         )
         self.label_ft_gen.grid(row=1, column=0, padx=20, pady=10, sticky="nsew")
 
-        # demo: 20WFTC11F/20WFTS11F/20WFTG11F (old order cat 01--36), 20WFTG12F (new order cat 37--57)
-        # M0 & Full det: 20WFTCM1F/20WFTSM1F/20WFTGM1F (future cat 01--62)
+        # demo V1 (PEB 1F): 20WFTC11F/20WFTS11F/20WFTG11F (old order cat 01--36), 20WFTG12F (new order cat 37--57)
+        # Pre-production: 20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F (cat 01--62)
+        # Main Production: 20WFTCM1F/20WFTSM1F/20WFTGM1F/20WFTMM1F (cat 01--62)
         self.label_ft_gen_output = customtkinter.CTkLabel(self.frame_ft_rel, text=" ")
         self.label_ft_gen_output.grid(row=1, column=1, padx=20, pady=10, sticky="nsew")
 
@@ -3385,17 +3386,35 @@ class App(customtkinter.CTk):
                 self.slot_loc_row_variable.set(s["SU_Row"])
                 self.slot_loc_mod_variable.set(s["SU_Module"])
                 if v == "D":
+                    if s["PEB_type"] == "1F":
+                        # demonstrator V1 (PEB 1F)
+                        # demo V1 (PEB 1F): 20WFTC11F/20WFTS11F/20WFTG11F (old order cat 01--36),
+                        # 20WFTG12F (new order cat 37--57)
+                        self.label_ft_gen_output.configure(
+                            text="20WFTC11F/20WFTS11F/20WFTG11F (old order cat 01--36), 20WFTG12F (new order cat 37--57)"
+                        )
+                        self.ft_filter = f"20WFTC11F/20WFTS11F/20WFTG11F/20WFTG12F+{s['FT_length_category']}"
+                    elif s["PEB_type"] == "3F":
+                        # demonstrator V2 (PEB 3F)
+                        # Pre-production: 20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F (cat 01--62)
+                        self.label_ft_gen_output.configure(
+                            text="20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F (cat 01--62)"
+                        )
+                        self.ft_filter = f"20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F+{s['FT_length_category']}"
+                elif v == "M":
+                    # Module 0
+                    # Pre-production: 20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F (cat 01--62)
                     self.label_ft_gen_output.configure(
-                        text="20WFTC11F/20WFTS11F/20WFTG11F (old order cat 01--36), 20WFTG12F (new order cat 37--57)"
+                        text="20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F (cat 01--62)"
                     )
-                    self.ft_filter = f"20WFTC11F/20WFTS11F/20WFTG11F/20WFTG12F+{s['FT_length_category']}"
+                    self.ft_filter = f"20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F+{s['FT_length_category']}"
                 else:
+                    # Full Detector
+                    # Main Production: 20WFTCM1F/20WFTSM1F/20WFTGM1F/20WFTMM1F (cat 01--62)
                     self.label_ft_gen_output.configure(
-                        text="20WFTCM1F/20WFTSM1F/20WFTGM1F (future cat 01--62)"
+                        text="20WFTCM1F/20WFTSM1F/20WFTGM1F/20WFTMM1F (cat 01--62)"
                     )
-                    self.ft_filter = (
-                        f"20WFTCM1F/20WFTSM1F/20WFTGM1F+{s['FT_length_category']}"
-                    )
+                    self.ft_filter = f"20WFTCM1F/20WFTSM1F/20WFTGM1F/20WFTMM1F+{s['FT_length_category']}"
                 self.label_ft_type_output.configure(
                     text=f"{s['FT_length_category']} ({s['FT_Length_mm']} mm)"
                 )
