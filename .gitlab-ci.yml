@@ -36,6 +36,10 @@ get_secret:
       - ./config_api
     expire_in: 10 min
     access: 'maintainer'
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 generate_files:
   stage: generate_reports
