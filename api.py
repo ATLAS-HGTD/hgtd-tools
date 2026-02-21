@@ -160,12 +160,13 @@ def get_access_token(grant_type="client_credentials", debug=False):
     applicationDetails["grant_type"] = (None, grant_type)
     if grant_type == "client_credentials":
         applicationDetails["client_id"] = (None, "hgtd-api-client")
-        applicationDetails["client_secret"] = (
-            None,
-            open(
-                os.path.dirname(os.path.realpath(__file__)) + "/config_api"
-            ).readlines()[0],
-        )
+        with open(
+            os.path.dirname(os.path.realpath(__file__)) + "/config_api"
+        ) as config_api:
+            applicationDetails["client_secret"] = (
+                None,
+                config_api.readline().strip(),
+            )
         applicationDetails["audience"] = (None, "webframeworks-paas-hgtddb")
         url_to_use = access_token_url
     else:
