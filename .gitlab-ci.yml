@@ -28,7 +28,6 @@ generate_files:
   script:
     - echo "🔧  Installing dependencies"
     - pip install -r requirements.txt
-    - ls -lah
     - echo "$CONFIG_API" > config_api
     - echo "🛠️  Running your yields report"
     - python report_stats.py --log-axis True
@@ -48,6 +47,7 @@ generate_files:
     paths:
       - generated/
     expire_in: 1h
+    access: 'maintainer'
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -63,14 +63,13 @@ sync_to_eos:
     "EOS_ACCOUNT_PASSWORD": "${EOS_ACCOUNT_PASSWORD}"
     "CI_OUTPUT_DIR": "generated/"
   script:
-    - echo "📂 ${EOS_ACCOUNT_USERNAME} will copy generated files into hgtd eos space"
+    - echo "📂 ${EOS_ACCOUNT_USERNAME} will copy generated files into eos space"
     - deploy-eos
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: never
-
 
 .job-script: &job-script
   - pip install zensical
