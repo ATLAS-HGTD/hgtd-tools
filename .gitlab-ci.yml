@@ -10,17 +10,17 @@ stages:
   - deploy_reports
   - deploy_docs
 
-pre-commit:
-  stage: build
-  image: registry.cern.ch/docker.io/library/python:3.12
-  script:
-    - pip install pre-commit
-    - pre-commit run --all-files
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-      when: never
+# pre-commit:
+#   stage: build
+#   image: registry.cern.ch/docker.io/library/python:3.12
+#   script:
+#     - pip install pre-commit
+#     - pre-commit run --all-files
+#   rules:
+#     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+#     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+#     - if: $CI_PIPELINE_SOURCE == "schedule"
+#       when: never
 
 # get_secret:
 #   stage: generate_reports
@@ -48,9 +48,11 @@ generate_files:
   script:
     - echo "🔧  Installing dependencies"
     - pip install -r requirements.txt
+    - ls -lah
     - echo "$CONFIG_API" > config_api
-    - echo "" > config_api
-    - chmod 600 config_api
+    - ls -lah
+    #- echo "" > config_api
+    #- chmod 600 config_api
     - echo "🛠️  Running your yields report"
     - python report_stats.py --log-axis True
     - shred -u config_api
