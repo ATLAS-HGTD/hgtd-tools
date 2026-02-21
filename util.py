@@ -897,44 +897,77 @@ def check_SN_valid(snIn):
                     prod = snIn[6]
                     if prod in ["M", "0"]:
                         prodExplainer = "Main production"
+                        sn_meta_gen = "new"
                     elif prod == "P":
                         prodExplainer = "Pre-production"
+                        sn_meta_gen = "new"
                     elif prod in ["D", "1"]:
                         prodExplainer = "demonstrator"
+                        sn_meta_gen = "old"
                     elif prod in ["T", "2"]:
                         prodExplainer = "test"
+                        sn_meta_gen = "old"
                     elif prod in ["O", "3"]:
                         prodExplainer = "other"
+                        sn_meta_gen = "old"
                     else:
                         prodExplainer = "Unknown Production attribute!"
                         return False, prodExplainer
-                    side = str(snIn[7])
-                    if side == "F":
-                        sideExplainer = "F"
-                    elif side == "B":
-                        sideExplainer = "B"
+                    if sn_meta_gen == "new":
+                        batchn = str(snIn[7])
+                        side = str(snIn[8])
+                        if side == "F":
+                            sideExplainer = "F"
+                        elif side == "B":
+                            sideExplainer = "B"
+                        else:
+                            sideExplainer = "Unknown F or B type attribute!"
+                            return False, stdExplainer
+                        ring = str(snIn[9])
+                        if ring == "I":
+                            ringExplainer = "inner"
+                        elif ring == "M":
+                            ringExplainer = "middle"
+                        elif ring == "O":
+                            ringExplainer = "outer"
+                        else:
+                            ringExplainer = "Unknown Ring attribute!"
+                            return False, ringExplainer
+                        numerictype = str(snIn[10]) + str(snIn[11])
+                        counter = str(snIn[12]) + str(snIn[13])
+                        propertiesOut = f"Manufacturer / Vendor: {manu} ({manuExplainer}), Production: {prod} ({prodExplainer}), Batch number: {batchn}, F or B type: {side} ({sideExplainer}), Ring: {ring} ({ringExplainer}), Type: {numerictype}, Counter: {counter}"
+                        if lengthMessageOut == "":
+                            messageOut = "Successfully decoded new-gen Support Unit SN"
+                        else:
+                            messageOut = ""
                     else:
-                        sideExplainer = "Unknown F or B type attribute!"
-                        return False, stdExplainer
-                    ring = str(snIn[8])
-                    if ring == "I":
-                        ringExplainer = "inner"
-                    elif ring == "M":
-                        ringExplainer = "middle"
-                    elif ring == "O":
-                        ringExplainer = "outer"
-                    else:
-                        ringExplainer = "Unknown Ring attribute!"
-                        return False, ringExplainer
-                    numerictype = str(snIn[9]) + str(snIn[10])
-                    counter = str(snIn[11]) + str(snIn[12]) + str(snIn[13])
-                    propertiesOut = f"Manufacturer / Vendor: {manu} ({manuExplainer}), Production: {prod} ({prodExplainer}), F or B type: {side} ({sideExplainer}), Ring: {ring} ({ringExplainer}), Type: {numerictype}, Counter: {counter}"
-                    if lengthMessageOut == "":
-                        messageOut = "Successfully decoded Support Unit SN"
-                    else:
-                        messageOut = ""
+                        side = str(snIn[7])
+                        if side == "F":
+                            sideExplainer = "F"
+                        elif side == "B":
+                            sideExplainer = "B"
+                        else:
+                            sideExplainer = "Unknown F or B type attribute!"
+                            return False, stdExplainer
+                        ring = str(snIn[8])
+                        if ring == "I":
+                            ringExplainer = "inner"
+                        elif ring == "M":
+                            ringExplainer = "middle"
+                        elif ring == "O":
+                            ringExplainer = "outer"
+                        else:
+                            ringExplainer = "Unknown Ring attribute!"
+                            return False, ringExplainer
+                        numerictype = str(snIn[9]) + str(snIn[10])
+                        counter = str(snIn[11]) + str(snIn[12]) + str(snIn[13])
+                        propertiesOut = f"Manufacturer / Vendor: {manu} ({manuExplainer}), Production: {prod} ({prodExplainer}), F or B type: {side} ({sideExplainer}), Ring: {ring} ({ringExplainer}), Type: {numerictype}, Counter: {counter}"
+                        if lengthMessageOut == "":
+                            messageOut = "Successfully decoded old-gen Support Unit SN"
+                        else:
+                            messageOut = ""
                 except:
-                    messageOut = "Failed to decode Support Unit SN, check if you used this pattern: 20WSUMPZRTTNNN"
+                    messageOut = "Failed to decode Support Unit SN, check if you used this pattern: 20WSUMPBZRTTNN"
                     return False, messageOut
             elif snIn[3] == "D" and snIn[4] == "U":
                 messageOut = "Attempting to decode Detector Unit SN"
@@ -958,44 +991,77 @@ def check_SN_valid(snIn):
                     prod = snIn[6]
                     if prod == "M" or prod == "0":
                         prodExplainer = "Main production"
+                        sn_meta_gen = "new"
                     elif prod == "P":
                         prodExplainer = "Pre-production"
+                        sn_meta_gen = "new"
                     elif prod == "D" or prod == "1":
                         prodExplainer = "demonstrator"
+                        sn_meta_gen = "old"
                     elif prod == "T" or prod == "2":
                         prodExplainer = "test"
+                        sn_meta_gen = "old"
                     elif prod == "O" or prod == "3":
                         prodExplainer = "other"
+                        sn_meta_gen = "old"
                     else:
                         prodExplainer = "Unknown Production attribute!"
                         return False, prodExplainer
-                    side = str(snIn[7])
-                    if side == "F":
-                        sideExplainer = "F"
-                    elif side == "B":
-                        sideExplainer = "B"
+                    if sn_meta_gen == "new":
+                        batchn = str(snIn[7])
+                        side = str(snIn[8])
+                        if side == "F":
+                            sideExplainer = "F"
+                        elif side == "B":
+                            sideExplainer = "B"
+                        else:
+                            sideExplainer = "Unknown F or B type attribute!"
+                            return False, sideExplainer
+                        ring = str(snIn[9])
+                        if ring == "I":
+                            ringExplainer = "inner"
+                        elif ring == "M":
+                            ringExplainer = "middle"
+                        elif ring == "O":
+                            ringExplainer = "outer"
+                        else:
+                            ringExplainer = "Unknown Ring attribute!"
+                            return False, ringExplainer
+                        numerictype = str(snIn[10]) + str(snIn[11])
+                        counter = str(snIn[12]) + str(snIn[13])
+                        propertiesOut = f"Sites that install modules on SU: {manu} ({manuExplainer}), Production: {prod} ({prodExplainer}), Batch number: {batchn}, F or B type: {side} ({sideExplainer}), Ring: {ring} ({ringExplainer}), Type: {numerictype}, Counter: {counter}"
+                        if lengthMessageOut == "":
+                            messageOut = "Successfully decoded new-gen Detector Unit SN"
+                        else:
+                            messageOut = ""
                     else:
-                        sideExplainer = "Unknown F or B type attribute!"
-                        return False, sideExplainer
-                    ring = str(snIn[8])
-                    if ring == "I":
-                        ringExplainer = "inner"
-                    elif ring == "M":
-                        ringExplainer = "middle"
-                    elif ring == "O":
-                        ringExplainer = "outer"
-                    else:
-                        ringExplainer = "Unknown Ring attribute!"
-                        return False, ringExplainer
-                    numerictype = str(snIn[9]) + str(snIn[10])
-                    counter = str(snIn[11]) + str(snIn[12]) + str(snIn[13])
-                    propertiesOut = f"Sites that install modules on SU: {manu} ({manuExplainer}), Production: {prod} ({prodExplainer}), F or B type: {side} ({sideExplainer}), Ring: {ring} ({ringExplainer}), Type: {numerictype}, Counter: {counter}"
-                    if lengthMessageOut == "":
-                        messageOut = "Successfully decoded Detector Unit SN"
-                    else:
-                        messageOut = ""
+                        side = str(snIn[7])
+                        if side == "F":
+                            sideExplainer = "F"
+                        elif side == "B":
+                            sideExplainer = "B"
+                        else:
+                            sideExplainer = "Unknown F or B type attribute!"
+                            return False, sideExplainer
+                        ring = str(snIn[8])
+                        if ring == "I":
+                            ringExplainer = "inner"
+                        elif ring == "M":
+                            ringExplainer = "middle"
+                        elif ring == "O":
+                            ringExplainer = "outer"
+                        else:
+                            ringExplainer = "Unknown Ring attribute!"
+                            return False, ringExplainer
+                        numerictype = str(snIn[9]) + str(snIn[10])
+                        counter = str(snIn[11]) + str(snIn[12]) + str(snIn[13])
+                        propertiesOut = f"Sites that install modules on SU: {manu} ({manuExplainer}), Production: {prod} ({prodExplainer}), F or B type: {side} ({sideExplainer}), Ring: {ring} ({ringExplainer}), Type: {numerictype}, Counter: {counter}"
+                        if lengthMessageOut == "":
+                            messageOut = "Successfully decoded old-gen Detector Unit SN"
+                        else:
+                            messageOut = ""
                 except:
-                    messageOut = "Failed to decode Detector Unit SN, check if you used this pattern: 20WDUKPZRTTNNN"
+                    messageOut = "Failed to decode Detector Unit SN, check if you used this pattern: 20WDUKPBZRTTNN"
                     return False, messageOut
             elif snIn[3] == "G" and snIn[4] == "L":
                 messageOut = "Attempting to decode Glue SN"
