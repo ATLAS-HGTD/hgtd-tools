@@ -193,7 +193,7 @@ class App(customtkinter.CTk):
             hover_color=data.hover_color_standard_but_active,
         )
         self.button_operation_mode_MA.grid(
-            row=1, column=0, padx=5, pady=5, sticky="nsew", columnspan=2
+            row=1, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
         )
 
         self.button_operation_mode_ML = customtkinter.CTkButton(
@@ -204,7 +204,7 @@ class App(customtkinter.CTk):
             hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_operation_mode_ML.grid(
-            row=2, column=0, padx=5, pady=5, sticky="nsew", columnspan=2
+            row=2, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
         )
 
         self.button_operation_mode_DA_DU = customtkinter.CTkButton(
@@ -217,7 +217,7 @@ class App(customtkinter.CTk):
             hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_operation_mode_DA_DU.grid(
-            row=3, column=0, padx=5, pady=5, sticky="nsew", columnspan=2
+            row=3, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
         )
 
         self.button_operation_mode_DA_PEB = customtkinter.CTkButton(
@@ -230,7 +230,7 @@ class App(customtkinter.CTk):
             hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_operation_mode_DA_PEB.grid(
-            row=4, column=0, padx=5, pady=5, sticky="nsew", columnspan=2
+            row=4, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
         )
 
         self.button_operation_mode_DA_FT = customtkinter.CTkButton(
@@ -243,7 +243,7 @@ class App(customtkinter.CTk):
             hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_operation_mode_DA_FT.grid(
-            row=5, column=0, padx=5, pady=5, sticky="nsew", columnspan=2
+            row=5, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
         )
 
         # buttons to go to external useful pages
@@ -258,7 +258,7 @@ class App(customtkinter.CTk):
             text="Useful Links",
             font=customtkinter.CTkFont(size=16, weight="bold"),
         )
-        self.label_useful_links.grid(row=0, column=0, padx=20, pady=10, columnspan=2)
+        self.label_useful_links.grid(row=0, column=0, padx=20, pady=5, columnspan=2)
 
         self.button_useful_links_Frontend = customtkinter.CTkButton(
             self.frame_useful_links,
@@ -270,7 +270,7 @@ class App(customtkinter.CTk):
             hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_useful_links_Frontend.grid(
-            row=1, column=0, padx=5, pady=(5, 0), sticky="nsew", columnspan=2
+            row=1, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
         )
 
         self.button_useful_links_Mockup = customtkinter.CTkButton(
@@ -284,7 +284,7 @@ class App(customtkinter.CTk):
             hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_useful_links_Mockup.grid(
-            row=2, column=0, padx=5, pady=(5, 0), sticky="nsew", columnspan=2
+            row=2, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
         )
 
         self.button_useful_links_Docs = customtkinter.CTkButton(
@@ -297,7 +297,7 @@ class App(customtkinter.CTk):
             hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_useful_links_Docs.grid(
-            row=3, column=0, padx=5, pady=(5, 0), sticky="nsew", columnspan=2
+            row=3, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
         )
 
         self.button_useful_links_MM = customtkinter.CTkButton(
@@ -311,7 +311,7 @@ class App(customtkinter.CTk):
             hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_useful_links_MM.grid(
-            row=4, column=0, padx=5, pady=(5, 0), sticky="nsew", columnspan=2
+            row=4, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
         )
 
         self.button_useful_links_meetings = customtkinter.CTkButton(
@@ -324,7 +324,7 @@ class App(customtkinter.CTk):
             hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_useful_links_meetings.grid(
-            row=5, column=0, padx=5, pady=(5, 0), sticky="nsew", columnspan=2
+            row=5, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
         )
 
         self.button_useful_links_GL_repo = customtkinter.CTkButton(
@@ -337,47 +337,60 @@ class App(customtkinter.CTk):
             hover_color=data.hover_color_standard_but_inactive,
         )
         self.button_useful_links_GL_repo.grid(
-            row=6, column=0, padx=5, pady=(5, 0), sticky="nsew", columnspan=2
+            row=6, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
+        )
+
+        self.button_useful_links_tools_docs = customtkinter.CTkButton(
+            self.frame_useful_links,
+            text="hgtd-tools Documentation",
+            command=lambda: util.open_webbrowser_with_url(
+                "https://hgtd-tools.docs.cern.ch/", noExtraPrefix=True
+            ),
+            fg_color=data.fg_color_standard_but_inactive,
+            hover_color=data.hover_color_standard_but_inactive,
+        )
+        self.button_useful_links_tools_docs.grid(
+            row=7, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
         )
 
         self.label_user = customtkinter.CTkLabel(
             self.frame_sidebar_left, text="User:", anchor="e"
         )
-        self.label_user.grid(row=7, column=0, padx=5, pady=5)
+        self.label_user.grid(row=8, column=0, padx=5, pady=5)
         self.optionmenu_user = customtkinter.CTkOptionMenu(
             self.frame_sidebar_left,
             values=["None", "new..."],
             command=self.change_user_event,
             width=60,
         )
-        self.optionmenu_user.grid(row=7, column=1, padx=5, pady=5)
+        self.optionmenu_user.grid(row=8, column=1, padx=5, pady=5)
         self.optionmenu_user.set("None")
         self.user_window = None
 
         self.label_appearance_mode = customtkinter.CTkLabel(
             self.frame_sidebar_left, text="Theme:", anchor="e"
         )
-        self.label_appearance_mode.grid(row=8, column=0, padx=5, pady=5)
+        self.label_appearance_mode.grid(row=9, column=0, padx=5, pady=5)
         self.optionmenu_appearance_mode = customtkinter.CTkOptionMenu(
             self.frame_sidebar_left,
             values=["Light", "Dark", "System"],
             command=self.change_appearance_mode_event,
             width=60,
         )
-        self.optionmenu_appearance_mode.grid(row=8, column=1, padx=5, pady=5)
+        self.optionmenu_appearance_mode.grid(row=9, column=1, padx=5, pady=5)
         self.optionmenu_appearance_mode.set("System")
 
         self.label_scaling = customtkinter.CTkLabel(
             self.frame_sidebar_left, text="UI Scaling:", anchor="e"
         )
-        self.label_scaling.grid(row=9, column=0, padx=5, pady=5)
+        self.label_scaling.grid(row=10, column=0, padx=5, pady=5)
         self.optionmenu_scaling = customtkinter.CTkOptionMenu(
             self.frame_sidebar_left,
             values=["80%", "90%", "100%", "110%", "120%"],
             command=self.change_scaling_event,
             width=60,
         )
-        self.optionmenu_scaling.grid(row=9, column=1, padx=5, pady=5)
+        self.optionmenu_scaling.grid(row=10, column=1, padx=5, pady=5)
         self.optionmenu_scaling.set("100%")
 
         self.help_image = customtkinter.CTkImage(
@@ -393,7 +406,7 @@ class App(customtkinter.CTk):
             command=self.help,
             width=60,
         )
-        self.btnHelp.grid(row=10, column=0, pady=10, padx=5, columnspan=2)
+        self.btnHelp.grid(row=11, column=0, pady=10, padx=5, columnspan=2)
         self.help_window = None
 
         self.exit_image = customtkinter.CTkImage(
@@ -409,7 +422,7 @@ class App(customtkinter.CTk):
             command=self.exit,
             width=60,
         )
-        self.btnLogout.grid(row=11, column=0, pady=20, padx=5, columnspan=2)
+        self.btnLogout.grid(row=12, column=0, pady=20, padx=5, columnspan=2)
 
         # work in main widget (column w.r.t. root >= 1)
 
@@ -2030,12 +2043,17 @@ class App(customtkinter.CTk):
                 else:
                     self.api_status = 1
                     self.progressbar.configure(progress_color=data.progress_color_OK)
+                    info_text = wrapped_text.fill(
+                        f"Info: Child Module Flex added successfully to ProdDB API."
+                    )
 
                     if len(parents_of_target_MF) == 0 and (
                         (occupied == False)
                         or (occupied == True and confirmed == "OVERWRITE")
                     ):
-                        self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
+                        self.loading_wheel = threading.Thread(
+                            target=self.fetch_MA_p_c, args=("Module Flex", info_text)
+                        )
                         self.loading_wheel.start()
                         self.update_progressbar(self.loading_wheel)
 
@@ -2183,9 +2201,14 @@ class App(customtkinter.CTk):
                 else:
                     self.api_status = 1
                     self.progressbar.configure(progress_color=data.progress_color_OK)
+                    info_text = wrapped_text.fill(
+                        f"Info: Child HV Hybrid added successfully to ProdDB API."
+                    )
 
                     if posted_new_rel:
-                        self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
+                        self.loading_wheel = threading.Thread(
+                            target=self.fetch_MA_p_c, args=("HY_HV", info_text)
+                        )
                         self.loading_wheel.start()
                         self.update_progressbar(self.loading_wheel)
 
@@ -2333,9 +2356,14 @@ class App(customtkinter.CTk):
                 else:
                     self.api_status = 1
                     self.progressbar.configure(progress_color=data.progress_color_OK)
+                    info_text = wrapped_text.fill(
+                        f"Info: Child LV Hybrid added successfully to ProdDB API."
+                    )
 
                     if posted_new_rel:
-                        self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
+                        self.loading_wheel = threading.Thread(
+                            target=self.fetch_MA_p_c, args=("HY_LV", info_text)
+                        )
                         self.loading_wheel.start()
                         self.update_progressbar(self.loading_wheel)
 
@@ -4058,7 +4086,44 @@ class App(customtkinter.CTk):
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         customtkinter.set_widget_scaling(new_scaling_float)
-        self.button_mode_event_click(self.operation_mode)
+        # self.frame_ft_rel.grid_remove()
+        # print(self.operation_mode)
+        if self.operation_mode == "Module Assembly":
+            self.frame_ma.grid()
+            self.frame_combobox.grid_remove()
+            self.label_canvas.grid_remove()
+            self.canvas.grid_remove()
+            self.label_info.grid()
+            self.frame_ft_rel.grid_remove()
+        elif self.operation_mode == "Module Loading":
+            self.frame_ma.grid_remove()
+            self.frame_combobox.grid()
+            self.label_canvas.grid()
+            self.canvas.grid()
+            self.label_info.grid()
+            self.frame_ft_rel.grid_remove()
+        elif self.operation_mode == "Detector Assembly (CERN): DU":
+            self.frame_ma.grid_remove()
+            self.frame_combobox.grid()
+            self.label_canvas.grid()
+            self.canvas.grid()
+            self.label_info.grid()
+            self.frame_ft_rel.grid_remove()
+        elif self.operation_mode == "Detector Assembly (CERN): PEB":
+            self.frame_ma.grid_remove()
+            self.frame_combobox.grid()
+            self.label_canvas.grid_remove()
+            self.canvas.grid_remove()
+            self.label_info.grid()
+            self.frame_ft_rel.grid_remove()
+        elif self.operation_mode == "Detector Assembly (CERN): FT":
+            self.frame_ma.grid_remove()
+            self.frame_combobox.grid_remove()
+            self.label_canvas.grid_remove()
+            self.canvas.grid_remove()
+            self.label_info.grid()
+            self.frame_ft_rel.grid()
+        # self.button_mode_event_click(self.operation_mode)
 
     def change_ft_conn_event(self, ft_conn):
         self.ft_conn = self.optionmenu_ft_conn.get()
@@ -4073,7 +4138,9 @@ class App(customtkinter.CTk):
         self.MA_mod_par_manu = self.combobox_MA_mod_par_manu.get()
         self.combobox_MA_mod_par.set("- Select -")
 
-        self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
+        self.loading_wheel = threading.Thread(
+            target=self.fetch_MA_p_c, args=("Module",)
+        )
         self.loading_wheel.start()
         self.update_progressbar(self.loading_wheel)
 
@@ -4082,7 +4149,9 @@ class App(customtkinter.CTk):
         self.MF_child_conn = self.optionmenu_MA_child_MF_conn.get()
         self.combobox_MA_MF_chi.set("- Select -")
 
-        self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
+        self.loading_wheel = threading.Thread(
+            target=self.fetch_MA_p_c, args=("Module Flex",)
+        )
         self.loading_wheel.start()
         self.update_progressbar(self.loading_wheel)
 
@@ -4094,7 +4163,7 @@ class App(customtkinter.CTk):
         # let user know when trying to add a relation between non-matching HYs
         self.combobox_MA_HY_HV_chi.set("- Select -")
 
-        self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
+        self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c, args=("HY_HV",))
         self.loading_wheel.start()
         self.update_progressbar(self.loading_wheel)
 
@@ -4106,7 +4175,7 @@ class App(customtkinter.CTk):
         # let user know when trying to add a relation between non-matching HYs
         self.combobox_MA_HY_LV_chi.set("- Select -")
 
-        self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
+        self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c, args=("HY_LV",))
         self.loading_wheel.start()
         self.update_progressbar(self.loading_wheel)
 
@@ -4834,10 +4903,10 @@ class App(customtkinter.CTk):
                 self.combobox_ft.configure(values=[])
                 self.combobox_ft.set("- Select -")
 
-    def fetch_MA_p_c(self, update="all"):
+    def fetch_MA_p_c(self, update="all", withMessage=" "):
         # this happens when any filter is changed and at the beginning
         self.progressbar.set(0)
-        self.label_info.configure(text=" ")
+        self.label_info.configure(text=withMessage)
         try:
             if update == "all" or update == "Module":
                 self.possible_MA_mod_par, self.last_responseText = (
