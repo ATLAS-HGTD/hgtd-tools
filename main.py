@@ -2863,11 +2863,6 @@ class App(customtkinter.CTk):
                                             for c in children_of_targetDetector:
                                                 # position of Det child is the same as the desired one, and PEB type of desired PEB is same as the one that already occupies the spot:
                                                 if str(c["position"]) == pos:
-                                                    # == OLD ==: previous schema did not include PEB Type in PEB SN
-                                                    # == OLD ==:  => used to need to fetch the attributes of maybe occupying children PEBs, because PEB type was only part of attributes (not part of SN sadly)
-                                                    # == OLD ==: child_attributes, self.last_responseText = api.fetch_information(f'/partattrlist/{c['part']['part_id']}/')
-                                                    # == OLD ==: PEB_type_occupying = [c for c in child_attributes if c['attribute']['name'] == 'Type'][0]['value']
-                                                    # NEW: PEB type is part of PEB SN!
                                                     if (
                                                         self.displayed_PEB_type
                                                         in c["part"]["serial_number"]
@@ -4086,8 +4081,7 @@ class App(customtkinter.CTk):
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         customtkinter.set_widget_scaling(new_scaling_float)
-        # self.frame_ft_rel.grid_remove()
-        # print(self.operation_mode)
+        # these operations are needed because widget scaling impacts grid
         if self.operation_mode == "Module Assembly":
             self.frame_ma.grid()
             self.frame_combobox.grid_remove()
@@ -4123,7 +4117,6 @@ class App(customtkinter.CTk):
             self.canvas.grid_remove()
             self.label_info.grid()
             self.frame_ft_rel.grid()
-        # self.button_mode_event_click(self.operation_mode)
 
     def change_ft_conn_event(self, ft_conn):
         self.ft_conn = self.optionmenu_ft_conn.get()
@@ -4257,8 +4250,6 @@ class App(customtkinter.CTk):
         # this is relevant for child = DU, and you want to specify
         # which DU type shall be shown
         # from the children, select those that have the type in their SN
-        # == OLD ==: for PEBs, PEB type is an attribute and not part of SN
-        # NEW: for PEBs, PEB type is now also part of the SN!
         self.chi_type = self.combobox_chi_type.get()
         self.combobox_child.set("- Select -")
 
@@ -4769,8 +4760,6 @@ class App(customtkinter.CTk):
             print(childSNIn)
             print(PEB_partID)
             print(self.possible_children)
-        # == OLD ==: PEB type used to be only an attribute
-        # self.displayed_PEB_type = self.possible_children[self.possible_children_SNs.index(PEB_SN)]['Type']
         for key in data.allPEBs:
             if key in PEB_SN:
                 self.displayed_PEB_type = key
@@ -5525,7 +5514,7 @@ class App(customtkinter.CTk):
                     self.possible_children = [
                         pc
                         for pc in self.possible_children
-                        if self.chi_type in pc["Type"]
+                        if self.chi_type in pc["serial_number"]
                     ]
 
             # child SN filter input
