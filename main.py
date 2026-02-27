@@ -27,7 +27,7 @@ class ToplevelWindow(customtkinter.CTkToplevel):
         self.geometry("1000x300")
 
         self.textbox = customtkinter.CTkTextbox(master=self, width=400, wrap="word")
-        self.textbox.pack(fill="both", expand=True, padx=20, pady=20)
+        self.textbox.pack(fill="both", expand=True, padx=10, pady=10)
         self.textbox.insert(
             "0.0",
             "Each Support Unit is oriented in such a way that when looking at its face, the module connectors are at the top (or on the right), and module capacitors are on the bottom (or on the left).\nUser actions (loading sites / assembly at CERN): First step at a loading site: fill the Detector Unit with modules, click on the canvas to select the correct position and use the button below. Once finished, move to the assembly step at CERN and enter the position manually when connecting a Detector Unit with the Detector (VxLxQx). Note: A back Detector Unit can only be on layer 1 or 2, a front Detector Unit can only be on layer 0 or 3.\nToo long dropdown selections are split into chunks, you can select which chunk shall be shown with the arrow buttons. This is to ensure compatibility with more operating systems.\n\nHint: manufacturers for modules should be interpreted as assembly sites. This field is taken live from all manufacturers available in the database and hence does not necessarily agree with the six defined assembly sites.\n\nHint 2: Blue option menus contain static choices (=hardcoded), while grey comboboxes are retrieved dynamically (=from the DB).\n\nHint 3: if you do not pre-select children by trivial attributes like manufacturer or type, the option to choose only not-yet-connected children will be slow, as is has to check from the full set of children. Pre-select with the other options to speed this process up.",
@@ -148,7 +148,7 @@ class App(customtkinter.CTk):
             text="HGTD Tools",
             font=customtkinter.CTkFont(size=20, weight="bold"),
         )
-        self.label_logo.grid(row=0, column=0, padx=20, pady=(20, 5), columnspan=2)
+        self.label_logo.grid(row=0, column=0, padx=10, pady=(10, 5), columnspan=2)
         self.my_version = "1.9.0"
         self.version_full_text = (
             f"v{self.my_version} - January 2026\nAnnika Stein (JGU Mainz)"
@@ -156,24 +156,24 @@ class App(customtkinter.CTk):
         self.label_credits = customtkinter.CTkLabel(
             self.frame_sidebar_left, text=self.version_full_text
         )
-        self.label_credits.grid(row=1, column=0, padx=20, pady=5, columnspan=2)
+        self.label_credits.grid(row=1, column=0, padx=10, pady=5, columnspan=2)
 
         self.label_progress = customtkinter.CTkLabel(
             self.frame_sidebar_left, text="API Request Status"
         )
-        self.label_progress.grid(row=2, column=0, padx=20, pady=5, columnspan=2)
+        self.label_progress.grid(row=2, column=0, padx=10, pady=5, columnspan=2)
         self.progressbar = customtkinter.CTkProgressBar(
             self.frame_sidebar_left,
             orientation="horizontal",
             progress_color=data.progress_color_OK,
         )
-        self.progressbar.grid(row=3, column=0, padx=20, pady=5, columnspan=2)
+        self.progressbar.grid(row=3, column=0, padx=10, pady=5, columnspan=2)
         self.progressbar.set(1)
 
         # buttons to select use case of the tool
         self.frame_operation_mode = customtkinter.CTkFrame(self.frame_sidebar_left)
         self.frame_operation_mode.grid(
-            row=4, column=0, padx=5, pady=(20, 5), sticky="nsew", columnspan=2
+            row=4, column=0, padx=5, pady=(10, 5), sticky="nsew", columnspan=2
         )
         self.frame_operation_mode.grid_columnconfigure((0, 1), weight=1)
         self.operation_mode = "Module Assembly"  # default
@@ -183,7 +183,7 @@ class App(customtkinter.CTk):
             text="Operation Mode",
             font=customtkinter.CTkFont(size=16, weight="bold"),
         )
-        self.label_operation_mode.grid(row=0, column=0, padx=20, pady=5, columnspan=2)
+        self.label_operation_mode.grid(row=0, column=0, padx=10, pady=5, columnspan=2)
 
         self.button_operation_mode_MA = customtkinter.CTkButton(
             self.frame_operation_mode,
@@ -258,7 +258,7 @@ class App(customtkinter.CTk):
             text="Useful Links",
             font=customtkinter.CTkFont(size=16, weight="bold"),
         )
-        self.label_useful_links.grid(row=0, column=0, padx=20, pady=5, columnspan=2)
+        self.label_useful_links.grid(row=0, column=0, padx=10, pady=5, columnspan=2)
 
         self.button_useful_links_Frontend = customtkinter.CTkButton(
             self.frame_useful_links,
@@ -422,7 +422,7 @@ class App(customtkinter.CTk):
             command=self.exit,
             width=60,
         )
-        self.btnLogout.grid(row=12, column=0, pady=20, padx=5, columnspan=2)
+        self.btnLogout.grid(row=12, column=0, pady=10, padx=5, columnspan=2)
 
         # work in main widget (column w.r.t. root >= 1)
 
@@ -459,21 +459,21 @@ class App(customtkinter.CTk):
             self.frame_parent, text="Parent Part Type: Detector Unit"
         )
         self.label_combobox_parent_T.grid(
-            row=0, column=0, padx=20, pady=(10, 10), columnspan=2, sticky="nsew"
+            row=0, column=0, padx=10, pady=(5, 0), columnspan=2, sticky="nsew"
         )
 
         self.label_combobox_par_type = customtkinter.CTkLabel(
             self.frame_parent, text="DU type"
         )
         self.label_combobox_par_type.grid(
-            row=1, column=0, padx=20, pady=(10, 10), sticky="nsew"
+            row=1, column=0, padx=10, pady=(5, 0), sticky="nsew"
         )
 
         self.combobox_par_type_paginationFrame = customtkinter.CTkFrame(
             self.frame_parent
         )
         self.combobox_par_type_paginationFrame.grid(
-            row=1, column=1, padx=20, pady=(10, 10), sticky="nsew"
+            row=1, column=1, padx=10, pady=(10, 5), sticky="nsew"
         )
         self.label_combobox_par_type_paginationFrame = customtkinter.CTkLabel(
             self.combobox_par_type_paginationFrame, text="page 0/0"
@@ -516,12 +516,12 @@ class App(customtkinter.CTk):
             self.frame_parent, text="Parent Part SN"
         )
         self.label_combobox_parent.grid(
-            row=2, column=0, padx=20, pady=(10, 10), sticky="nsew"
+            row=2, column=0, padx=10, pady=(5, 0), sticky="nsew"
         )
 
         self.combobox_parent_paginationFrame = customtkinter.CTkFrame(self.frame_parent)
         self.combobox_parent_paginationFrame.grid(
-            row=2, column=1, padx=20, pady=(10, 10), sticky="nsew"
+            row=2, column=1, padx=10, pady=(10, 5), sticky="nsew"
         )
         self.label_combobox_parent_paginationFrame = customtkinter.CTkLabel(
             self.combobox_parent_paginationFrame, text="page 0/0"
@@ -562,7 +562,7 @@ class App(customtkinter.CTk):
             text="INSPECT PARENT",
             command=self.button_inspect_parent_event_click,
         )
-        self.button_inspect_parent.grid(row=3, column=1, padx=20, pady=(10, 10))
+        self.button_inspect_parent.grid(row=3, column=1, padx=10, pady=(10, 5))
 
         # child
         self.frame_child = customtkinter.CTkFrame(self.frame_combobox)
@@ -575,7 +575,7 @@ class App(customtkinter.CTk):
             self.frame_child, text="Child Part Type: Module"
         )
         self.label_combobox_child_T.grid(
-            row=0, column=0, padx=20, pady=(10, 10), columnspan=2, sticky="nsew"
+            row=0, column=0, padx=10, pady=(5, 0), columnspan=2, sticky="nsew"
         )
 
         self.optionmenu_child_conn = customtkinter.CTkOptionMenu(
@@ -601,7 +601,7 @@ class App(customtkinter.CTk):
             self.frame_child
         )
         self.combobox_chi_type_paginationFrame.grid(
-            row=1, column=1, padx=20, pady=(10, 10), sticky="nsew"
+            row=1, column=1, padx=10, pady=(10, 5), sticky="nsew"
         )
 
         self.label_combobox_chi_type_paginationFrame = customtkinter.CTkLabel(
@@ -646,12 +646,12 @@ class App(customtkinter.CTk):
             self.frame_child, text="Child Part SN"
         )
         self.label_combobox_child.grid(
-            row=2, column=0, padx=20, pady=(10, 10), columnspan=2, sticky="nsew"
+            row=2, column=0, padx=10, pady=(5, 0), columnspan=2, sticky="nsew"
         )
 
         self.frame_child_SN_filter = customtkinter.CTkFrame(self.frame_child)
         self.frame_child_SN_filter.grid(
-            row=3, column=0, padx=20, pady=(10, 10), sticky="nsew"
+            row=3, column=0, padx=10, pady=(10, 5), sticky="nsew"
         )
         self.variable_child_SN_filter = customtkinter.StringVar(value="")
         self.entry_child_SN_filter = customtkinter.CTkEntry(
@@ -673,7 +673,7 @@ class App(customtkinter.CTk):
 
         self.combobox_child_paginationFrame = customtkinter.CTkFrame(self.frame_child)
         self.combobox_child_paginationFrame.grid(
-            row=3, column=1, padx=20, pady=(10, 10), sticky="nsew"
+            row=3, column=1, padx=10, pady=(10, 5), sticky="nsew"
         )
         self.label_combobox_child_paginationFrame = customtkinter.CTkLabel(
             self.combobox_child_paginationFrame, text="page 0/0"
@@ -714,7 +714,7 @@ class App(customtkinter.CTk):
             text="INSPECT CHILD",
             command=self.button_inspect_child_event_click,
         )
-        self.button_inspect_child.grid(row=4, column=1, padx=20, pady=(10, 10))
+        self.button_inspect_child.grid(row=4, column=1, padx=10, pady=(10, 5))
 
         # position / click
         self.frame_position = customtkinter.CTkFrame(self.frame_combobox)
@@ -726,20 +726,20 @@ class App(customtkinter.CTk):
         self.label_position = customtkinter.CTkLabel(
             self.frame_position, text="Position (derived from canvas interaction)"
         )
-        self.label_position.grid(row=6, column=0, padx=20, pady=(20, 10), sticky="nsew")
+        self.label_position.grid(row=6, column=0, padx=10, pady=(5, 0), sticky="nsew")
 
         self.position_variable = customtkinter.StringVar(value="- automatic -")
         self.position_entry = customtkinter.CTkEntry(
             self.frame_position, textvariable=self.position_variable, state="disabled"
         )
-        self.position_entry.grid(row=6, column=1, padx=20, pady=(20, 10), sticky="nsew")
+        self.position_entry.grid(row=6, column=1, padx=10, pady=(10, 5), sticky="nsew")
 
         self.button_add = customtkinter.CTkButton(
             self.frame_position,
             text="ADD PARTS TREE",
             command=self.button_add_event_click,
         )
-        self.button_add.grid(row=7, column=1, padx=20, pady=(20, 10))
+        self.button_add.grid(row=7, column=1, padx=10, pady=(10, 5))
 
         self.frame_clicked_position = customtkinter.CTkFrame(self.frame_position)
         self.frame_clicked_position.grid(
@@ -753,7 +753,7 @@ class App(customtkinter.CTk):
             command=self.button_inspect_clicked_event_click,
             state="disabled",
         )
-        self.button_inspect_clicked.grid(row=0, column=1, padx=20, pady=(20, 10))
+        self.button_inspect_clicked.grid(row=0, column=1, padx=10, pady=(10, 5))
 
         self.button_delete_clicked = customtkinter.CTkButton(
             self.frame_clicked_position,
@@ -763,7 +763,7 @@ class App(customtkinter.CTk):
             fg_color=data.fg_color_standard_but_red,
             hover_color=data.hover_color_standard_but_red,
         )
-        self.button_delete_clicked.grid(row=0, column=0, padx=20, pady=(20, 10))
+        self.button_delete_clicked.grid(row=0, column=0, padx=10, pady=(10, 5))
 
         # right sub widget: canvas containing DUs to click on
         self.label_canvas = customtkinter.CTkLabel(
@@ -802,26 +802,38 @@ class App(customtkinter.CTk):
         self.frame_module_parent_selection.grid(
             row=0, column=0, padx=5, pady=5, columnspan=1
         )
-        self.frame_module_parent_selection.grid_columnconfigure((0, 1), weight=1)
+        self.frame_module_parent_selection.grid_columnconfigure((0, 1, 2), weight=1)
 
         self.label_module_parent = customtkinter.CTkLabel(
             self.frame_module_parent_selection, text="Parent Module"
         )
-        self.label_module_parent.grid(row=0, column=0, padx=5, pady=5, columnspan=2)
+        self.label_module_parent.grid(
+            row=0, column=0, padx=5, pady=(5, 0), columnspan=3
+        )
         self.label_module_parent_manu = customtkinter.CTkLabel(
             self.frame_module_parent_selection, text="Manufacturer"
         )
         self.label_module_parent_manu.grid(
-            row=1, column=0, padx=5, pady=5, columnspan=1
+            row=1, column=0, padx=5, pady=(5, 0), columnspan=1
         )
         self.label_module_parent_loc = customtkinter.CTkLabel(
             self.frame_module_parent_selection, text="Location"
         )
-        self.label_module_parent_loc.grid(row=1, column=1, padx=5, pady=5, columnspan=1)
+        self.label_module_parent_loc.grid(
+            row=1, column=1, padx=5, pady=(5, 0), columnspan=1
+        )
+        self.label_module_parent_conn = customtkinter.CTkLabel(
+            self.frame_module_parent_selection, text="Connection status"
+        )
+        self.label_module_parent_conn.grid(
+            row=1, column=2, padx=5, pady=(5, 0), columnspan=1
+        )
         self.label_module_parent_SN = customtkinter.CTkLabel(
             self.frame_module_parent_selection, text="Parent SN"
         )
-        self.label_module_parent_SN.grid(row=3, column=0, padx=5, pady=5, columnspan=1)
+        self.label_module_parent_SN.grid(
+            row=3, column=0, padx=5, pady=(5, 0), columnspan=3
+        )
 
         self.combobox_MA_mod_par_manu = customtkinter.CTkComboBox(
             self.frame_module_parent_selection,
@@ -829,7 +841,7 @@ class App(customtkinter.CTk):
             command=self.change_MA_parent_Mod_filter_event,
             width=250,
         )
-        self.combobox_MA_mod_par_manu.grid(row=2, column=0, padx=10, pady=10)
+        self.combobox_MA_mod_par_manu.grid(row=2, column=0, padx=5, pady=5)
         self.combobox_MA_mod_par_manu.set("All manufacturers")
 
         self.combobox_MA_mod_par_loc = customtkinter.CTkComboBox(
@@ -838,14 +850,52 @@ class App(customtkinter.CTk):
             command=self.change_MA_parent_Mod_filter_event,
             width=250,
         )
-        self.combobox_MA_mod_par_loc.grid(row=2, column=1, padx=10, pady=10)
+        self.combobox_MA_mod_par_loc.grid(row=2, column=1, padx=5, pady=5)
         self.combobox_MA_mod_par_loc.set("All locations")
+        self.optionmenu_MA_mod_par_conn = customtkinter.CTkOptionMenu(
+            self.frame_module_parent_selection,
+            values=["Needs children", "No filter"],
+            command=self.change_MA_parent_Mod_filter_event,
+            width=170,
+        )
+        self.optionmenu_MA_mod_par_conn.grid(
+            row=2, column=2, padx=5, pady=5, columnspan=2
+        )
+        self.optionmenu_MA_mod_par_conn.set("No filter")
+        ###
+        self.frame_module_parent_SN_filter = customtkinter.CTkFrame(
+            self.frame_module_parent_selection
+        )
+        self.frame_module_parent_SN_filter.grid(
+            row=4, column=0, padx=10, pady=10, sticky="nsew"
+        )
+        self.variable_module_parent_SN_filter = customtkinter.StringVar(value="")
+        self.entry_module_parent_SN_filter = customtkinter.CTkEntry(
+            self.frame_module_parent_SN_filter,
+            textvariable=self.variable_module_parent_SN_filter,
+        )
+        self.entry_module_parent_SN_filter.grid(
+            row=0, column=0, padx=5, pady=5, sticky="nsew"
+        )
+        self.filter_image = customtkinter.CTkImage(
+            Image.open("searchIcon.png"), size=(20, 20)
+        )
+        self.btn_module_parent_filter_SN = customtkinter.CTkButton(
+            self.frame_module_parent_SN_filter,
+            image=self.filter_image,
+            text="Filter SN",
+            compound="left",
+            command=lambda: self.change_MA_parent_Mod_filter_event("generic parent"),
+            width=60,
+        )
+        self.btn_module_parent_filter_SN.grid(row=0, column=1, padx=5, pady=5)
+        ####
 
         self.combobox_MA_mod_par_paginationFrame = customtkinter.CTkFrame(
             self.frame_module_parent_selection
         )
         self.combobox_MA_mod_par_paginationFrame.grid(
-            row=4, column=0, padx=20, pady=10, sticky="nsew"
+            row=4, column=1, padx=10, pady=10, sticky="nsew"
         )
         self.label_combobox_MA_mod_par_paginationFrame = customtkinter.CTkLabel(
             self.combobox_MA_mod_par_paginationFrame, text="page 0/0"
@@ -886,10 +936,10 @@ class App(customtkinter.CTk):
             text="INSPECT MODULE",
             command=self.button_inspect_parent_module_event_click,
         )
-        self.button_inspect_parent_module.grid(row=4, column=1, padx=20, pady=10)
+        self.button_inspect_parent_module.grid(row=4, column=2, padx=5, pady=5)
 
         self.module_image = customtkinter.CTkImage(
-            Image.open("Module.png"), size=(1920 / 5, (1920 / 5) * 1080 / 1920)
+            Image.open("Module.png"), size=(1920 / 7, (1920 / 7) * 1080 / 1920)
         )
         self.label_module_image_in = customtkinter.CTkLabel(
             self.frame_module_parent, text="", image=self.module_image
@@ -921,12 +971,14 @@ class App(customtkinter.CTk):
         self.label_module_flex_child = customtkinter.CTkLabel(
             self.frame_module_flex_child, text="Child Module Flex"
         )
-        self.label_module_flex_child.grid(row=0, column=0, padx=5, pady=5, columnspan=2)
+        self.label_module_flex_child.grid(
+            row=0, column=0, padx=5, pady=(5, 0), columnspan=2
+        )
         self.label_module_flex_child_loc = customtkinter.CTkLabel(
             self.frame_module_flex_child, text="Location"
         )
         self.label_module_flex_child_loc.grid(
-            row=1, column=0, padx=5, pady=5, columnspan=2
+            row=1, column=0, padx=5, pady=(5, 0), columnspan=2
         )
         self.combobox_MA_MF_child_loc = customtkinter.CTkComboBox(
             self.frame_module_flex_child,
@@ -942,7 +994,7 @@ class App(customtkinter.CTk):
             self.frame_module_flex_child, text="Connection status"
         )
         self.label_module_flex_child_conn.grid(
-            row=3, column=0, padx=5, pady=5, columnspan=2
+            row=3, column=0, padx=5, pady=(5, 0), columnspan=2
         )
         self.optionmenu_MA_child_MF_conn = customtkinter.CTkOptionMenu(
             self.frame_module_flex_child,
@@ -958,14 +1010,14 @@ class App(customtkinter.CTk):
             self.frame_module_flex_child, text="Module Flex SN"
         )
         self.label_module_flex_child_SN.grid(
-            row=5, column=0, padx=5, pady=5, columnspan=2
+            row=5, column=0, padx=5, pady=(5, 0), columnspan=2
         )
 
         self.frame_child0_SN_filter = customtkinter.CTkFrame(
             self.frame_module_flex_child
         )
         self.frame_child0_SN_filter.grid(
-            row=6, column=0, padx=20, pady=(10, 10), columnspan=2, sticky="nsew"
+            row=6, column=0, padx=10, pady=(10, 5), columnspan=2, sticky="nsew"
         )
         self.variable_child0_SN_filter = customtkinter.StringVar(value="")
         self.entry_child0_SN_filter = customtkinter.CTkEntry(
@@ -986,7 +1038,7 @@ class App(customtkinter.CTk):
             self.frame_module_flex_child
         )
         self.combobox_MA_MF_chi_paginationFrame.grid(
-            row=7, column=0, padx=20, pady=10, sticky="nsew", columnspan=2
+            row=7, column=0, padx=10, pady=10, sticky="nsew", columnspan=2
         )
         self.label_combobox_MA_MF_chi_paginationFrame = customtkinter.CTkLabel(
             self.combobox_MA_MF_chi_paginationFrame, text="page 0/0"
@@ -1059,7 +1111,7 @@ class App(customtkinter.CTk):
         self.label_HY_HV_child = customtkinter.CTkLabel(
             self.frame_HY_HV_child, text="Child Hybrid HV-side"
         )
-        self.label_HY_HV_child.grid(row=0, column=0, padx=5, pady=5, columnspan=2)
+        self.label_HY_HV_child.grid(row=0, column=0, padx=5, pady=(5, 0), columnspan=2)
         self.label_HY_HV_child_loc = customtkinter.CTkLabel(
             self.frame_HY_HV_child, text="Location"
         )
@@ -1077,7 +1129,9 @@ class App(customtkinter.CTk):
         self.label_HY_HV_child_conn = customtkinter.CTkLabel(
             self.frame_HY_HV_child, text="Connection status"
         )
-        self.label_HY_HV_child_conn.grid(row=3, column=0, padx=5, pady=5, columnspan=2)
+        self.label_HY_HV_child_conn.grid(
+            row=3, column=0, padx=5, pady=(5, 0), columnspan=2
+        )
         self.optionmenu_MA_child_HY_HV_conn = customtkinter.CTkOptionMenu(
             self.frame_HY_HV_child,
             values=["Not yet connected children", "All children"],
@@ -1091,7 +1145,9 @@ class App(customtkinter.CTk):
         self.label_HY_HV_child_conn = customtkinter.CTkLabel(
             self.frame_HY_HV_child, text="Cluster based on VBD"
         )
-        self.label_HY_HV_child_conn.grid(row=5, column=0, padx=5, pady=5, columnspan=2)
+        self.label_HY_HV_child_conn.grid(
+            row=5, column=0, padx=5, pady=(5, 0), columnspan=2
+        )
         self.combobox_MA_HY_HV_child_cluster = customtkinter.CTkComboBox(
             self.frame_HY_HV_child,
             values=["All clusters"],
@@ -1105,11 +1161,13 @@ class App(customtkinter.CTk):
         self.label_HY_HV_child_SN = customtkinter.CTkLabel(
             self.frame_HY_HV_child, text="HY HV-side SN"
         )
-        self.label_HY_HV_child_SN.grid(row=7, column=0, padx=5, pady=5, columnspan=2)
+        self.label_HY_HV_child_SN.grid(
+            row=7, column=0, padx=5, pady=(5, 0), columnspan=2
+        )
 
         self.frame_child1_SN_filter = customtkinter.CTkFrame(self.frame_HY_HV_child)
         self.frame_child1_SN_filter.grid(
-            row=8, column=0, padx=20, pady=(10, 10), columnspan=2, sticky="nsew"
+            row=8, column=0, padx=10, pady=(10, 5), columnspan=2, sticky="nsew"
         )
         self.variable_child1_SN_filter = customtkinter.StringVar(value="")
         self.entry_child1_SN_filter = customtkinter.CTkEntry(
@@ -1130,7 +1188,7 @@ class App(customtkinter.CTk):
             self.frame_HY_HV_child
         )
         self.combobox_HY_HV_paginationFrame.grid(
-            row=9, column=0, padx=20, pady=10, sticky="nsew", columnspan=2
+            row=9, column=0, padx=10, pady=10, sticky="nsew", columnspan=2
         )
         self.label_combobox_HY_HV_paginationFrame = customtkinter.CTkLabel(
             self.combobox_HY_HV_paginationFrame, text="page 0/0"
@@ -1203,11 +1261,13 @@ class App(customtkinter.CTk):
         self.label_HY_LV_child = customtkinter.CTkLabel(
             self.frame_HY_LV_child, text="Child Hybrid LV-side"
         )
-        self.label_HY_LV_child.grid(row=0, column=0, padx=5, pady=5, columnspan=2)
+        self.label_HY_LV_child.grid(row=0, column=0, padx=5, pady=(5, 0), columnspan=2)
         self.label_HY_LV_child_loc = customtkinter.CTkLabel(
             self.frame_HY_LV_child, text="Location"
         )
-        self.label_HY_LV_child_loc.grid(row=1, column=0, padx=5, pady=5, columnspan=2)
+        self.label_HY_LV_child_loc.grid(
+            row=1, column=0, padx=5, pady=(5, 0), columnspan=2
+        )
         self.combobox_MA_HY_LV_child_loc = customtkinter.CTkComboBox(
             self.frame_HY_LV_child,
             values=["All locations"],
@@ -1221,7 +1281,9 @@ class App(customtkinter.CTk):
         self.label_HY_LV_child_conn = customtkinter.CTkLabel(
             self.frame_HY_LV_child, text="Connection status"
         )
-        self.label_HY_LV_child_conn.grid(row=3, column=0, padx=5, pady=5, columnspan=2)
+        self.label_HY_LV_child_conn.grid(
+            row=3, column=0, padx=5, pady=(5, 0), columnspan=2
+        )
         self.optionmenu_MA_child_HY_LV_conn = customtkinter.CTkOptionMenu(
             self.frame_HY_LV_child,
             values=["Not yet connected children", "All children"],
@@ -1235,7 +1297,9 @@ class App(customtkinter.CTk):
         self.label_HY_LV_child_conn = customtkinter.CTkLabel(
             self.frame_HY_LV_child, text="Cluster based on VBD"
         )
-        self.label_HY_LV_child_conn.grid(row=5, column=0, padx=5, pady=5, columnspan=2)
+        self.label_HY_LV_child_conn.grid(
+            row=5, column=0, padx=5, pady=(5, 0), columnspan=2
+        )
         self.combobox_MA_HY_LV_child_cluster = customtkinter.CTkComboBox(
             self.frame_HY_LV_child,
             values=["All clusters"],
@@ -1249,11 +1313,13 @@ class App(customtkinter.CTk):
         self.label_HY_LV_child_SN = customtkinter.CTkLabel(
             self.frame_HY_LV_child, text="HY LV-side SN"
         )
-        self.label_HY_LV_child_SN.grid(row=7, column=0, padx=5, pady=5, columnspan=2)
+        self.label_HY_LV_child_SN.grid(
+            row=7, column=0, padx=5, pady=(5, 0), columnspan=2
+        )
 
         self.frame_child2_SN_filter = customtkinter.CTkFrame(self.frame_HY_LV_child)
         self.frame_child2_SN_filter.grid(
-            row=8, column=0, padx=20, pady=(10, 10), columnspan=2, sticky="nsew"
+            row=8, column=0, padx=10, pady=(10, 5), columnspan=2, sticky="nsew"
         )
         self.variable_child2_SN_filter = customtkinter.StringVar(value="")
         self.entry_child2_SN_filter = customtkinter.CTkEntry(
@@ -1274,7 +1340,7 @@ class App(customtkinter.CTk):
             self.frame_HY_LV_child
         )
         self.combobox_HY_LV_paginationFrame.grid(
-            row=9, column=0, padx=20, pady=10, sticky="nsew", columnspan=2
+            row=9, column=0, padx=10, pady=10, sticky="nsew", columnspan=2
         )
         self.label_combobox_HY_LV_paginationFrame = customtkinter.CTkLabel(
             self.combobox_HY_LV_paginationFrame, text="page 0/0"
@@ -1390,31 +1456,31 @@ class App(customtkinter.CTk):
         self.label_slot_global = customtkinter.CTkLabel(
             self.frame_slot_sel, text="Global (type in):"
         )
-        self.label_slot_global.grid(row=0, column=1, padx=20, pady=10, sticky="nsew")
+        self.label_slot_global.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
 
         self.button_find_slot = customtkinter.CTkButton(
             self.frame_slot_sel,
             text="FIND IN SLOT TABLE",
             command=self.button_find_slot_event_click,
         )
-        self.button_find_slot.grid(row=1, column=1, padx=20, pady=10, sticky="nsew")
+        self.button_find_slot.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
 
         self.button_inspect_slot = customtkinter.CTkButton(
             self.frame_slot_sel,
             text="INSPECT SLOT",
             command=self.button_inspect_slot_event_click,
         )
-        self.button_inspect_slot.grid(row=3, column=1, padx=20, pady=10)
+        self.button_inspect_slot.grid(row=3, column=1, padx=10, pady=10)
 
         self.label_slot_local = customtkinter.CTkLabel(
             self.frame_slot_sel, text="Local (derived):"
         )
-        self.label_slot_local.grid(row=2, column=1, padx=20, pady=10, sticky="nsew")
+        self.label_slot_local.grid(row=2, column=1, padx=10, pady=10, sticky="nsew")
 
         self.label_slot_DU_type = customtkinter.CTkLabel(
             self.frame_slot_sel, text="DU type"
         )
-        self.label_slot_DU_type.grid(row=1, column=2, padx=20, pady=10, sticky="nsew")
+        self.label_slot_DU_type.grid(row=1, column=2, padx=10, pady=10, sticky="nsew")
 
         self.slot_loc_DUtype_variable = customtkinter.StringVar(value="- automatic -")
         self.slot_loc_DUtype_entry = customtkinter.CTkEntry(
@@ -1423,17 +1489,17 @@ class App(customtkinter.CTk):
             state="disabled",
         )
         self.slot_loc_DUtype_entry.grid(
-            row=2, column=2, padx=20, pady=10, sticky="nsew"
+            row=2, column=2, padx=10, pady=10, sticky="nsew"
         )
 
         self.slot_glob_row_variable = customtkinter.StringVar(value="")
         self.slot_glob_row_entry = customtkinter.CTkEntry(
             self.frame_slot_sel, textvariable=self.slot_glob_row_variable
         )
-        self.slot_glob_row_entry.grid(row=0, column=3, padx=20, pady=10, sticky="nsew")
+        self.slot_glob_row_entry.grid(row=0, column=3, padx=10, pady=10, sticky="nsew")
 
         self.label_slot_row = customtkinter.CTkLabel(self.frame_slot_sel, text="Row")
-        self.label_slot_row.grid(row=1, column=3, padx=20, pady=10, sticky="nsew")
+        self.label_slot_row.grid(row=1, column=3, padx=10, pady=10, sticky="nsew")
 
         self.slot_loc_row_variable = customtkinter.StringVar(value="- automatic -")
         self.slot_loc_row_entry = customtkinter.CTkEntry(
@@ -1441,16 +1507,16 @@ class App(customtkinter.CTk):
             textvariable=self.slot_loc_row_variable,
             state="disabled",
         )
-        self.slot_loc_row_entry.grid(row=2, column=3, padx=20, pady=10, sticky="nsew")
+        self.slot_loc_row_entry.grid(row=2, column=3, padx=10, pady=10, sticky="nsew")
 
         self.slot_glob_mod_variable = customtkinter.StringVar(value="")
         self.slot_glob_mod_entry = customtkinter.CTkEntry(
             self.frame_slot_sel, textvariable=self.slot_glob_mod_variable
         )
-        self.slot_glob_mod_entry.grid(row=0, column=4, padx=20, pady=10, sticky="nsew")
+        self.slot_glob_mod_entry.grid(row=0, column=4, padx=10, pady=10, sticky="nsew")
 
         self.label_slot_mod = customtkinter.CTkLabel(self.frame_slot_sel, text="Mod")
-        self.label_slot_mod.grid(row=1, column=4, padx=20, pady=10, sticky="nsew")
+        self.label_slot_mod.grid(row=1, column=4, padx=10, pady=10, sticky="nsew")
 
         self.slot_loc_mod_variable = customtkinter.StringVar(value="- automatic -")
         self.slot_loc_mod_entry = customtkinter.CTkEntry(
@@ -1458,7 +1524,7 @@ class App(customtkinter.CTk):
             textvariable=self.slot_loc_mod_variable,
             state="disabled",
         )
-        self.slot_loc_mod_entry.grid(row=2, column=4, padx=20, pady=10, sticky="nsew")
+        self.slot_loc_mod_entry.grid(row=2, column=4, padx=10, pady=10, sticky="nsew")
 
         #
         # === 2nd line ===
@@ -1467,13 +1533,13 @@ class App(customtkinter.CTk):
             self.frame_ft_rel,
             text="Suitable FT batch(es)/meta-generation for this VLQ:",
         )
-        self.label_ft_gen.grid(row=1, column=0, padx=20, pady=10, sticky="nsew")
+        self.label_ft_gen.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
 
         # demo V1 (PEB 1F): 20WFTC11F/20WFTS11F/20WFTG11F (old order cat 01--36), 20WFTG12F (new order cat 37--57)
         # Pre-production: 20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F (cat 01--62)
         # Main Production: 20WFTCM1F/20WFTSM1F/20WFTGM1F/20WFTMM1F (cat 01--62)
         self.label_ft_gen_output = customtkinter.CTkLabel(self.frame_ft_rel, text=" ")
-        self.label_ft_gen_output.grid(row=1, column=1, padx=20, pady=10, sticky="nsew")
+        self.label_ft_gen_output.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
 
         #
         # === 3rd line ===
@@ -1482,10 +1548,10 @@ class App(customtkinter.CTk):
             self.frame_ft_rel,
             text="Derived FT type of this FT generation for this Slot:",
         )
-        self.label_ft_type.grid(row=2, column=0, padx=20, pady=10, sticky="nsew")
+        self.label_ft_type.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
 
         self.label_ft_type_output = customtkinter.CTkLabel(self.frame_ft_rel, text=" ")
-        self.label_ft_type_output.grid(row=2, column=1, padx=20, pady=10, sticky="nsew")
+        self.label_ft_type_output.grid(row=2, column=1, padx=10, pady=10, sticky="nsew")
 
         #
         # === 4/5th line ===
@@ -1493,11 +1559,11 @@ class App(customtkinter.CTk):
         self.label_combobox_ft = customtkinter.CTkLabel(
             self.frame_ft_rel, text="FTs matching selection criteria:"
         )
-        self.label_combobox_ft.grid(row=4, column=0, padx=20, pady=10, sticky="nsew")
+        self.label_combobox_ft.grid(row=4, column=0, padx=10, pady=10, sticky="nsew")
 
         self.frame_childFT_SN_filter = customtkinter.CTkFrame(self.frame_ft_rel)
         self.frame_childFT_SN_filter.grid(
-            row=3, column=1, padx=20, pady=(10, 10), sticky="nsew"
+            row=3, column=1, padx=10, pady=(10, 5), sticky="nsew"
         )
         self.variable_childFT_SN_filter = customtkinter.StringVar(value="")
         self.entry_childFT_SN_filter = customtkinter.CTkEntry(
@@ -1525,12 +1591,12 @@ class App(customtkinter.CTk):
             command=self.change_ft_conn_event,
             width=250,
         )
-        self.optionmenu_ft_conn.grid(row=4, column=0, padx=20, pady=10)
+        self.optionmenu_ft_conn.grid(row=4, column=0, padx=10, pady=10)
         self.optionmenu_ft_conn.set("All FTs")
 
         self.combobox_ft_paginationFrame = customtkinter.CTkFrame(self.frame_ft_rel)
         self.combobox_ft_paginationFrame.grid(
-            row=4, column=1, padx=20, pady=10, sticky="ns"
+            row=4, column=1, padx=10, pady=10, sticky="ns"
         )
         self.label_combobox_ft_paginationFrame = customtkinter.CTkLabel(
             self.combobox_ft_paginationFrame, text="page 0/0"
@@ -1567,7 +1633,7 @@ class App(customtkinter.CTk):
             text="INSPECT FT",
             command=self.button_inspect_ft_event_click,
         )
-        self.button_inspect_ft.grid(row=4, column=2, padx=20, pady=10)
+        self.button_inspect_ft.grid(row=4, column=2, padx=10, pady=10)
 
         self.button_delete_connected_ft = customtkinter.CTkButton(
             self.frame_ft_rel,
@@ -1577,14 +1643,14 @@ class App(customtkinter.CTk):
             fg_color=data.fg_color_standard_but_red,
             hover_color=data.hover_color_standard_but_red,
         )
-        self.button_delete_connected_ft.grid(row=5, column=1, padx=20, pady=(20, 10))
+        self.button_delete_connected_ft.grid(row=5, column=1, padx=10, pady=(10, 5))
 
         self.button_add_ft = customtkinter.CTkButton(
             self.frame_ft_rel,
             text="ADD PARTS TREE",
             command=self.button_add_ft_event_click,
         )
-        self.button_add_ft.grid(row=5, column=2, padx=20, pady=10)
+        self.button_add_ft.grid(row=5, column=2, padx=10, pady=10)
 
         # footer: info for user (e.g. Warning, Error)
         self.label_info = customtkinter.CTkLabel(
@@ -1592,7 +1658,7 @@ class App(customtkinter.CTk):
             text=" ",
             font=customtkinter.CTkFont(size=16, weight="bold"),
         )
-        self.label_info.grid(row=2, column=0, padx=20, pady=20, columnspan=2)
+        self.label_info.grid(row=2, column=0, padx=10, pady=10, columnspan=2)
 
         # *************************************************
         #
