@@ -76,7 +76,7 @@ contains the actual user input and buttons to perform the parts tree operations.
     When you click on the User dropdown menu (which originally says "None"),
     select "new...". This will open a new window where you can type in your
     username, password (and if setup, TOTP code for 2FA). After your login was successful,
-    the blue box will list your username, and otherwise fallback.
+    the blue box will list your username, and otherwise fallback. In hgtd-tools, the login is valid for the entire runtime of the program; in cli scripts interfacing against the API with user-tokens, login is valid for one workday (8hrs).
 
 !!! note "General aspects and settings"
     **API status**
@@ -91,7 +91,7 @@ contains the actual user input and buttons to perform the parts tree operations.
 
     ![error_API.png](../images/for_user/hgtd-tools/error_API.png)
 
-    Should you get any API errors mentioning something like `Internal Server Error`, or something that is clearly not related to your own connection to the web, please inform the ProdDB team. A link to the mattermost is available on the sidebar.
+    Should you get any API errors mentioning something like `Internal Server Error`, or something that is clearly not related to your own connection to the web, please inform the ProdDB team. A link to the mattermost is available on the hgtd-tools GUI sidebar.
 
     **Useful links**
 
@@ -108,6 +108,12 @@ contains the actual user input and buttons to perform the parts tree operations.
     **Navigation of paginated comboboxes**
 
     Because some operating systems tend to not display long lists of serial numbers correctly, we opted to placing such long lists into pages with fixed maximum length per page. You will see that for example the number of available modules in the database are too many to show on one screen, and so you get left / right buttons to navigate through pages of serial numbers.
+
+    **Selections**
+
+    Parts can be selected based on features such as manufacturer, location, type, serial number or connection status. Connection status refers to parents or children connections, for child and parent components, respectively.
+
+    :warning: Use "Connection status" only after preselecting from other dropdowns/inputs, to limit the number of parts to process against the DB parts tree.
 
 ### Operation Modes
 
@@ -129,10 +135,11 @@ contains the actual user input and buttons to perform the parts tree operations.
 
     **Implemented functionality**
 
-    - Selection of parts that fulfil the criteria you placed on manufacturer, location for the parent (Module); on location, connection status of child (Module Flex); on location, connection status, and WIP on cluster of children (Hybrids).
+    - Selection of parts that fulfil the criteria you placed on manufacturer, location, serial number, connection status for the parent (Module); on location, serial number, connection status of child (Module Flex); on location, serial number, connection status, and WIP on cluster of children (Hybrids).
     - You can inspect the parent.
     - You can inspect, connect, disconnect children.
     - hgtd-tools does not let you connect parts for positions that are already taken by other parts, unless you actively instruct hgtd-tools to OVERWRITE the existing relation(s).
+    - hgtd-tools inspects existing relations and reports on their consistency and validity with respect to DB conventions.
 
     **:construction: Work-in-progress functionality**
 
@@ -155,7 +162,7 @@ contains the actual user input and buttons to perform the parts tree operations.
 
     **Implemented functionality**
 
-    - Selection of parts that fulfil the criteria you placed on type for the parent (Detector Unit); on manufacturer, connection status of child (Module).
+    - Selection of parts that fulfil the criteria you placed on type for the parent (Detector Unit); on manufacturer, serial number, connection status of child (Module).
     - You can inspect the parent.
     - You can inspect, connect, disconnect children.
     - hgtd-tools shows a graphical view of the DU type along with its color-coded module slots, if the serial number contains one of the [48 allowed DU types](https://gitlab.cern.ch/anstein/hgtd-tools/-/blob/master/data.py?ref_type=heads#L119){target="_blank"}.
@@ -198,7 +205,7 @@ contains the actual user input and buttons to perform the parts tree operations.
 
     **Implemented functionality**
 
-    - Selection of parts that fulfil the criteria you placed on type, connection status for the child (Detector Unit).
+    - Selection of parts that fulfil the criteria you placed on type, serial number, connection status for the child (Detector Unit).
     - You can inspect the parent.
     - You can inspect, connect the child. You can overwrite the child DU at a certain VesselLayerQuadrant.
     - You can inspect, disconnect modules on the selected child DU.
@@ -237,7 +244,7 @@ contains the actual user input and buttons to perform the parts tree operations.
 
     **Implemented functionality**
 
-    - Selection of parts that fulfil the criteria you placed on type, connection status for the child (PEB).
+    - Selection of parts that fulfil the criteria you placed on type, serial number, connection status for the child (PEB).
     - You can inspect the parent.
     - You can inspect, connect the child. You can overwrite the child PEB at a certain VesselLayerQuadrant.
     - hgtd-tools does not let you connect PEBs for positions that are already taken by other PEBs, but you can OVERWRITE with another PEB of the same type.
@@ -276,7 +283,7 @@ contains the actual user input and buttons to perform the parts tree operations.
     **Implemented functionality**
 
     - Selection of the parent Slot with its global labeling scheme, retrieve the corresponding local labeling to assist you ("FIND IN SLOT TABLE" button).
-    - Selection of parts that fulfil the criteria you placed on connection status for the child (FT).
+    - Selection of parts that fulfil the criteria you placed on serial number, connection status for the child (FT).
     - You can inspect the parent.
     - You can inspect, connect, disconnect the child.
     - hgtd-tools does not let you connect FTs for positions that are already taken by other FTs, but you can OVERWRITE with another FT of the same category.
@@ -302,6 +309,10 @@ contains the actual user input and buttons to perform the parts tree operations.
 ??? question "Not authorized issue"
 
     Have you followed the steps from the [install guide](../getting_started/install.md) fully, for example, did you also download the `config_api` file into the main directory of `hgtd-tools`? This is likely missing if you are not authorized to perform operations despite trying with login. This file is only accessible to proddb-users (you need to join the e-group first). For the latter, you can follow the steps [here](https://hgtd-database.docs.cern.ch/content/user/user_tasks/){target="_blank"}.
+
+??? question "Parts take too long to load after selecting based on connection status"
+
+    This happens if your preselection of parts was not tight enough -- the connection status is an expensive DB query carried out for all parts surviving your preselection via menus/fields such as manufacturer, location, type, or serial number. Restrict the list of parts for which this expensive operation is done by the other "cuts" and observe how the process will significantly speed up. If an ongoing selection is taking too long to complete (yellow progress bar continuously running...), then you can of course close the app and restart fresh with a stricter preselection before running the connection query.
 
 ## Demonstrator extras
 

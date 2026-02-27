@@ -149,9 +149,9 @@ class App(customtkinter.CTk):
             font=customtkinter.CTkFont(size=20, weight="bold"),
         )
         self.label_logo.grid(row=0, column=0, padx=10, pady=(10, 5), columnspan=2)
-        self.my_version = "1.9.0"
+        self.my_version = "1.10.0"
         self.version_full_text = (
-            f"v{self.my_version} - January 2026\nAnnika Stein (JGU Mainz)"
+            f"v{self.my_version} - February 2026\nAnnika Stein (JGU Mainz)"
         )
         self.label_credits = customtkinter.CTkLabel(
             self.frame_sidebar_left, text=self.version_full_text
