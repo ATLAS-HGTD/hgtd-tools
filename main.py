@@ -862,7 +862,7 @@ class App(customtkinter.CTk):
             row=2, column=2, padx=5, pady=5, columnspan=2
         )
         self.optionmenu_MA_mod_par_conn.set("No filter")
-        ###
+
         self.frame_module_parent_SN_filter = customtkinter.CTkFrame(
             self.frame_module_parent_selection
         )
@@ -885,11 +885,10 @@ class App(customtkinter.CTk):
             image=self.filter_image,
             text="Filter SN",
             compound="left",
-            command=lambda: self.change_MA_parent_Mod_filter_event("generic parent"),
+            command=lambda: self.button_onclick_event_filter_parent_SN("Module"),
             width=60,
         )
         self.btn_module_parent_filter_SN.grid(row=0, column=1, padx=5, pady=5)
-        ####
 
         self.combobox_MA_mod_par_paginationFrame = customtkinter.CTkFrame(
             self.frame_module_parent_selection
@@ -1682,6 +1681,7 @@ class App(customtkinter.CTk):
         self.this_MOD_relations_HY_HV = []
         self.this_MOD_relations_HY_LV = []
         self.this_MOD_relations_HY_unknownPosition = []
+        self.this_MOD_relations_HY_invalidPosition = []
         self.this_MF_relations_MOD = []
         self.this_HY_HV_relations_MOD = []
         self.this_HY_LV_relations_MOD = []
@@ -1707,9 +1707,11 @@ class App(customtkinter.CTk):
         self.clicked_module = []
 
         self.par_type = None
+        self.par_conn = None
         self.chi_type = None
         self.child_conn = None
         self.child_manu = None
+        self.parent_SN_filter = ""
         self.child_SN_filter = ""
         self.child0_SN_filter = ""
         self.child1_SN_filter = ""
@@ -1720,6 +1722,7 @@ class App(customtkinter.CTk):
         # Module Assembly
         self.MA_mod_par_manu = None
         self.MA_mod_par_loc = None
+        self.MA_mod_par_conn = None
         self.module_flex_child_loc = None
         self.HY_HV_child_loc = None
         self.HY_LV_child_loc = None
@@ -3453,6 +3456,18 @@ class App(customtkinter.CTk):
         self.loading_wheel.start()
         self.update_progressbar(self.loading_wheel)
 
+    def button_onclick_event_filter_parent_SN(self, parentIdentifier="Module"):
+        if self.operation_mode == "Module Assembly":
+            self.combobox_MA_mod_par.set("- Select -")
+            self.loading_wheel = threading.Thread(
+                target=self.fetch_MA_p_c, args=(parentIdentifier,)
+            )
+        else:
+            pass  # not implemented for other operation modes
+
+        self.loading_wheel.start()
+        self.update_progressbar(self.loading_wheel)
+
     def button_find_slot_event_click(self):
         self.label_info.configure(text=" ")
         v = self.optionmenu_slot_vessel.get()[-1]
@@ -3608,6 +3623,7 @@ class App(customtkinter.CTk):
         self.this_MOD_relations_HY_HV = []
         self.this_MOD_relations_HY_LV = []
         self.this_MOD_relations_HY_unknownPosition = []
+        self.this_MOD_relations_HY_invalidPosition = []
         self.this_MF_relations_MOD = []
         self.this_HY_HV_relations_MOD = []
         self.this_HY_LV_relations_MOD = []
@@ -3652,6 +3668,8 @@ class App(customtkinter.CTk):
         self.HY_LV_child_loc = None
         self.combobox_MA_HY_LV_child_loc.set("All locations")
 
+        self.MA_mod_par_conn = None
+        self.optionmenu_MA_mod_par_conn.set("No filter")
         self.MF_child_conn = None
         self.optionmenu_MA_child_MF_conn.set("All children")
         self.HY_HV_child_conn = None
@@ -4195,6 +4213,7 @@ class App(customtkinter.CTk):
     def change_MA_parent_Mod_filter_event(self, foo):
         self.MA_mod_par_loc = self.combobox_MA_mod_par_loc.get()
         self.MA_mod_par_manu = self.combobox_MA_mod_par_manu.get()
+        self.MA_mod_par_conn = self.optionmenu_MA_mod_par_conn.get()
         self.combobox_MA_mod_par.set("- Select -")
 
         self.loading_wheel = threading.Thread(
@@ -4347,6 +4366,7 @@ class App(customtkinter.CTk):
         self.this_MOD_relations_HY_HV = []
         self.this_MOD_relations_HY_LV = []
         self.this_MOD_relations_HY_unknownPosition = []
+        self.this_MOD_relations_HY_invalidPosition = []
         SNIn = self.combobox_MA_mod_par.get()
         if SNIn != "- Select -":
             self.loading_wheel = threading.Thread(
@@ -4972,6 +4992,7 @@ class App(customtkinter.CTk):
                 self.this_MOD_relations_HY_HV = []
                 self.this_MOD_relations_HY_LV = []
                 self.this_MOD_relations_HY_unknownPosition = []
+                self.this_MOD_relations_HY_invalidPosition = []
             if update == "all" or update == "Module Flex":
                 self.possible_MF, self.last_responseText = util.get_relevant_parts(
                     "Module Flex"
@@ -5001,6 +5022,7 @@ class App(customtkinter.CTk):
                 self.this_MOD_relations_HY_HV = []
                 self.this_MOD_relations_HY_LV = []
                 self.this_MOD_relations_HY_unknownPosition = []
+                self.this_MOD_relations_HY_invalidPosition = []
             if update == "all" or update == "Module Flex":
                 self.possible_MF = []
                 self.combobox_MA_MF_chi.set("- Select -")
@@ -5018,6 +5040,7 @@ class App(customtkinter.CTk):
                 self.this_MOD_relations_HY_HV = []
                 self.this_MOD_relations_HY_LV = []
                 self.this_MOD_relations_HY_unknownPosition = []
+                self.this_MOD_relations_HY_invalidPosition = []
             if update == "all" or update == "Module Flex":
                 self.possible_MF = []
                 self.combobox_MA_MF_chi.set("- Select -")
@@ -5045,10 +5068,12 @@ class App(customtkinter.CTk):
             self.progressbar.configure(progress_color=data.progress_color_OK)
 
             if update == "all" or update == "Module":
+                no_filters_except_conn = True
                 if (
                     self.MA_mod_par_manu != None
                     and self.MA_mod_par_manu != "All manufacturers"
                 ):
+                    no_filters_except_conn = False
                     self.possible_MA_mod_par = [
                         pp
                         for pp in self.possible_MA_mod_par
@@ -5060,17 +5085,55 @@ class App(customtkinter.CTk):
                     self.MA_mod_par_loc != None
                     and self.MA_mod_par_loc != "All locations"
                 ):
+                    no_filters_except_conn = False
                     self.possible_MA_mod_par = [
                         pp
                         for pp in self.possible_MA_mod_par
                         if self.MA_mod_par_loc == str(pp["location"]["location_name"])
                     ]
 
+                self.par_mod_SN_filter = self.entry_module_parent_SN_filter.get()
+                if self.par_mod_SN_filter != "":
+                    no_filters_except_conn = False
+                    self.possible_MA_mod_par = [
+                        pp
+                        for pp in self.possible_MA_mod_par
+                        if self.par_mod_SN_filter in str(pp["serial_number"])
+                    ]
+
+                if self.MA_mod_par_conn != None and self.MA_mod_par_conn != "No filter":
+                    if no_filters_except_conn == True:
+                        info_text = wrapped_text.fill(
+                            f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
+                        )
+                        print(f">>> {info_text}")
+                        self.label_info.configure(text=info_text)
+                    self.possible_MA_mod_par = [
+                        pp
+                        for pp in self.possible_MA_mod_par
+                        if (
+                            (
+                                len(
+                                    util.get_children(
+                                        pp["part_id"], ofKind="Module Flex"
+                                    )[0]
+                                )
+                            )
+                            == 0
+                        )
+                        or (
+                            (len(util.get_children(pp["part_id"], ofKind="Hybrid")[0]))
+                            < 2
+                        )
+                    ]
+
             if update == "all" or update == "Module Flex":
+                no_filters_except_conn = True
                 if (
                     self.module_flex_child_loc != None
                     and self.module_flex_child_loc != "All locations"
                 ):
+                    no_filters_except_conn = False
                     self.possible_MF = [
                         pp
                         for pp in self.possible_MF
@@ -5081,6 +5144,7 @@ class App(customtkinter.CTk):
                 # MF child SN filter input
                 self.child0_SN_filter = self.entry_child0_SN_filter.get()
                 if self.child0_SN_filter != "":
+                    no_filters_except_conn = False
                     self.possible_MF = [
                         pc
                         for pc in self.possible_MF
@@ -5088,6 +5152,12 @@ class App(customtkinter.CTk):
                     ]
 
                 if self.MF_child_conn != None and self.MF_child_conn != "All children":
+                    if no_filters_except_conn == True:
+                        info_text = wrapped_text.fill(
+                            f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
+                        )
+                        print(f">>> {info_text}")
+                        self.label_info.configure(text=info_text)
                     self.possible_MF = [
                         pp
                         for pp in self.possible_MF
@@ -5096,10 +5166,12 @@ class App(customtkinter.CTk):
                     ]
 
             if update == "all" or update == "HY_HV":
+                no_filters_except_conn = True
                 if (
                     self.HY_HV_child_loc != None
                     and self.HY_HV_child_loc != "All locations"
                 ):
+                    no_filters_except_conn = False
                     self.possible_HY_HV = [
                         pp
                         for pp in self.possible_HY_HV
@@ -5109,6 +5181,7 @@ class App(customtkinter.CTk):
                 # HY_HV child SN filter input
                 self.child1_SN_filter = self.entry_child1_SN_filter.get()
                 if self.child1_SN_filter != "":
+                    no_filters_except_conn = False
                     self.possible_HY_HV = [
                         pc
                         for pc in self.possible_HY_HV
@@ -5116,9 +5189,23 @@ class App(customtkinter.CTk):
                     ]
 
                 if (
+                    self.HY_HV_child_cluster != None
+                    and self.HY_HV_child_cluster != "All clusters"
+                ):
+                    no_filters_except_conn = False
+                    # ToDo: call the function that groups Hybrids by their child sensor VBD score into different clusters
+                    self.possible_HY_HV = [pp for pp in self.possible_HY_HV if True]
+
+                if (
                     self.HY_HV_child_conn != None
                     and self.HY_HV_child_conn != "All children"
                 ):
+                    if no_filters_except_conn == True:
+                        info_text = wrapped_text.fill(
+                            f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
+                        )
+                        print(f">>> {info_text}")
+                        self.label_info.configure(text=info_text)
                     self.possible_HY_HV = [
                         pp
                         for pp in self.possible_HY_HV
@@ -5126,18 +5213,13 @@ class App(customtkinter.CTk):
                         == 0
                     ]
 
-                if (
-                    self.HY_HV_child_cluster != None
-                    and self.HY_HV_child_cluster != "All clusters"
-                ):
-                    # ToDo: call the function that groups Hybrids by their child sensor VBD score into different clusters
-                    self.possible_HY_HV = [pp for pp in self.possible_HY_HV if True]
-
             if update == "all" or update == "HY_LV":
+                no_filters_except_conn = True
                 if (
                     self.HY_LV_child_loc != None
                     and self.HY_LV_child_loc != "All locations"
                 ):
+                    no_filters_except_conn = False
                     self.possible_HY_LV = [
                         pp
                         for pp in self.possible_HY_LV
@@ -5147,6 +5229,7 @@ class App(customtkinter.CTk):
                 # HY_LV child SN filter input
                 self.child2_SN_filter = self.entry_child2_SN_filter.get()
                 if self.child2_SN_filter != "":
+                    no_filters_except_conn = False
                     self.possible_HY_LV = [
                         pc
                         for pc in self.possible_HY_LV
@@ -5154,22 +5237,29 @@ class App(customtkinter.CTk):
                     ]
 
                 if (
+                    self.HY_LV_child_cluster != None
+                    and self.HY_LV_child_cluster != "All clusters"
+                ):
+                    no_filters_except_conn = False
+                    # ToDo: call the function that groups Hybrids by their child sensor VBD score into different clusters
+                    self.possible_HY_LV = [pp for pp in self.possible_HY_LV if True]
+
+                if (
                     self.HY_LV_child_conn != None
                     and self.HY_LV_child_conn != "All children"
                 ):
+                    if no_filters_except_conn == True:
+                        info_text = wrapped_text.fill(
+                            f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
+                        )
+                        print(f">>> {info_text}")
+                        self.label_info.configure(text=info_text)
                     self.possible_HY_LV = [
                         pp
                         for pp in self.possible_HY_LV
                         if (len(util.get_parents(pp["part_id"], ofKind="Module")[0]))
                         == 0
                     ]
-
-                if (
-                    self.HY_LV_child_cluster != None
-                    and self.HY_LV_child_cluster != "All clusters"
-                ):
-                    # ToDo: call the function that groups Hybrids by their child sensor VBD score into different clusters
-                    self.possible_HY_LV = [pp for pp in self.possible_HY_LV if True]
 
             # begin updating the paginated SN comboboxes shown to user
             # Module
@@ -5327,6 +5417,7 @@ class App(customtkinter.CTk):
             self.this_MOD_relations_HY_HV = []
             self.this_MOD_relations_HY_LV = []
             self.this_MOD_relations_HY_unknownPosition = []
+            self.this_MOD_relations_HY_invalidPosition = []
         else:
             self.api_status = 1
             self.progressbar.configure(progress_color=data.progress_color_OK)
@@ -5369,7 +5460,15 @@ class App(customtkinter.CTk):
                         == str(r["part"]["kind_of_part"]["kind_of_part_id"])
                     ) and (str(r["position"]) == ""):
                         self.this_MOD_relations_HY_unknownPosition.append(r)
-                        add_info_text = f"\n\nExisting HY relation, at unknown location within module: {r['part']['serial_number']}.\nPlease consider adding the child again with this tool to record a valid position."
+                        add_info_text = f"\n\nExisting HY relation, at unknown position within module: {r['part']['serial_number']}.\nPlease consider adding the child again with this tool to record a valid position."
+                        print(f"{add_info_text}")
+                        info_text += add_info_text
+                    elif (
+                        str(data.KoPID_from_partKoPName["Hybrid"])
+                        == str(r["part"]["kind_of_part"]["kind_of_part_id"])
+                    ) and (str(r["position"]) not in ["HV", "LV"]):
+                        self.this_MOD_relations_HY_invalidPosition.append(r)
+                        add_info_text = f"\n\nExisting HY relation, at invalid position {str(r["position"])} within module: {r['part']['serial_number']}.\nPlease consider adding the child again with this tool to record a valid position (DB convention: HV or LV)."
                         print(f"{add_info_text}")
                         info_text += add_info_text
                     else:
