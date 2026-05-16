@@ -27,6 +27,7 @@ api_report:
     project: anstein/hgtd-tools-internal
     branch: master
     strategy: mirror
+  variables:
     TRIGGER_TARGET: "api_report_generate_files"
   rules:
     # Run on schedules
@@ -40,8 +41,8 @@ api_test:
     project: anstein/hgtd-tools-internal
     branch: master
     strategy: depend
-    TRIGGER_TARGET: "api_test_generate_files"
   variables:
+    TRIGGER_TARGET: "api_test_generate_files"
     UPSTREAM_MR_BRANCH: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
     UPSTREAM_PROJECT_URL: $CI_MERGE_REQUEST_SOURCE_PROJECT_URL
   rules:
