@@ -6,8 +6,7 @@ workflow:
 
 stages:
   - build
-  - generate_reports
-  - deploy_reports
+  - test
   - deploy_docs
 
 pre-commit:
@@ -22,54 +21,31 @@ pre-commit:
     - if: $CI_PIPELINE_SOURCE == "schedule"
       when: never
 
-generate_files:
-  stage: generate_reports
-  image: registry.cern.ch/docker.io/library/python:3.12
-  script:
-    - echo "🔧  Installing dependencies"
-    - pip install -r requirements.txt
-    - echo "$CONFIG_API" > config_api
-    - echo "🛠️  Running your yields report"
-    - python report_stats.py --log-axis True
-    - shred -u config_api
-    - mkdir generated
-    - cp counts*.pdf generated
-    - cp counts*.png generated
-    - cp fractions*.pdf generated
-    - cp fractions*.png generated
-    - cp newly_uploaded*.pdf generated
-    - cp newly_uploaded*.png generated
-    - cp cumulative_counts*.pdf generated
-    - cp cumulative_counts*.png generated
-    - cp report_stats*.json generated
-    - cp output_invalid.txt generated
-  artifacts:
-    paths:
-      - generated/
-    expire_in: 1h
-    access: 'maintainer'
+api_report:
+  stage: test
+  trigger:
+    project: anstein/hgtd-tools-internal
+    branch: master
+    strategy: mirror
+    TRIGGER_TARGET: "api_report_generate_files"
   rules:
+    # Run on schedules
     - if: $CI_PIPELINE_SOURCE == "schedule"
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # Run on pushes to the default branch (main or master)
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
-sync_to_eos:
-  stage: deploy_reports
-  needs: [generate_files]
-  image: gitlab-registry.cern.ch/ci-tools/ci-web-deployer
+api_test:
+  stage: test
+  trigger:
+    project: anstein/hgtd-tools-internal
+    branch: master
+    strategy: depend
+    TRIGGER_TARGET: "api_test_generate_files"
   variables:
-    "EOS_PATH": "${EOS_HGTD_PATH}"
-    "EOS_ACCOUNT_USERNAME": "${EOS_ACCOUNT_USERNAME}"
-    "EOS_ACCOUNT_PASSWORD": "${EOS_ACCOUNT_PASSWORD}"
-    "CI_OUTPUT_DIR": "generated/"
-  script:
-    - echo "📂 ${EOS_ACCOUNT_USERNAME} will copy generated files into eos space"
-    - deploy-eos
+    UPSTREAM_MR_BRANCH: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+    UPSTREAM_PROJECT_URL: $CI_MERGE_REQUEST_SOURCE_PROJECT_URL
   rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: never
 
 .job-script: &job-script
   - pip install zensical
