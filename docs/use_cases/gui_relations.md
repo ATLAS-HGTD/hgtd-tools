@@ -52,8 +52,13 @@ The operation modes of hgtd-tools and what relations are affected:
 If you do not find the relation you wish to enter in this table, refer to the [alternative strategy with the main frontend single or bulk upload](https://hgtd-database.docs.cern.ch/content/user/fill_parts_tree/){target="_blank"} instead.
 
 !!! success "Get ready to use hgtd-tools"
-    Please follow the [install guide](../getting_started/install.md) to learn more about how you can install hgtd-tools
-    on your machine, especially read the *Installation* and *Usage* sections. This should take no more than one hour when starting the installation from scratch, including first ever install of miniconda3 as a package manager for python3 if you had never done so on your machine.
+    Please follow the [install guide](../getting_started/install.md) to learn more about how you can install hgtd-tools on your machine and read the [quickstart instructions](../index.md#quickstart). This should take no more than one hour when starting the installation from scratch, including first ever install of miniconda3 as a package manager for python3 if you had never done so on your machine.
+
+    Once you are done with installation (and have activated your environment, e.g. with `conda activate hgtd` as in the instructions), start the GUI:
+
+    ```shell
+    python main.py
+    ```
 
 ## User Manual
 At startup, the GUI looks like the following:

@@ -16,7 +16,7 @@ Please refer to this overview of the most common status codes and what you can l
 
 - **Starts with 2**: good news, wohoo! Your request was successful, e.g. retrieving data (200) or creating new data upstream (201).
 - **Starts with 4**: you sure what you are doing is correct? Likely a typo or bad payload in your request (400) when the endpoint exists, but it does not like your request, or missing authentication / access token (401). Could also be wrong URL (404) which is similar to dialing a phone number that does not exist ("The number you have dialed is not in service.", but in the web edition).
-- **Starts with 5**: server has received your request, but failed to process it internally. Can be an error that is not caught, e.g. the python-portion of our backend had an error while processing (500), not further specified where and what went wrong. Could also be something related to DB / some infrastructure not available or overlaoded (502 / 503), or your request taking too long / timeout (504).
+- **Starts with 5**: server has received your request, but failed to process it internally. Can be an error that is not caught, e.g. the python-portion of our backend had an error while processing (500), not further specified where and what went wrong. Could also be something related to DB / some infrastructure not available or overloaded (502 / 503), or your request taking too long / timeout (504).
 
 More codes and their explanation are documented for example over at [wikipedia](https://en.wikipedia.org/wiki/List_of_HTTP_status_codes){target="_blank"}.
 

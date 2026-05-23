@@ -1,5 +1,5 @@
 # GUI component naming and patterns
-This somewhat ugly page is just a collection of typical GUI elements and the associated actions, use these as examples to model additional components.
+Typical GUI elements and the associated actions, use these as examples to model additional components.
 
 ## Buttons associated with textbox
 

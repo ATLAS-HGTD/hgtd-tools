@@ -7,7 +7,7 @@
 5. ON GITLAB: create new release X.Y.Z from tag vX.Y.Z
 6. update version endpoint `hgtd-tools-version` on cernbox with content X.Y.Z [https://cernbox.cern.ch/text-editor/eos/user/a/anstein/hgtd-tools-version](https://cernbox.cern.ch/text-editor/eos/user/a/anstein/hgtd-tools-version){target="_blank"}
 7. submit MR to FADAPro to update the submodule (if anything except GUI, i.e. the API interface is affected)
-8. email to users e-group and message on mattermost users channel with the changelog / release notes (only if release includes breaking changes, otherwise, let the automatic version checker help via CLI)
+8. email to hgtd-tools-users-announce e-group with the changelog / release notes (also announce what the automatic version checker via CLI will recommend as latest version)
 
 ## Ongoing and closed release cycles
 v1.Y.Z: First release cycle for actual users, part of the ProdDB tutorial
