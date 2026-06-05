@@ -305,6 +305,49 @@ contains the actual user input and buttons to perform the parts tree operations.
 
     HGTD Tools asks the user for confirmation, if another FT was already used for the desired Slot, similar to the DU check.
 
+## Standard workflows
+
+??? question "Finding local position (in DU) at a given global position"
+
+    ??? example "Manually in csv table"
+
+        This only knows about the theory, if you just need the translation between labeling schemes.
+
+        1. Open [slot table](https://gitlab.cern.ch/anstein/slotsflextailspreproduction/-/blob/master/SlotTable/all_slots_withOutdatedPlaceholder.csv?ref_type=heads){target="_blank"}. (You may want to download a local copy and periodically check for updates, although now with all CAD drawings and corresponding FT categories, no fundamental changes are expected).
+        2. Search for slot to cross-check its local position, slot serial numbers use global scheme, i.e.  
+            which vessel? D, M, 1, 2  
+            which layer? 0,...,3  
+            which quadrant? 0,...,3  
+            which row?  
+            which module?
+        3. Look for columns: `SU_Row` and `SU_Module`, these are the local positions you are looking for.
+
+    ??? example "With hgtd-tools GUI open"
+
+        1. Go to Operation Mode "Detector Assembly (CERN): FT". (Because this is usually needed when connecting flex tails).
+        2. Search for slot in question, slot serial numbers use global scheme, i.e.  
+            From blue dropdown: which vessel? D, M, 1, 2  
+            From blue dropdown: which layer? 0,...,3  
+            From blue dropdown: which quadrant? 0,...,3  
+            From upper input box: which row?  
+            From upper input box: which module?
+        4. Hit the "FIND IN SLOT TABLE" button. Local positions are retrieved from slot table.
+
+??? question "Finding which module is connected at a given global position"
+
+    ??? example "With hgtd-tools GUI open"
+
+        1. Go to Operation Mode "Detector Assembly (CERN): FT". (Because this is usually needed when connecting flex tails).
+        2. Search for slot in question, slot serial numbers use global scheme, i.e.  
+            From blue dropdown: which vessel? D, M, 1, 2  
+            From blue dropdown: which layer? 0,...,3  
+            From blue dropdown: which quadrant? 0,...,3  
+            From upper input box: which row?  
+            From upper input box: which module?
+        3. Hit the "FIND IN SLOT TABLE" button.
+        4. Hit the "INSPECT SLOT" button. Its parts detail page will open in your webbrowser.
+        5. Check part children. If both required operations - module loading, DU assembly - have been carried out correctly with hgtd-tools, you will find your module there.
+
 ## Common issues / solutions
 
 ??? question "UI elements are cut off (screen resolution issue)"
