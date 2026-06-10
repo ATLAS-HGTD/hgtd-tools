@@ -627,6 +627,11 @@ def check_SN_valid(snIn):
                     if digitEight == "D" and int(digitSeven) <= 2:
                         snGeneration = 1
                         messageOut = "Recognize old Flex Tail SN definition, used for demonstrator from 24.05.2023 until 2024"
+                        prodExplainer = "demonstrator"
+                    elif digitEight == "1" and digitSeven == "1":
+                        snGeneration = 1
+                        messageOut = "Recognize old Flex Tail SN definition, used for demonstrator from 24.05.2023 until 2024"
+                        prodExplainer = "demonstrator"
                     elif digitEight == "2" and digitSeven == "1":
                         snGeneration = 1.2
                         messageOut = "Recognize old Flex Tail SN definition, used for new demonstrator order 2024/2025"
@@ -670,17 +675,7 @@ def check_SN_valid(snIn):
                         batchn = digitEight
                     elif snGeneration == 1:
                         prod = digitEight
-                        if prod == "M":
-                            prodExplainer = "Main production"
-                        elif prod == "D":
-                            prodExplainer = "demonstrator"
-                        elif prod == "T":
-                            prodExplainer = "test"
-                        elif prod == "O":
-                            prodExplainer = "other"
-                        else:
-                            prodExplainer = "Unknown Production attribute!"
-                            return False, prodExplainer
+                        # prodExplainer already known above
                         batchn = digitSeven
                     else:
                         prod = digitEight
