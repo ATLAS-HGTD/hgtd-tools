@@ -17,3 +17,17 @@
 ---
 
 Please consult the documentation on [https://hgtd-tools.docs.cern.ch/](https://hgtd-tools.docs.cern.ch/) to learn more about hgtd-tools.
+
+---
+
+HGTD Tools is now on Zenodo, with a persistent [Zenodo DOI identifier](https://doi.org/10.5281/zenodo.20774012), updating with each new version.
+
+```
+@software{hgtd_tools,
+  author       = {Stein, Annika},
+  title        = {HGTD Tools},
+  publisher    = {Zenodo},
+  doi          = {10.5281/zenodo.20774012},
+  url          = {https://doi.org/10.5281/zenodo.20774012},
+}
+```
