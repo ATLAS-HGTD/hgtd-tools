@@ -111,11 +111,6 @@ upload_zenodo:
         VERSION: $CI_COMMIT_TAG
         HGTDTOOLS_PROJECT_ISTAG: true
       when: on_success
-    - if: $CI_COMMIT_TAG
-      when: never
-    # Will default to `latest` for any change to `master`
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-      when: on_success
     - when: never
   trigger:
     project: anstein/hgtd-tools-internal
