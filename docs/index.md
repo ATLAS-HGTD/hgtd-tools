@@ -105,8 +105,6 @@ Thanks to an unknown reddit user who gave me hope when the PyQt6 installation wo
 
 ## Zenodo
 
----
-
 HGTD Tools is now on Zenodo, with a persistent [Zenodo DOI identifier](https://doi.org/10.5281/zenodo.20774012) which updates with each new version.
 
 ```
