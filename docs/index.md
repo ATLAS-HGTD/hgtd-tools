@@ -102,3 +102,19 @@ Some of them are also bound to [Milestones](https://gitlab.cern.ch/anstein/hgtd-
 
 ## Acknowledgements
 Thanks to an unknown reddit user who gave me hope when the PyQt6 installation wouldn't want to work with my setup / machine. This [link](https://www.reddit.com/r/Tkinter/comments/snrb1f/comment/hw4bylf/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button){target="_blank"} brought me to [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter){target="_blank"} and the GUI is built on top of the tutorial.
+
+## Zenodo
+
+---
+
+HGTD Tools is now on Zenodo, with a persistent [Zenodo DOI identifier](https://doi.org/10.5281/zenodo.20774012) which updates with each new version.
+
+```
+@software{hgtd_tools,
+  author       = {Stein, Annika},
+  title        = {HGTD Tools},
+  publisher    = {Zenodo},
+  doi          = {10.5281/zenodo.20774012},
+  url          = {https://doi.org/10.5281/zenodo.20774012},
+}
+```

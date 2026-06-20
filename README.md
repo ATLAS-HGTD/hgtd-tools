@@ -20,7 +20,7 @@ Please consult the documentation on [https://hgtd-tools.docs.cern.ch/](https://h
 
 ---
 
-HGTD Tools is now on Zenodo, with a persistent [Zenodo DOI identifier](https://doi.org/10.5281/zenodo.20774012), updating with each new version.
+HGTD Tools is now on Zenodo, with a persistent [Zenodo DOI identifier](https://doi.org/10.5281/zenodo.20774012) which updates with each new version.
 
 ```
 @software{hgtd_tools,
