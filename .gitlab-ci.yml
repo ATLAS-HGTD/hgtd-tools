@@ -76,7 +76,7 @@ prepare_zenodo:
       when: on_success
     - when: never
   script:
-    - git archive --output hgtd-tools_${CI_COMMIT_TAG}.zip --format zip
+    - git archive --format zip --output hgtd-tools_${CI_COMMIT_TAG}.zip ${CI_COMMIT_TAG}
     # Update publication settings
     - sed -i -e "s/<<DATE>>/$(date +%F)/g" .zenodo.json
     - sed -i -e "s/<<VERSION>>/${CI_COMMIT_TAG}/g" .zenodo.json
