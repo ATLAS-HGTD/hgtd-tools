@@ -3,18 +3,21 @@
         "title": "HGTD Tools",
         "publication_date": "<<DATE>>",
         "version": "<<VERSION_STRIPPED>>",
+        "doi": "10.5281/zenodo.20774012",
         "access_right": "open",
         "creators": [
             {
                 "person_or_org": {
-                    "type": "personal",
-                    "name": "Annika Stein",
-                    "given_name": "Annika",
                     "family_name": "Stein",
-                    "identifiers": [{
-                        "scheme": "orcid",
-                        "identifier": "0000-0003-0713-811X"
-                    }]
+                    "given_name": "Annika",
+                    "identifiers": [
+                        {
+                        "identifier": "0000-0003-0713-811X",
+                        "scheme": "orcid"
+                        }
+                    ],
+                    "name": "Stein, Annika",
+                    "type": "personal"
                 }
             }
         ],
@@ -110,8 +113,19 @@
         ],
         "rights": [
             {
-                "id": "apache-2.0"
+                "description": {
+                    "en": "A permissive license whose main conditions require preservation of copyright and license notices. Contributors provide an express grant of patent rights. Licensed works, modifications, and larger works may be distributed under different terms and without source code."
+                },
+                "id": "apache-2.0",
+                "props": {
+                    "scheme": "spdx",
+                    "url": "http://www.apache.org/licenses/LICENSE-2.0"
+                },
+                "title": {
+                    "en": "Apache License 2.0"
+                }
             }
-        ]
+        ],
+        "publisher": "Zenodo"
     }
 }
