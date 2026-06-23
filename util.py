@@ -822,16 +822,10 @@ def check_SN_valid(snIn):
                         testsExplainer = "Unknown Assembly site attribute!"
                         return False, testsExplainer
                     prod = snIn[6]
-                    if prod in ("M", "0"):
+                    if prod in ("M"):
                         prodExplainer = "Main production"
                     elif prod == "P":
                         prodExplainer = "Pre-production"
-                    elif prod in ("D", "1"):
-                        prodExplainer = "demonstrator"
-                    elif prod in ("T", "2"):
-                        prodExplainer = "test"
-                    elif prod in ("O", "3"):
-                        prodExplainer = "other"
                     else:
                         prodExplainer = "Unknown Production attribute!"
                         return False, prodExplainer
