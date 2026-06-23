@@ -149,7 +149,7 @@ class App(customtkinter.CTk):
             font=customtkinter.CTkFont(size=20, weight="bold"),
         )
         self.label_logo.grid(row=0, column=0, padx=10, pady=(10, 5), columnspan=2)
-        self.my_version = "1.10.0"
+        self.my_version = "1.10.1"
         self.version_full_text = (
             f"v{self.my_version} - February 2026\nAnnika Stein (JGU Mainz)"
         )
@@ -1178,7 +1178,7 @@ class App(customtkinter.CTk):
             image=self.filter_image,
             text="Filter SN",
             compound="left",
-            command=lambda: self.button_onclick_event_filter_child_SN("HY_LV"),
+            command=lambda: self.button_onclick_event_filter_child_SN("HY_HV"),
             width=60,
         )
         self.btn_child1_filter_SN.grid(row=0, column=1, padx=5, pady=5, columnspan=2)
