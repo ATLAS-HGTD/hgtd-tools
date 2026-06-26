@@ -1,4 +1,39 @@
 # This file contains all hardcoded constants
+## For reporting
+all_cats = [
+    "Sensor",
+    "Wafer",
+    "ASIC",
+    "Hybrid",
+    "Module Flex",
+    "Module",
+    "Support Unit",
+    "Detector Unit",
+    "PEB",
+    "PEB_MUX64",
+    "Flex Tail",
+    "HV_PS",
+    "HV_module",
+]
+public_cats = [
+    "Sensor",
+    "Wafer",
+    # "ASIC", add them back when significant portion is uploaded
+    "Hybrid",
+    "Module Flex",
+    "Module",
+    "Support Unit",
+    "Detector Unit",
+    "PEB",
+    # "PEB_MUX64", add them back when significant portion is uploaded
+    "Flex Tail",
+    "HV_PS",
+    "HV_module",
+]
+test_cats = [
+    "HV_PS",
+    "HV_module",
+]
 ## DB internal IDs
 ### human-readable KoP name map to internal KoP-ID
 KoPID_from_partKoPName = {

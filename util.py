@@ -173,8 +173,8 @@ def delete_parents(chi_partID, onlyNonDeleted=True, ofKind="all", dryrun=False):
 
 def get_info_of_part_id(part_id):
     try:
-        attributes, responseText = api.fetch_information(f"/part/{part_id}/")
-        return attributes, responseText
+        details, responseText = api.fetch_information(f"/part/{part_id}/")
+        return details, responseText
     except (
         requests.exceptions.HTTPError,
         requests.exceptions.ConnectionError,
@@ -231,6 +231,8 @@ def select_parts(
     manu_name=None,
     manu_id=None,
     check_valid_SN_latest_spec=False,
+    check_invalid_SN_latest_spec=False,
+    check_fake_SN=False,
     no_parents_ofKind=None,
     no_children_ofKind=None,
     has_parents_ofKind=None,
@@ -276,6 +278,12 @@ def select_parts(
         parts = [
             iP for iP in parts if check_SN_valid(str(iP["serial_number"]))[0] == True
         ]
+    if check_invalid_SN_latest_spec == True:
+        parts = [
+            iP for iP in parts if check_SN_valid(str(iP["serial_number"]))[0] == False
+        ]
+    if check_fake_SN == True:
+        parts = [iP for iP in parts if (str(iP["serial_number"])[:3] != "20W")]
     if no_parents_ofKind != None:
         parts = [
             iP

@@ -29,7 +29,7 @@ parser.add_argument(
 parser.add_argument(
     "--subtitle",
     dest="subtitle",
-    help="[Optional] Add a subtitle with SN category and commit + date of generation.",
+    help="[Optional] Add a subtitle with SN validity category and used hgtd-tools commit + date of generation.",
     default=True,
 )
 parser.add_argument(
@@ -46,46 +46,12 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-all_cats = [
-    "Sensor",
-    "Wafer",
-    "ASIC",
-    "Hybrid",
-    "Module Flex",
-    "Module",
-    "Support Unit",
-    "Detector Unit",
-    "PEB",
-    "PEB_MUX64",
-    "Flex Tail",
-    "HV_PS",
-    "HV_module",
-]
-public_cats = [
-    "Sensor",
-    "Wafer",
-    # "ASIC", add them back when significant portion is uploaded
-    "Hybrid",
-    "Module Flex",
-    "Module",
-    "Support Unit",
-    "Detector Unit",
-    "PEB",
-    # "PEB_MUX64", add them back when significant portion is uploaded
-    "Flex Tail",
-    "HV_PS",
-    "HV_module",
-]
-test_cats = [
-    "HV_PS",
-    "HV_module",
-]
 if args.categories == None:
-    categories = all_cats
+    categories = data.all_cats
 elif args.categories == "public":
-    categories = public_cats
+    categories = data.public_cats
 elif args.categories == "test":
-    categories = test_cats
+    categories = data.test_cats
 
 skip_data_prep = util.str2bool(args.skipDataPrep)
 subtitle = util.str2bool(args.subtitle)
