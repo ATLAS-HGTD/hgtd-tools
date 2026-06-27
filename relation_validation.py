@@ -1,3 +1,6 @@
+import data
+import util
+
 # =============================================================================
 # This file contains validation functions to make sure relations are in order
 # =============================================================================
@@ -15,7 +18,6 @@
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # A - Parent: Module
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-import data
 
 
 def validate_MO_chi_MF(children_MF):
@@ -147,6 +149,26 @@ def validate_MO_children(children):
     ]
 
     return validate_MO_chi_MF(children_MF), validate_MO_chi_HY(children_HY)
+
+
+def validate_module(MO_part_id):
+    """
+    Validate a single module, given its part_id.
+    """
+    children = util.get_children(MO_part_id)[0]
+    (validation_result_MO_chi_MF, validation_reason_MO_chi_MF), (
+        validation_result_MO_chi_HY,
+        validation_reason_MO_chi_HY,
+    ) = validate_MO_children(children)
+    validation_result = {
+        "validation_result_MO_chi_MF": validation_result_MO_chi_MF,
+        "validation_reason_MO_chi_MF": validation_reason_MO_chi_MF,
+        "validation_result_MO_chi_HY": validation_result_MO_chi_HY,
+        "validation_reason_MO_chi_HY": validation_reason_MO_chi_HY,
+        "validation_result_overall": validation_result_MO_chi_MF
+        and validation_result_MO_chi_HY,
+    }
+    return validation_result
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
