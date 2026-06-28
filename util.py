@@ -280,7 +280,10 @@ def select_parts(
         ]
     if check_invalid_SN_latest_spec == True:
         parts = [
-            iP for iP in parts if check_SN_valid(str(iP["serial_number"]))[0] == False
+            iP
+            for iP in parts
+            if (str(iP["serial_number"])[:3] == "20W")
+            and check_SN_valid(str(iP["serial_number"]))[0] == False
         ]
     if check_fake_SN == True:
         parts = [iP for iP in parts if (str(iP["serial_number"])[:3] != "20W")]

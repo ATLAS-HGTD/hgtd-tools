@@ -54,7 +54,7 @@ def validate_MO_chi_MF(children_MF):
 
 def validate_MO_chi_HY(children_HY):
     """
-    Check if a module has exactly one hybrid at position HV, exactly on hybrid at position LV. => Return validity True, empty reason string
+    Check if a module has exactly one hybrid at position HV, exactly one hybrid at position LV. => Return validity True, empty reason string
     Otherwise => Return validaty False, filled reason string
 
     Parameters:

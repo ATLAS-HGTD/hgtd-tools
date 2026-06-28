@@ -300,3 +300,92 @@ def iv_curves_for_sns(
         dpi=300,
     )
     plt.close()
+
+
+def pie_chart(
+    data,
+    text_labels,
+    filename_postfix,
+    exp_text,
+    subtitle,
+    extra_text,
+):
+    plt.rcParams["axes.prop_cycle"] = cycler("color", combination_color_sequence)
+    fig, ax = plt.subplots(figsize=(12, 8))
+    # filter to make sure empty contributions are ignored, keeping the color sequence
+    filtered_data = []
+    filtered_labels = []
+    filtered_colors = []
+    for i, val in enumerate(data):
+        if val > 0:
+            filtered_data.append(val)
+            filtered_labels.append(text_labels[i])
+            filtered_colors.append(
+                combination_color_sequence[i % len(combination_color_sequence)]
+            )
+    pie = ax.pie(filtered_data, colors=filtered_colors)
+    wedges = pie[0]
+    labels_outer = ax.pie_label(pie, filtered_labels, distance=1.1)
+    labels_frac = ax.pie_label(pie, "{frac:.1%}", distance=0.7)
+    labels_abs = ax.pie_label(pie, "{absval:d}", distance=0.4)
+    # change the text color depending on wedge color (luminance)
+    for i, wedge in enumerate(wedges):
+        rgba = wedge.get_facecolor()
+        r, g, b = rgba[0], rgba[1], rgba[2]
+        # W3C
+        luminance = 0.299 * r + 0.587 * g + 0.114 * b
+        text_color = "white" if luminance < 0.5 else "#111111"
+        labels_frac[i].set_color(text_color)
+        labels_frac[i].set_weight("bold")
+        labels_abs[i].set_color(text_color)
+        labels_abs[i].set_weight("bold")
+    hep.label.exp_text(
+        "ATLAS HGTD",
+        " " + exp_text,
+        "",
+        loc=0,
+        fontsize=(
+            rcParams["font.size"] * 1.3,
+            rcParams["font.size"] * 1.3,
+            rcParams["font.size"],
+            rcParams["font.size"] / 1.7,
+        ),
+        fontstyle=("italic", "normal", "italic", "normal"),
+    )
+    if subtitle:
+        full_subtitle = f"{extra_text}Generated with anstein/hgtd-tools~master on {datetime.today().strftime('%Y-%m-%d')}"
+        ax.text(
+            0.00,
+            0.99,
+            full_subtitle,
+            transform=ax.transAxes,
+            fontsize=rcParams["font.size"] / 1.7,
+            fontstyle="normal",
+            verticalalignment="top",
+            horizontalalignment="left",
+        )
+    fig.savefig(
+        f"pie_chart_{filename_postfix}.pdf",
+        bbox_inches="tight",
+        facecolor="white",
+        dpi=300,
+    )
+    fig.savefig(
+        f"pie_chart_{filename_postfix}.png",
+        bbox_inches="tight",
+        facecolor="white",
+        dpi=300,
+    )
+    plt.close()
+
+
+if __name__ == "__main__":
+    # test pie chart plotter
+    pie_chart(
+        [17, 52, 52, 61],
+        ["a", "b", "c", "d"],
+        "test",
+        "Experiment",
+        True,
+        "Extra text. ",
+    )

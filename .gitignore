@@ -58,6 +58,7 @@ local/*
 local_info/*
 archived/*
 output_invalid.txt
+validation.md
 
 # ================================================================
 # Other files that should not be committed
