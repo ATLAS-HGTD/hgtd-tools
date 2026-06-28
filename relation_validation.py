@@ -10,9 +10,11 @@ import util
 ## A: Go by parent => down to children
 ### 1. individual kinds of relations, if there are multiple for some parent KoP
 ### 2. combination of all relations to be validated for some parent KoP
+### The existance of the parent implies all relations to children must be valid
 ## B: Go by child => up to parents
 ### 1. individual kinds of relations, if there are multiple for some child KoP
 ### 2. combination of all relations to be validated for some child KoP
+### The existance of child does not require relation to parent (yet), new part
 # How to use
 ## These functions can be called standalone, or as part of reporting wrapper
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -174,4 +176,68 @@ def validate_module(MO_part_id):
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # B - Child: Sensor
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# ToDo
+def validate_S_par_HY(parents_HY):
+    """
+    Check if a sensor has exactly one hybrid parent, with empty position. => Return validity True, empty reason string
+    No parent connected yet => Return validity "new"
+    Otherwise => Return validity False, filled reason string
+
+    Parameters:
+        parents_HY: list of relations.
+
+    Counting the correct number of parents always takes precedence (no further checks for position in that case).
+    """
+    if len(parents_HY) == 0:
+        return (
+            "new",
+            "No Hybrid connected. This is acceptable during production process, sensor has not been used yet.",
+        )
+    elif len(parents_HY) == 1:
+        position_attribute = str(parents_HY[0]["position"])
+        SN_HY = str(parents_HY[0]["part_parent"]["serial_number"])
+        if position_attribute != "":
+            return (
+                False,
+                f"One Hybrid {SN_HY} connected, but wrong position attribute {position_attribute}.",
+            )
+        else:
+            return True, ""
+    else:
+        return (
+            False,
+            "Multiple Hybrid parents connected. Must be exactly one, at empty position.",
+        )
+
+
+def validate_S_parents(parents):
+    """
+    Validates the parents of a single sensor.
+
+    Parameters:
+        parents: list of relations.
+
+    Returns:
+        2-tuple of results (value and reason).
+    """
+    parents_HY = [
+        c
+        for c in parents
+        if c["part_parent"]["kind_of_part"]["kind_of_part_id"]
+        == data.KoPID_from_partKoPName["Hybrid"]
+    ]
+
+    return validate_S_par_HY(parents_HY)
+
+
+def validate_sensor(S_part_id):
+    """
+    Validate a single sensor, given its part_id.
+    """
+    parents = util.get_parents(S_part_id)[0]
+    validation_result_S_par_HY, validation_reason_S_par_HY = validate_S_parents(parents)
+    validation_result = {
+        "validation_result_S_par_HY": validation_result_S_par_HY,
+        "validation_reason_S_par_HY": validation_reason_S_par_HY,
+        "validation_result_overall": validation_result_S_par_HY,
+    }
+    return validation_result

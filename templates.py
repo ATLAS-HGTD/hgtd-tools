@@ -34,7 +34,7 @@ def module_assembly_all(
     n_invalid_parts_all,
     n_fake_parts_all,
 ):
-    return f"""???+ note "All validated sites"
+    return f"""???+ tip "All validated sites"
 
     Valid Modules: {n_valid_parts_all}, of which correctly connected with children (MF, HY): {n_valid_connected_parts_all}
 
@@ -42,17 +42,27 @@ def module_assembly_all(
 
     Fake Modules: {n_fake_parts_all}
 
-    ???+ note "Overview: valid Modules by assembly sites"
+    ???+ info "Overview: valid Modules by assembly sites"
 
         [.png :material-image-search-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_MA_valid_all.png){{ .md-button }}
         [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_MA_valid_all.pdf){{ .md-button }}
 
         ![pie_chart_MA_valid_all.png](../generated/pie_chart_MA_valid_all.png)
 
-    ???+ note "Overview: valid & correctly connected Modules by assembly sites"
+    ???+ info "Overview: valid & correctly connected Modules by assembly sites"
 
         [.png :material-image-search-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_MA_valid_connected_all.png){{ .md-button }}
         [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_MA_valid_connected_all.pdf){{ .md-button }}
 
         ![pie_chart_MA_valid_connected_all.png](../generated/pie_chart_MA_valid_connected_all.png)
+"""
+
+
+def sensor_par_HY_intro():
+    return f"""### Sensor -> Hybrid (testing parents of S)
+
+| Parent KoP | Child KoP | Position |
+| ---------- | --------- | -------- |
+| Hybrid | Sensor | empty |
+
 """
