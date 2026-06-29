@@ -13,7 +13,7 @@ parser.add_argument(
     dest="mode_alias",
     help="Validation mode alias. (Default: %(default)s)",
     default="all",
-    choices=["Module Assembly", "Sensor_par_HY", "all"],
+    choices=["Module Assembly", "Sensor_par_HY", "Hybridization", "all"],
 )
 parser.add_argument(
     "--single-manufacturer",
@@ -49,7 +49,7 @@ exp_text = args.customText if args.customText != None else "Production Database"
 
 if mode_alias == "all":
     # need to run multiple validations in this script
-    mode_aliases = ["Module Assembly", "Sensor_par_HY"]
+    mode_aliases = ["Module Assembly", "Hybridization", "Sensor_par_HY"]
 else:
     mode_aliases = [mode_alias]
 
@@ -64,7 +64,8 @@ def prepare_validation_per_subset(parts_subset, mode_alias):
     invalid_parts = util.select_parts(parts_subset, check_invalid_SN_latest_spec=True)
     fake_parts = util.select_parts(parts_subset, check_fake_SN=True)
     ## Count and prepare dict for relation validation
-    if mode_alias == "Module Assembly":
+    # if the relation validation is of nature parent -> check its children, do not allow unconnected
+    if mode_alias in ["Module Assembly", "Hybridization"]:
         validation_subset = {
             "n_valid_parts": len(valid_parts),
             "n_invalid_parts": len(invalid_parts),
@@ -73,6 +74,7 @@ def prepare_validation_per_subset(parts_subset, mode_alias):
             "relations_template_good": '\t??? success "Relation validation OK for these parts:"\n\n',
             "relations_template_bad": "",
         }
+    # if the relation validation is of nature child -> check its parents, do track / allow unconnected (new)
     elif mode_alias == "Sensor_par_HY":
         validation_subset = {
             "n_valid_parts": len(valid_parts),
@@ -89,6 +91,8 @@ def prepare_validation_per_subset(parts_subset, mode_alias):
         this_part_SN = p["serial_number"]
         if mode_alias == "Module Assembly":
             individual_part_results = relation_validation.validate_module(this_part_id)
+        elif mode_alias == "Hybridization":
+            individual_part_results = relation_validation.validate_hybrid(this_part_id)
         elif mode_alias == "Sensor_par_HY":
             individual_part_results = relation_validation.validate_sensor(this_part_id)
 
@@ -125,6 +129,14 @@ def prepare_validation_per_subset(parts_subset, mode_alias):
                         + individual_part_results["validation_reason_MO_chi_HY"]
                         + "\n\n"
                     )
+            elif mode_alias == "Hybridization":
+                # Currently, only check the 1-1 relation to sensors, in the future, also ASICs!
+                if individual_part_results["validation_result_HY_chi_S"] == False:
+                    validation_subset["relations_template_bad"] += (
+                        "\t\t"
+                        + individual_part_results["validation_reason_HY_chi_S"]
+                        + "\n\n"
+                    )
             elif mode_alias == "Sensor_par_HY":
                 if individual_part_results["validation_result_S_par_HY"] == False:
                     validation_subset["relations_template_bad"] += (
@@ -141,9 +153,17 @@ def prepare_validation_per_subset(parts_subset, mode_alias):
 
 def prepare_validation_per_mode(mode_alias, manufacturers=None):
     validation_all = {}
-    if mode_alias == "Module Assembly":
+    if mode_alias in ["Module Assembly", "Hybridization"]:
+        if mode_alias == "Module Assembly":
+            category = "Module"
+            filename_postfix_mode_alias = "MA"
+            extra_text_mode_alias = "Module Assembly: Modules"
+        elif mode_alias == "Hybridization":
+            category = "Hybrid"
+            filename_postfix_mode_alias = "HY"
+            extra_text_mode_alias = "Hybridization: Hybrids"
+
         # Find all relevant parts of category under investigation
-        category = "Module"
         parts = util.get_relevant_parts(category)[0]
         # further split by manufacturer
         for manu in manufacturers:
@@ -174,9 +194,6 @@ def prepare_validation_per_mode(mode_alias, manufacturers=None):
                 validation_all[m]["n_fake_parts"] for m in manufacturers
             ),
         }
-
-        filename_postfix_mode_alias = "MA"
-        extra_text_mode_alias = "Module Assembly: Modules"
 
         # Plot overview pie charts
         ## All valid parts, contributions by manufacturer
@@ -211,6 +228,8 @@ validation_template = templates.validation_header()
 for mode_alias in mode_aliases:
     if mode_alias == "Module Assembly":
         manufacturers = data.MA_sites_to_monitor
+    elif mode_alias == "Hybridization":
+        manufacturers = data.HY_sites_to_monitor
     else:
         manufacturers = []  # not implemented, but to use same pattern
     if single_manufacturer != None:
@@ -232,6 +251,28 @@ for mode_alias in mode_aliases:
     Invalid Modules: {validation_all[m]["n_invalid_parts"]}
 
     Fake Modules: {validation_all[m]["n_fake_parts"]}
+
+    Details:
+
+{validation_all[m]["relations_template_good"]}
+{validation_all[m]["relations_template_bad"]}
+"""
+    elif mode_alias == "Hybridization":
+        validation_template += templates.hybridization_intro()
+        validation_template += templates.hybridization_all(
+            validation_all["all"]["n_valid_parts"],
+            validation_all["all"]["n_valid_connected_parts"],
+            validation_all["all"]["n_invalid_parts"],
+            validation_all["all"]["n_fake_parts"],
+        )
+        for m in manufacturers:
+            validation_template += f"""??? note "{m}"
+
+    Valid Hybrids: {validation_all[m]["n_valid_parts"]}, of which correctly connected with children (currently checking only S): {validation_all[m]["n_valid_connected_parts"]}
+
+    Invalid Hybrids: {validation_all[m]["n_invalid_parts"]}
+
+    Fake Hybrids: {validation_all[m]["n_fake_parts"]}
 
     Details:
 

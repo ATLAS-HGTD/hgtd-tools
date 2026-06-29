@@ -96,6 +96,7 @@ MO_site_id = {
     "test": "T",
 }
 MA_sites_to_monitor = ["ifae", "ihep", "ijclab", "mainz", "mascir"]
+HY_sites_to_monitor = ["ifae", "ihep"]
 ### defintion of chars in MO SNs: prod
 MO_prod_id = {
     "prod": "M",  # main production

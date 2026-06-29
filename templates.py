@@ -55,6 +55,49 @@ def module_assembly_all(
         [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_MA_valid_connected_all.pdf){{ .md-button }}
 
         ![pie_chart_MA_valid_connected_all.png](../generated/pie_chart_MA_valid_connected_all.png)
+
+"""
+
+
+def hybridization_intro():
+    return f"""### Hybridization
+
+| Parent KoP | Child KoP | Position |
+| ---------- | --------- | -------- |
+| Hybrid | Sensor | empty |
+| Hybrid | ASIC | empty (note: currently not investigated because ASICs are missing in DB) |
+
+"""
+
+
+def hybridization_all(
+    n_valid_parts_all,
+    n_valid_connected_parts_all,
+    n_invalid_parts_all,
+    n_fake_parts_all,
+):
+    return f"""???+ tip "All validated sites"
+
+    Valid Hybrids: {n_valid_parts_all}, of which correctly connected with children (currently checking only S): {n_valid_connected_parts_all}
+
+    Invalid Hybrids: {n_invalid_parts_all}
+
+    Fake Hybrids: {n_fake_parts_all}
+
+    ???+ info "Overview: valid Hybrids by hybridization sites"
+
+        [.png :material-image-search-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_HY_valid_all.png){{ .md-button }}
+        [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_HY_valid_all.pdf){{ .md-button }}
+
+        ![pie_chart_HY_valid_all.png](../generated/pie_chart_HY_valid_all.png)
+
+    ???+ info "Overview: valid & correctly connected Hybrids by hybridization sites"
+
+        [.png :material-image-search-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_HY_valid_connected_all.png){{ .md-button }}
+        [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_HY_valid_connected_all.pdf){{ .md-button }}
+
+        ![pie_chart_HY_valid_connected_all.png](../generated/pie_chart_HY_valid_connected_all.png)
+
 """
 
 

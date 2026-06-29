@@ -174,6 +174,79 @@ def validate_module(MO_part_id):
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# A - Parent: Hybrid
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+def validate_HY_chi_S(children_S):
+    """
+    Check if a hybrid has exactly one sensor child, with empty position. => Return validity True, empty reason string
+    Otherwise => Return validity False, filled reason string
+
+    Parameters:
+        children_S: list of relations.
+
+    Counting the correct number of children always takes precedence (no further checks for position in that case).
+    """
+    if len(children_S) == 0:
+        return (
+            False,
+            "No Sensor connected. Must be exactly one, at empty position.",
+        )
+    elif len(children_S) == 1:
+        position_attribute = str(children_S[0]["position"])
+        SN_S = str(children_S[0]["part"]["serial_number"])
+        if position_attribute != "":
+            return (
+                False,
+                f"One Sensor {SN_S} connected, but wrong position attribute {position_attribute}.",
+            )
+        else:
+            return True, ""
+    else:
+        return (
+            False,
+            "Multiple Sensor children connected. Must be exactly one, at empty position.",
+        )
+
+
+def validate_HY_children(children):
+    """
+    Validates the children of a single hybrid.
+
+    Parameters:
+        children: list of relations.
+
+    Returns:
+        2-tuple of results (value and reason).
+    """
+    children_S = [
+        c
+        for c in children
+        if c["part"]["kind_of_part"]["kind_of_part_id"]
+        == data.KoPID_from_partKoPName["Sensor"]
+    ]
+
+    return validate_HY_chi_S(children_S)
+
+
+def validate_hybrid(HY_part_id):
+    """
+    Validate a single hybrid, given its part_id.
+    """
+    children = util.get_children(HY_part_id)[0]
+    validation_result_HY_chi_S, validation_reason_HY_chi_S = validate_HY_children(
+        children
+    )
+    validation_result = {
+        "validation_result_HY_chi_S": validation_result_HY_chi_S,
+        "validation_reason_HY_chi_S": validation_reason_HY_chi_S,
+        "validation_result_overall": validation_result_HY_chi_S,
+    }
+    return validation_result
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # B - Child: Sensor
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 def validate_S_par_HY(parents_HY):
