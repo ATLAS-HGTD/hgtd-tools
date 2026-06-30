@@ -2,6 +2,7 @@ import json
 import textwrap
 import webbrowser
 
+import numpy as np
 import requests
 
 import api
@@ -1215,3 +1216,189 @@ def check_SN_valid(snIn):
         messageOut = "Invalid Serial Number"
         return False, messageOut
     return True, ""
+
+
+def get_vbd_for_sensor_via_wafer(sensor_SN, wafer_SN, metric="VBD_AVERAGE"):
+    vbd, api_response = api.fetch_information(
+        f"/sensorvbdv2view?serial_number={wafer_SN}"
+    )
+    available_vbd_meas_per_sensor = []
+    for s in vbd:
+        if s["SERIAL_NUMBER"] == sensor_SN:
+            available_vbd_meas_per_sensor.append(s)
+    if len(available_vbd_meas_per_sensor) > 0:
+        return (
+            float(
+                sorted(
+                    available_vbd_meas_per_sensor,
+                    key=lambda d: d["RUN_END_TIMESTAMP"],
+                    reverse=True,
+                )[0][metric]
+            ),
+            "",
+        )
+    else:
+        return (
+            -999999,
+            f"Could not retrieve VBD via /sensorvbdv2view for Sensor {sensor_SN} and Wafer {wafer_SN}",
+        )
+
+
+def get_vbd_from_iv(
+    i, v, method="interpolate_linear", debug=False, threshold_in_A=5e-5
+):
+    """
+    Determine Vbd for a given IV curve with measured currents per voltage (needs two lists as input)
+
+    interpolate_linear: find the V-range between which the threshold for BD was exceeded and interpolate linearly between them
+    first_to_exceed: the first V-value for which the threshold for BD was exceeded
+
+    threshold in A, take 500nA=5e-7 from sensor paper for sensor, but 100*500nA=5e-5 for hybrid
+
+    behavior: if multiple passes cross the threshold, return only the first (lowest V)
+
+    Algorithm discussed at February 26 HGTD Week, Annika + Stefano
+    """
+
+    # convert the list into numpy array and continue with absolute values
+    i = np.abs(np.array(i))
+    v = np.abs(np.array(v))
+
+    if debug:
+        print(i >= threshold_in_A)
+
+    if np.all(i < threshold_in_A):
+        # if during the entire measurement range, the threshold was never exceeded, we have not seen Vbd
+        # output a reasonable dummy value that coincides with the worst-case (BD could happen at next 5V step)
+        # this is to make sure the average determination has good inputs to work with,
+        # but different handling is possible (e.g. excluding such a value from AVG, if it comes from a single pad)
+        return 205
+
+    # index in array for which current (I) first exceeds threshold
+    first_pass_index = np.where(i >= threshold_in_A)[0][0]
+
+    # use this index to get the corresponding V, I and the last values just before this
+    first_v_above_threshold = v[first_pass_index]
+    if method == "first_to_exceed":
+        return first_v_above_threshold
+    else:
+        # linear interpolation between two points (just below, just above threshold)
+        last_v_below_threshold = v[first_pass_index - 1]
+        first_i_above_threshold = i[first_pass_index]
+        last_i_below_threshold = i[first_pass_index - 1]
+
+        # relative amount of current between consecutive measured points covered to exceed threshold
+        estimated_path_fraction = (threshold_in_A - last_i_below_threshold) / (
+            first_i_above_threshold - last_i_below_threshold
+        )
+        # this fraction of covered voltage between consecutive steps to estimate the interpolated Vbd
+        return last_v_below_threshold + estimated_path_fraction * (
+            first_v_above_threshold - last_v_below_threshold
+        )
+
+
+def get_i_v_from_iv_pad_str(iv_long_formatted_string):
+    string_as_json = json.loads(iv_long_formatted_string)
+    i_strings = string_as_json["I"]
+    v_strings = string_as_json["V"]
+    I = [float(i) for i in i_strings]
+    V = [float(v) for v in v_strings]
+    return I, V
+
+
+def get_vbd_for_sensor_via_iv(sensor_SN):
+    ivs, api_response = api.fetch_information(
+        f"/sensorivview?serial_number={sensor_SN}"
+    )
+    types = []
+    for iv in ivs:
+        if str(iv["RUN_TYPE"]) == "15x15":
+            types.append("15x15")
+        elif str(iv["RUN_TYPE"]) == "15X15":
+            types.append("15X15")
+        elif str(iv["RUN_TYPE"]) == "15x1":
+            types.append("15x1")
+        elif str(iv["RUN_TYPE"]) == "15X1":
+            types.append("15X1")
+        elif str(iv["RUN_TYPE"]) == "1x1":
+            types.append("1x1")
+        elif str(iv["RUN_TYPE"]) == "1X1":
+            types.append("1X1")
+    if len(types) == 0:
+        return (
+            -999999,
+            f"Could not retrieve VBD via /sensorivview for Sensor {sensor_SN}",
+        )
+
+    # there could be different types, just pick one of them in hierarchy
+    if "15x15" in types:
+        ivs, api_response = api.fetch_information(
+            f"/sensorivview?serial_number={sensor_SN}&run_type=15x15"
+        )
+    else:
+        if "15X15" in types:
+            ivs, api_response = api.fetch_information(
+                f"/sensorivview?serial_number={sensor_SN}&run_type=15X15"
+            )
+        else:
+            if "15x1" in types:
+                ivs, api_response = api.fetch_information(
+                    f"/sensorivview?serial_number={sensor_SN}&run_type=15x1"
+                )
+            else:
+                if "15X1" in types:
+                    ivs, api_response = api.fetch_information(
+                        f"/sensorivview?serial_number={sensor_SN}&run_type=15X1"
+                    )
+                else:
+                    if "1x1" in types:
+                        ivs, api_response = api.fetch_information(
+                            f"/sensorivview?serial_number={sensor_SN}&run_type=1x1"
+                        )
+                    else:
+                        if "1X1" in types:
+                            ivs, api_response = api.fetch_information(
+                                f"/sensorivview?serial_number={sensor_SN}&run_type=1X1"
+                            )
+                        else:
+                            return (
+                                -999999,
+                                f"Could not retrieve VBD via /sensorivview for Sensor {sensor_SN}, unknown run types only {", ".join(types)}",
+                            )
+    if len(ivs) == 0:
+        print("Len of 15x15 output is zero, does not exist.")
+        ivs, api_response = api.fetch_information(
+            f"/sensorivview?serial_number={sensor_SN}&run_type=15X1"
+        )
+        if len(ivs) == 0:
+            print("Len of 15X1 output is also zero, does not exist.")
+            ivs, api_response = api.fetch_information(
+                f"/sensorivview?serial_number={sensor_SN}&run_type=1X1"
+            )
+            if len(ivs) == 0:
+                print("Len of 1X1 output is also zero, does not exist.")
+                return (
+                    -999999,
+                    f"Could not retrieve VBD via /sensorivview for Sensor {sensor_SN}",
+                )
+    ivs_per_pad = {}
+    for curve in ivs:
+        pad_loc = int(curve["PAD_LOCATION"])
+        if pad_loc in list(range(1, 256)):
+            if str(curve["GUARD_RING"]) == "" and str(curve["IV_GUARD_RING"]) == "":
+                if pad_loc not in ivs_per_pad.keys():
+                    ivs_per_pad[pad_loc] = curve["IV_PAD"]
+                else:
+                    if ivs_per_pad[pad_loc]["RUN_END_TIMESTAMP"] < curve[pad_loc][
+                        "RUN_END_TIMESTAMP"
+                    ] or int(ivs_per_pad[pad_loc]["RUN_NUMBER"]) < int(
+                        curve[pad_loc]["RUN_NUMBER"]
+                    ):
+                        # current curve is newer than previously stored one
+                        ivs_per_pad[pad_loc] = curve["IV_PAD"]
+    # after all ivs, for each pad, are collected, calculate VBD for each of them using 500nA as threshold
+    vbd_per_pad = {}
+    for pad in ivs_per_pad.keys():
+        i, v = get_i_v_from_iv_pad_str(ivs_per_pad[pad])
+        vbd_per_pad[pad] = float(get_vbd_from_iv(i, v, threshold_in_A=5e-7))
+    return sum(vbd_per_pad.values()) / len(vbd_per_pad.keys()), ""

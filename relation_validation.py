@@ -286,7 +286,7 @@ def validate_S_par_HY(parents_HY):
 
 def validate_S_par_W(parents_W):
     """
-    Check if a sensor has exactly one wafer parent, with filled position matching its SN. => Return validity True, empty reason string
+    Check if a sensor has exactly one wafer parent, with filled empty position or position matching its SN. => Return validity True, empty reason string
     Otherwise => Return validity False, filled reason string
 
     Parameters:
