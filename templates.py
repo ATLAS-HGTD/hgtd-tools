@@ -101,11 +101,44 @@ def hybridization_all(
 """
 
 
-def sensor_par_HY_intro():
-    return f"""### Sensor -> Hybrid (testing parents of S)
+def sensor_par_intro():
+    return f"""### Sensor Parents -> (Hybrid, Wafer)
 
 | Parent KoP | Child KoP | Position |
 | ---------- | --------- | -------- |
 | Hybrid | Sensor | empty |
+| Wafer | Sensor | empty (in principle, last two digits of Sensor SN, which is however not stored in position attribute, but as a part attribute of the sensor) |
+
+"""
+
+
+def sensor_par_all(
+    n_valid_parts_all,
+    n_valid_connected_parts_all,
+    n_invalid_parts_all,
+    n_fake_parts_all,
+    n_valid_new_parts_all,
+):
+    return f"""???+ tip "All validated manufacturers"
+
+    Valid Sensors: {n_valid_parts_all}, of which correctly connected with parent HY + W: {n_valid_connected_parts_all}; or of which correctly connected with parent W, but not yet to H: {n_valid_new_parts_all}
+
+    Invalid Sensors: {n_invalid_parts_all}
+
+    Fake Sensors: {n_fake_parts_all}
+
+    ???+ info "Overview: valid Sensors by manufacturer"
+
+        [.png :material-image-search-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_S_valid_all.png){{ .md-button }}
+        [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_S_valid_all.pdf){{ .md-button }}
+
+        ![pie_chart_S_valid_all.png](../generated/pie_chart_S_valid_all.png)
+
+    ???+ info "Overview: valid & correctly connected Sensors by manufacturer"
+
+        [.png :material-image-search-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_S_valid_connected_all.png){{ .md-button }}
+        [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_S_valid_connected_all.pdf){{ .md-button }}
+
+        ![pie_chart_S_valid_connected_all.png](../generated/pie_chart_S_valid_connected_all.png)
 
 """

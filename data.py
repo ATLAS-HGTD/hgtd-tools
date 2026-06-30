@@ -83,6 +83,8 @@ relevant_manufacturer_IDs_by_shortname = {
     "mascir": 1241,
     "ustc": 1261,
     "test": 1161,
+    "IHEP-IME": 1021,
+    "USTC-IME": 1041,
 }
 ## Serial Number decoding / encoding helpers
 ### defintion of chars in MO SNs: site
@@ -97,6 +99,7 @@ MO_site_id = {
 }
 MA_sites_to_monitor = ["ifae", "ihep", "ijclab", "mainz", "mascir"]
 HY_sites_to_monitor = ["ifae", "ihep"]
+S_W_manus_to_monitor = ["IHEP-IME", "USTC-IME"]
 ### defintion of chars in MO SNs: prod
 MO_prod_id = {
     "prod": "M",  # main production

@@ -13,7 +13,7 @@ parser.add_argument(
     dest="mode_alias",
     help="Validation mode alias. (Default: %(default)s)",
     default="all",
-    choices=["Module Assembly", "Sensor_par_HY", "Hybridization", "all"],
+    choices=["Module Assembly", "Sensor_par", "Hybridization", "all"],
 )
 parser.add_argument(
     "--single-manufacturer",
@@ -49,7 +49,7 @@ exp_text = args.customText if args.customText != None else "Production Database"
 
 if mode_alias == "all":
     # need to run multiple validations in this script
-    mode_aliases = ["Module Assembly", "Hybridization", "Sensor_par_HY"]
+    mode_aliases = ["Module Assembly", "Hybridization", "Sensor_par"]
 else:
     mode_aliases = [mode_alias]
 
@@ -75,14 +75,15 @@ def prepare_validation_per_subset(parts_subset, mode_alias):
             "relations_template_bad": "",
         }
     # if the relation validation is of nature child -> check its parents, do track / allow unconnected (new)
-    elif mode_alias == "Sensor_par_HY":
+    elif mode_alias == "Sensor_par":
         validation_subset = {
             "n_valid_parts": len(valid_parts),
             "n_invalid_parts": len(invalid_parts),
             "n_fake_parts": len(fake_parts),
             "n_valid_connected_parts": 0,
+            "n_valid_new_parts": 0,
             "relations_template_good": '\t??? success "Relation validation OK for these parts:"\n\n',
-            "relations_template_new": '\t??? example "These parts are not connected yet:"\n\n',
+            "relations_template_new": '\t??? example "These parts are not connected yet to a Hybrid:"\n\n',
             "relations_template_bad": "",
         }
     # Collect stats from validation results and prepare to feed into report template
@@ -93,7 +94,7 @@ def prepare_validation_per_subset(parts_subset, mode_alias):
             individual_part_results = relation_validation.validate_module(this_part_id)
         elif mode_alias == "Hybridization":
             individual_part_results = relation_validation.validate_hybrid(this_part_id)
-        elif mode_alias == "Sensor_par_HY":
+        elif mode_alias == "Sensor_par":
             individual_part_results = relation_validation.validate_sensor(this_part_id)
 
         if individual_part_results["validation_result_overall"] == True:
@@ -102,58 +103,110 @@ def prepare_validation_per_subset(parts_subset, mode_alias):
             validation_subset[
                 "relations_template_good"
             ] += f'\t\t[Part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}).\n\n'
-        elif individual_part_results["validation_result_overall"] == "new":
-            # this part has not been connected yet to parent(s), OK during production (every part => new line)
-            validation_subset[
-                "relations_template_new"
-            ] += f'\t\t[Part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}).\n\n'
         else:
-            # something is incorrectly connected for this part (every part => new admonition)
-            validation_subset[
-                "relations_template_bad"
-            ] += f"""\t??? failure "Relation validation failed for {this_part_SN}:"\n
+            if mode_alias == "Sensor_par":
+                # Sensors are a special case: there are acceptable failures (sensor not used yet for a Hybrid)
+                # but also non-acceptable failures (sensor not connected to parent Wafer, connection to Hybrid truly faulty)
+                if individual_part_results["validation_result_S_par_HY"] == "new":
+                    # could be acceptable, but need to test also against Wafer
+                    if individual_part_results["validation_result_S_par_W"] == True:
+                        # connection to parent Wafer is fine, but this part has not been connected yet to HY parent(s), OK during production (every part => new line)
+                        validation_subset["n_valid_new_parts"] += 1
+                        validation_subset[
+                            "relations_template_new"
+                        ] += f'\t\t[Part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}).\n\n'
+                    else:
+                        # not yet connected to HY, but no connection to Wafer parent, which is not acceptable
+                        validation_subset[
+                            "relations_template_bad"
+                        ] += f"""\t??? failure "Relation validation failed for {this_part_SN}:"\n
 \t\tInspect this [part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}) in DB.\n
 \t\tDetailed failure reason:\n
 """
-            # note down the reason(s) individually
-            if mode_alias == "Module Assembly":
-                if individual_part_results["validation_result_MO_chi_MF"] == False:
-                    validation_subset["relations_template_bad"] += (
-                        "\t\t"
-                        + individual_part_results["validation_reason_MO_chi_MF"]
-                        + "\n\n"
-                    )
-                if individual_part_results["validation_result_MO_chi_HY"] == False:
-                    validation_subset["relations_template_bad"] += (
-                        "\t\t"
-                        + individual_part_results["validation_reason_MO_chi_HY"]
-                        + "\n\n"
-                    )
-            elif mode_alias == "Hybridization":
-                # Currently, only check the 1-1 relation to sensors, in the future, also ASICs!
-                if individual_part_results["validation_result_HY_chi_S"] == False:
-                    validation_subset["relations_template_bad"] += (
-                        "\t\t"
-                        + individual_part_results["validation_reason_HY_chi_S"]
-                        + "\n\n"
-                    )
-            elif mode_alias == "Sensor_par_HY":
-                if individual_part_results["validation_result_S_par_HY"] == False:
+                        validation_subset["relations_template_bad"] += (
+                            "\t\t"
+                            + individual_part_results["validation_reason_S_par_W"]
+                            + "\n\n"
+                        )
+                elif individual_part_results["validation_result_S_par_HY"] == False:
+                    # validation failed and at least the connection to Hybrid is truly faulty (wrong position, or more than one connection)
+                    validation_subset[
+                        "relations_template_bad"
+                    ] += f"""\t??? failure "Relation validation failed for {this_part_SN}:"\n
+\t\tInspect this [part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}) in DB.\n
+\t\tDetailed failure reason:\n
+"""
                     validation_subset["relations_template_bad"] += (
                         "\t\t"
                         + individual_part_results["validation_reason_S_par_HY"]
                         + "\n\n"
                     )
+                    if individual_part_results["validation_result_S_par_W"] == False:
+                        validation_subset["relations_template_bad"] += (
+                            "\t\t"
+                            + individual_part_results["validation_reason_S_par_W"]
+                            + "\n\n"
+                        )
+                elif individual_part_results["validation_result_S_par_HY"] == True:
+                    # relation validation to Hybrid is OK, test against Wafer
+                    if individual_part_results["validation_result_S_par_W"] == False:
+                        validation_subset[
+                            "relations_template_bad"
+                        ] += f"""\t??? failure "Relation validation failed for {this_part_SN}:"\n
+\t\tInspect this [part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}) in DB.\n
+\t\tDetailed failure reason:\n
+"""
+                        validation_subset["relations_template_bad"] += (
+                            "\t\t"
+                            + individual_part_results["validation_reason_S_par_W"]
+                            + "\n\n"
+                        )
+            else:
+                # something is incorrectly connected for this part (every part => new admonition)
+                validation_subset[
+                    "relations_template_bad"
+                ] += f"""\t??? failure "Relation validation failed for {this_part_SN}:"\n
+    \t\tInspect this [part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}) in DB.\n
+    \t\tDetailed failure reason:\n
+    """
+                # note down the reason(s) individually
+                if mode_alias == "Module Assembly":
+                    if individual_part_results["validation_result_MO_chi_MF"] == False:
+                        validation_subset["relations_template_bad"] += (
+                            "\t\t"
+                            + individual_part_results["validation_reason_MO_chi_MF"]
+                            + "\n\n"
+                        )
+                    if individual_part_results["validation_result_MO_chi_HY"] == False:
+                        validation_subset["relations_template_bad"] += (
+                            "\t\t"
+                            + individual_part_results["validation_reason_MO_chi_HY"]
+                            + "\n\n"
+                        )
+                elif mode_alias == "Hybridization":
+                    # Currently, only check the 1-1 relation to sensors, in the future, also ASICs!
+                    if individual_part_results["validation_result_HY_chi_S"] == False:
+                        validation_subset["relations_template_bad"] += (
+                            "\t\t"
+                            + individual_part_results["validation_reason_HY_chi_S"]
+                            + "\n\n"
+                        )
+
     if validation_subset["n_valid_connected_parts"] == 0:
         validation_subset["relations_template_good"] = (
             '\t!!! warning "Not a single relation validation passed!"\n\n'
         )
+    if mode_alias == "Sensor_par":
+        if validation_subset["n_valid_new_parts"] == 0:
+            validation_subset["relations_template_new"] = (
+                '\t!!! info "No new Sensors not yet connected to HY."\n\n'
+            )
     return validation_subset
 
 
 def prepare_validation_per_mode(mode_alias, manufacturers=None):
     validation_all = {}
-    if mode_alias in ["Module Assembly", "Hybridization"]:
+    if mode_alias in ["Module Assembly", "Hybridization", "Sensor_par"]:
         if mode_alias == "Module Assembly":
             category = "Module"
             filename_postfix_mode_alias = "MA"
@@ -162,6 +215,10 @@ def prepare_validation_per_mode(mode_alias, manufacturers=None):
             category = "Hybrid"
             filename_postfix_mode_alias = "HY"
             extra_text_mode_alias = "Hybridization: Hybrids"
+        elif mode_alias == "Sensor_par":
+            category = "Sensor"
+            filename_postfix_mode_alias = "S"
+            extra_text_mode_alias = "Sensor Parents: Hybrids and Wafers"
 
         # Find all relevant parts of category under investigation
         parts = util.get_relevant_parts(category)[0]
@@ -179,13 +236,9 @@ def prepare_validation_per_mode(mode_alias, manufacturers=None):
             validation_all[m]["n_valid_connected_parts"] for m in manufacturers
         ]
         validation_all["all"] = {
-            "contributions_valid": [
-                validation_all[m]["n_valid_parts"] for m in manufacturers
-            ],
+            "contributions_valid": contributions_valid_all,
             "n_valid_parts": sum(contributions_valid_all),
-            "contributions_valid_connected": [
-                validation_all[m]["n_valid_connected_parts"] for m in manufacturers
-            ],
+            "contributions_valid_connected": contributions_valid_connected_all,
             "n_valid_connected_parts": sum(contributions_valid_connected_all),
             "n_invalid_parts": sum(
                 validation_all[m]["n_invalid_parts"] for m in manufacturers
@@ -194,7 +247,12 @@ def prepare_validation_per_mode(mode_alias, manufacturers=None):
                 validation_all[m]["n_fake_parts"] for m in manufacturers
             ),
         }
-
+        if mode_alias == "Sensor_par":
+            contributions_new_all = [
+                validation_all[m]["n_valid_new_parts"] for m in manufacturers
+            ]
+            validation_all["all"]["contributions_valid_new"] = contributions_new_all
+            validation_all["all"]["n_valid_new_parts"] = sum(contributions_new_all)
         # Plot overview pie charts
         ## All valid parts, contributions by manufacturer
         plotter.pie_chart(
@@ -214,11 +272,17 @@ def prepare_validation_per_mode(mode_alias, manufacturers=None):
             subtitle=subtitle,
             extra_text=extra_text_mode_alias + " (valid & correctly connected). ",
         )
-    elif mode_alias == "Sensor_par_HY":
-        category = "Sensor"
-        parts = util.get_relevant_parts(category)[0]
-        # all of them
-        validation_all["all"] = prepare_validation_per_subset(parts, mode_alias)
+        if mode_alias == "Sensor_par":
+            ## All **new** parts, contributions by manufacturer
+            plotter.pie_chart(
+                data=validation_all["all"]["contributions_valid_new"],
+                text_labels=manufacturers,
+                filename_postfix=filename_postfix_mode_alias + "_valid_new_all",
+                exp_text=exp_text,
+                subtitle=subtitle,
+                extra_text=extra_text_mode_alias
+                + " (valid & new, not connected yet to Hybrid, but to Wafer). ",
+            )
     return validation_all
 
 
@@ -230,6 +294,8 @@ for mode_alias in mode_aliases:
         manufacturers = data.MA_sites_to_monitor
     elif mode_alias == "Hybridization":
         manufacturers = data.HY_sites_to_monitor
+    elif mode_alias == "Sensor_par":
+        manufacturers = data.S_W_manus_to_monitor
     else:
         manufacturers = []  # not implemented, but to use same pattern
     if single_manufacturer != None:
@@ -279,21 +345,29 @@ for mode_alias in mode_aliases:
 {validation_all[m]["relations_template_good"]}
 {validation_all[m]["relations_template_bad"]}
 """
-    elif mode_alias == "Sensor_par_HY":
-        validation_template += templates.sensor_par_HY_intro()
-        validation_template += f"""???+ tip "All validated Sensors"
+    elif mode_alias == "Sensor_par":
+        validation_template += templates.sensor_par_intro()
+        validation_template += templates.sensor_par_all(
+            validation_all["all"]["n_valid_parts"],
+            validation_all["all"]["n_valid_connected_parts"],
+            validation_all["all"]["n_invalid_parts"],
+            validation_all["all"]["n_fake_parts"],
+            validation_all["all"]["n_valid_new_parts"],
+        )
+        for m in manufacturers:
+            validation_template += f"""??? note "{m}"
 
-    Valid Sensors: {validation_all["all"]["n_valid_parts"]}, of which correctly connected with parent HY: {validation_all["all"]["n_valid_connected_parts"]}
+    Valid Sensors: {validation_all[m]["n_valid_parts"]}, of which correctly connected with parent HY + W: {validation_all[m]["n_valid_connected_parts"]}; or of which correctly connected with parent W, but not yet to H: {validation_all[m]["n_valid_new_parts"]}
 
-    Invalid Sensors: {validation_all["all"]["n_invalid_parts"]}
+    Invalid Sensors: {validation_all[m]["n_invalid_parts"]}
 
-    Fake Sensors: {validation_all["all"]["n_fake_parts"]}
+    Fake Sensors: {validation_all[m]["n_fake_parts"]}
 
     Details:
 
-{validation_all["all"]["relations_template_good"]}
-{validation_all["all"]["relations_template_new"]}
-{validation_all["all"]["relations_template_bad"]}
+{validation_all[m]["relations_template_good"]}
+{validation_all[m]["relations_template_new"]}
+{validation_all[m]["relations_template_bad"]}
 """
 
 with open("validation.md", "w") as f:

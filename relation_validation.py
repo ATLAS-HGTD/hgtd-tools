@@ -249,6 +249,8 @@ def validate_hybrid(HY_part_id):
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # B - Child: Sensor
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 def validate_S_par_HY(parents_HY):
     """
     Check if a sensor has exactly one hybrid parent, with empty position. => Return validity True, empty reason string
@@ -282,6 +284,39 @@ def validate_S_par_HY(parents_HY):
         )
 
 
+def validate_S_par_W(parents_W):
+    """
+    Check if a sensor has exactly one wafer parent, with filled position matching its SN. => Return validity True, empty reason string
+    Otherwise => Return validity False, filled reason string
+
+    Parameters:
+        parents_W: list of relations.
+
+    Counting the correct number of parents always takes precedence (no further checks for position in that case).
+    """
+    if len(parents_W) == 0:
+        return (
+            False,
+            "No Wafer parent connected. Must be exactly one, at position in Wafer matching exactly last two digits of child Sensor SN.",
+        )
+    elif len(parents_W) == 1:
+        position_attribute = str(parents_W[0]["position"])
+        SN_W = str(parents_W[0]["part_parent"]["serial_number"])
+        SN_S = str(parents_W[0]["part"]["serial_number"])
+        if position_attribute != "" and position_attribute != SN_S[-2:]:
+            return (
+                False,
+                f"One Wafer {SN_W} connected, but wrong position attribute {position_attribute}. Position in Wafer must be either empty (in that case, position is stored in Sensor attributes) or filled, to match exactly last two digits of child Sensor SN.",
+            )
+        else:
+            return True, ""
+    else:
+        return (
+            False,
+            "Multiple Wafer parents connected. Must be exactly one, at position in Wafer matching exactly last two digits of child Sensor SN.",
+        )
+
+
 def validate_S_parents(parents):
     """
     Validates the parents of a single sensor.
@@ -290,7 +325,7 @@ def validate_S_parents(parents):
         parents: list of relations.
 
     Returns:
-        2-tuple of results (value and reason).
+        2-tuple of results for both checks (HY, W).
     """
     parents_HY = [
         c
@@ -298,8 +333,14 @@ def validate_S_parents(parents):
         if c["part_parent"]["kind_of_part"]["kind_of_part_id"]
         == data.KoPID_from_partKoPName["Hybrid"]
     ]
+    parents_W = [
+        c
+        for c in parents
+        if c["part_parent"]["kind_of_part"]["kind_of_part_id"]
+        == data.KoPID_from_partKoPName["Wafer"]
+    ]
 
-    return validate_S_par_HY(parents_HY)
+    return validate_S_par_HY(parents_HY), validate_S_par_W(parents_W)
 
 
 def validate_sensor(S_part_id):
@@ -307,10 +348,22 @@ def validate_sensor(S_part_id):
     Validate a single sensor, given its part_id.
     """
     parents = util.get_parents(S_part_id)[0]
-    validation_result_S_par_HY, validation_reason_S_par_HY = validate_S_parents(parents)
+    (validation_result_S_par_HY, validation_reason_S_par_HY), (
+        validation_result_S_par_W,
+        validation_reason_S_par_W,
+    ) = validate_S_parents(parents)
+    if validation_result_S_par_HY != "new":
+        # if it's not new, then use the same boolean result for overall
+        validation_result_S_par_HY_for_overall = validation_result_S_par_HY
+    else:
+        # for overall result, S_par_HY being new evaluates to False
+        validation_result_S_par_HY_for_overall = False
     validation_result = {
         "validation_result_S_par_HY": validation_result_S_par_HY,
         "validation_reason_S_par_HY": validation_reason_S_par_HY,
-        "validation_result_overall": validation_result_S_par_HY,
+        "validation_result_S_par_W": validation_result_S_par_W,
+        "validation_reason_S_par_W": validation_reason_S_par_W,
+        "validation_result_overall": validation_result_S_par_HY_for_overall
+        and validation_result_S_par_W,
     }
     return validation_result

@@ -312,33 +312,40 @@ def pie_chart(
 ):
     plt.rcParams["axes.prop_cycle"] = cycler("color", combination_color_sequence)
     fig, ax = plt.subplots(figsize=(12, 8))
-    # filter to make sure empty contributions are ignored, keeping the color sequence
-    filtered_data = []
-    filtered_labels = []
-    filtered_colors = []
-    for i, val in enumerate(data):
-        if val > 0:
-            filtered_data.append(val)
-            filtered_labels.append(text_labels[i])
-            filtered_colors.append(
-                combination_color_sequence[i % len(combination_color_sequence)]
-            )
-    pie = ax.pie(filtered_data, colors=filtered_colors)
-    wedges = pie[0]
-    labels_outer = ax.pie_label(pie, filtered_labels, distance=1.1)
-    labels_frac = ax.pie_label(pie, "{frac:.1%}", distance=0.7)
-    labels_abs = ax.pie_label(pie, "{absval:d}", distance=0.4)
-    # change the text color depending on wedge color (luminance)
-    for i, wedge in enumerate(wedges):
-        rgba = wedge.get_facecolor()
-        r, g, b = rgba[0], rgba[1], rgba[2]
-        # W3C
-        luminance = 0.299 * r + 0.587 * g + 0.114 * b
-        text_color = "white" if luminance < 0.5 else "#111111"
-        labels_frac[i].set_color(text_color)
-        labels_frac[i].set_weight("bold")
-        labels_abs[i].set_color(text_color)
-        labels_abs[i].set_weight("bold")
+    if sum(data) == 0:
+        # all contributions are zero => fill a dummy pie chart
+        pie = ax.pie([1], colors=["white"])
+        labels = ax.pie_label(pie, "No entries", distance=0.7)
+        labels[0].set_color("#111111")
+        labels[0].set_weight("bold")
+    else:
+        # filter to make sure empty contributions are ignored, keeping the color sequence
+        filtered_data = []
+        filtered_labels = []
+        filtered_colors = []
+        for i, val in enumerate(data):
+            if val > 0:
+                filtered_data.append(val)
+                filtered_labels.append(text_labels[i])
+                filtered_colors.append(
+                    combination_color_sequence[i % len(combination_color_sequence)]
+                )
+        pie = ax.pie(filtered_data, colors=filtered_colors)
+        wedges = pie[0]
+        labels_outer = ax.pie_label(pie, filtered_labels, distance=1.1)
+        labels_frac = ax.pie_label(pie, "{frac:.1%}", distance=0.7)
+        labels_abs = ax.pie_label(pie, "{absval:d}", distance=0.4)
+        # change the text color depending on wedge color (luminance)
+        for i, wedge in enumerate(wedges):
+            rgba = wedge.get_facecolor()
+            r, g, b = rgba[0], rgba[1], rgba[2]
+            # W3C
+            luminance = 0.299 * r + 0.587 * g + 0.114 * b
+            text_color = "white" if luminance < 0.5 else "#111111"
+            labels_frac[i].set_color(text_color)
+            labels_frac[i].set_weight("bold")
+            labels_abs[i].set_color(text_color)
+            labels_abs[i].set_weight("bold")
     hep.label.exp_text(
         "ATLAS HGTD",
         " " + exp_text,
