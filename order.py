@@ -166,9 +166,9 @@ def prepare_validation_per_subset(parts_subset, mode_alias):
                 validation_subset[
                     "relations_template_bad"
                 ] += f"""\t??? failure "Relation validation failed for {this_part_SN}:"\n
-    \t\tInspect this [part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}) in DB.\n
-    \t\tDetailed failure reason:\n
-    """
+\t\tInspect this [part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}) in DB.\n
+\t\tDetailed failure reason:\n
+"""
                 # note down the reason(s) individually
                 if mode_alias == "Module Assembly":
                     if individual_part_results["validation_result_MO_chi_MF"] == False:
@@ -304,6 +304,7 @@ for mode_alias in mode_aliases:
     if mode_alias == "Module Assembly":
         validation_template += templates.module_assembly_intro()
         validation_template += templates.module_assembly_all(
+            manufacturers,
             validation_all["all"]["n_valid_parts"],
             validation_all["all"]["n_valid_connected_parts"],
             validation_all["all"]["n_invalid_parts"],
@@ -326,6 +327,7 @@ for mode_alias in mode_aliases:
     elif mode_alias == "Hybridization":
         validation_template += templates.hybridization_intro()
         validation_template += templates.hybridization_all(
+            manufacturers,
             validation_all["all"]["n_valid_parts"],
             validation_all["all"]["n_valid_connected_parts"],
             validation_all["all"]["n_invalid_parts"],
@@ -348,6 +350,7 @@ for mode_alias in mode_aliases:
     elif mode_alias == "Sensor_par":
         validation_template += templates.sensor_par_intro()
         validation_template += templates.sensor_par_all(
+            manufacturers,
             validation_all["all"]["n_valid_parts"],
             validation_all["all"]["n_valid_connected_parts"],
             validation_all["all"]["n_invalid_parts"],
@@ -357,7 +360,7 @@ for mode_alias in mode_aliases:
         for m in manufacturers:
             validation_template += f"""??? note "{m}"
 
-    Valid Sensors: {validation_all[m]["n_valid_parts"]}, of which correctly connected with parent HY + W: {validation_all[m]["n_valid_connected_parts"]}; or of which correctly connected with parent W, but not yet to H: {validation_all[m]["n_valid_new_parts"]}
+    Valid Sensors: {validation_all[m]["n_valid_parts"]}, of which correctly connected with parent HY + W: {validation_all[m]["n_valid_connected_parts"]}; or of which correctly connected with parent W, but not yet to HY: {validation_all[m]["n_valid_new_parts"]}
 
     Invalid Sensors: {validation_all[m]["n_invalid_parts"]}
 

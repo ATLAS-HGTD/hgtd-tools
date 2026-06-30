@@ -29,12 +29,15 @@ def module_assembly_intro():
 
 
 def module_assembly_all(
+    all_manus,
     n_valid_parts_all,
     n_valid_connected_parts_all,
     n_invalid_parts_all,
     n_fake_parts_all,
 ):
     return f"""???+ tip "All validated sites"
+
+    Selected sites: {', '.join(all_manus)}.
 
     Valid Modules: {n_valid_parts_all}, of which correctly connected with children (MF, HY): {n_valid_connected_parts_all}
 
@@ -71,12 +74,15 @@ def hybridization_intro():
 
 
 def hybridization_all(
+    all_manus,
     n_valid_parts_all,
     n_valid_connected_parts_all,
     n_invalid_parts_all,
     n_fake_parts_all,
 ):
     return f"""???+ tip "All validated sites"
+
+    Selected sites: {', '.join(all_manus)}.
 
     Valid Hybrids: {n_valid_parts_all}, of which correctly connected with children (currently checking only S): {n_valid_connected_parts_all}
 
@@ -113,6 +119,7 @@ def sensor_par_intro():
 
 
 def sensor_par_all(
+    all_manus,
     n_valid_parts_all,
     n_valid_connected_parts_all,
     n_invalid_parts_all,
@@ -120,6 +127,8 @@ def sensor_par_all(
     n_valid_new_parts_all,
 ):
     return f"""???+ tip "All validated manufacturers"
+
+    Selected manufacturers: {', '.join(all_manus)}.
 
     Valid Sensors: {n_valid_parts_all}, of which correctly connected with parent HY + W: {n_valid_connected_parts_all}; or of which correctly connected with parent W, but not yet to H: {n_valid_new_parts_all}
 
@@ -140,5 +149,12 @@ def sensor_par_all(
         [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_S_valid_connected_all.pdf){{ .md-button }}
 
         ![pie_chart_S_valid_connected_all.png](../generated/pie_chart_S_valid_connected_all.png)
+
+    ???+ info "Overview: valid & new (correctly connected to W, not yet to a HY) Sensors by manufacturer"
+
+        [.png :material-image-search-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_S_valid_new_all.png){{ .md-button }}
+        [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_S_valid_new_all.pdf){{ .md-button }}
+
+        ![pie_chart_S_valid_new_all.png](../generated/pie_chart_S_valid_new_all.png)
 
 """
