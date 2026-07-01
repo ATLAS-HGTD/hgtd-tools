@@ -1,4 +1,6 @@
 from argparse import ArgumentParser
+from datetime import datetime
+from datetime import UTC
 
 import numpy as np
 
@@ -221,10 +223,11 @@ def run_pairing(parts, algorithm):
         return get_optimal_pairs_with_leftover_1D_On2(parts)
 
 
-if __name__ == "__main__":
-    print(
-        "\n"
-        + """
+def hybridmatch(mode_alias, location, dev, printouts=False):
+    if printouts:
+        print(
+            "\n"
+            + """
 ██╗    ██╗███████╗██╗      ██████╗ ██████╗ ███╗   ███╗███████╗    ████████╗ ██████╗
 ██║    ██║██╔════╝██║     ██╔════╝██╔═══██╗████╗ ████║██╔════╝    ╚══██╔══╝██╔═══██╗
 ██║ █╗ ██║█████╗  ██║     ██║     ██║   ██║██╔████╔██║█████╗         ██║   ██║   ██║
@@ -237,38 +240,61 @@ if __name__ == "__main__":
 ██╔══██║  ╚██╔╝  ██╔══██╗██╔══██╗██║██║  ██║██║╚██╔╝██║██╔══██║   ██║   ██║     ██╔══██║
 ██║  ██║   ██║   ██████╔╝██║  ██║██║██████╔╝██║ ╚═╝ ██║██║  ██║   ██║   ╚██████╗██║  ██║
 ╚═╝  ╚═╝   ╚═╝   ╚═════╝ ╚═╝  ╚═╝╚═╝╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝    ╚═════╝╚═╝  ╚═╝
-        """
-        + "\n"
-    )
-    print("%" * 80 + "\n")
-    print(">>> Settings:")
-    print(f"- {mode_alias=}")
-    print(f"- {location=}")
-    print(f"- {dev=}")
+            """
+            + "\n"
+        )
+        print("%" * 80 + "\n")
+        print(">>> Settings:")
+        print(f"- {mode_alias=}")
+        print(f"- {location=}")
+        print(f"- {dev=}")
 
-    print("\n" + "%" * 80 + "\n")
-    print(">>> 1. Preparing relevant Hybrids at your location...\n")
+        print("\n" + "%" * 80 + "\n")
+        print(">>> 1. Preparing relevant Hybrids at your location...\n")
     parts = prepare_parts(location, dev)
-    print("%" * 80)
-    print("\n>>> 2. Preparing data sources for pairing...\n")
+    if printouts:
+        print("%" * 80)
+        print("\n>>> 2. Preparing data sources for pairing...\n")
     ignored_parts, kept_parts_and_scoring = prepare_data_sources(mode_alias, parts)
-    print("\nIgnored parts:\n")
-    for ip in ignored_parts:
-        print(ip)
-    print("\nKept parts for matching:\n")
-    for kp in kept_parts_and_scoring:
-        print(kp)
-    print("\n" + "%" * 80)
-    print("\n>>> 3. Running pairing algorithm...\n")
+    if printouts:
+        print("\nIgnored parts:\n")
+        for ip in ignored_parts:
+            print(ip)
+        print("\nKept parts for matching:\n")
+        for kp in kept_parts_and_scoring:
+            print(kp)
+        print("\n" + "%" * 80)
+        print("\n>>> 3. Running pairing algorithm...\n")
     pairings, total, leftover = run_pairing(
         kept_parts_and_scoring, algorithm=mode_alias
     )
+    if printouts:
+        if leftover != []:
+            print(
+                f"\nOdd number of parts for pairing, optimal leftover to minimize the total distance: {leftover}"
+            )
+        print(f"\nTotal distance for optimal pairing: {total}")
+        print("\nOptimal pairings:\n")
+        for pairing in pairings:
+            print(pairing)
+        print()
+    return ignored_parts, kept_parts_and_scoring, pairings, total, leftover
+
+
+if __name__ == "__main__":
+    (ignored_parts, kept_parts_and_scoring, pairings, total, leftover) = hybridmatch(
+        mode_alias, location, dev, printouts=True
+    )
+    dt = datetime.now(UTC)
+    md_content = f"# Hybridmatch logbook\n\nDate / time in UTC: {dt}\n\n## Settings\n\n"
+    md_content += f"{mode_alias=}\n{location=}\n\n## Results\n\n"
     if leftover != []:
-        print(
-            f"\nOdd number of parts for pairing, optimal leftover to minimize the total distance: {leftover}"
-        )
-    print(f"\nTotal distance for optimal pairing: {total}")
-    print("\nOptimal pairings:\n")
+        md_content += f"Odd number of parts for pairing, optimal leftover to minimize the total distance: {leftover}\n\n"
+    md_content += f"Optimal total distance: {total}\n\nOptimal pairings:\n\n"
     for pairing in pairings:
-        print(pairing)
-    print()
+        l_pairing = list(pairing)
+        hy_a = [str(content) for content in l_pairing[0]]
+        hy_b = [str(content) for content in l_pairing[1]]
+        md_content += ", ".join(hy_a) + "  +  " + ", ".join(hy_b) + "\n\n"
+    with open(f"pairings.md", "w") as f:
+        f.write(md_content)
