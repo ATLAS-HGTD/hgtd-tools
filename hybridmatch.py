@@ -172,129 +172,53 @@ def prepare_data_sources(mode_alias, parts):
     return ignored_parts, kept_parts_and_scoring
 
 
-def optimal_pairs_with_leftover_1D(parts_scores):
+def get_pairs_totaldiff_via_chunking(arr, at_column=2):
     """
-    AI-assisted. (GPT OSS 120B, JGU KI).
-
-    Find the pairing that minimises the sum of absolute differences of the
-    third column (the numeric value). If the number of rows is odd, one row
-    is left unpaired; the function chooses the leftover that yields the
-    smallest possible total distance.
-
-    Returns
-    -------
-    pairs: list of (part_a, part_b)
-    total_distance: float
-    leftover: [] (even case, empty list) or [leftover_part] (odd case)
+    Pair (0,1),(2,3)... and return (pairs, total_distance).
+    at_column: which column of inner lists to calc diff with
     """
-    # convert
+    pairs = []
+    total = 0.0
+    for i in range(0, len(arr), 2):
+        a, b = arr[i], arr[i + 1]
+        dist = abs(float(b[at_column]) - float(a[at_column]))
+        total += dist
+        pairs.append((a.tolist(), b.tolist()))
+    return pairs, total
+
+
+def get_optimal_pairs_with_leftover_1D_On2(parts_scores, at_column=2):
+    """
+    O(n^2) algorithm to get optimal pairing, for 1-column comparisons.
+    Works for even (just chunking) & odd no. of parts (with optimal leftover).
+
+    at_column: which column of inner lists to calc diff with
+    """
     arr = np.array(parts_scores, dtype=object)
-    # sort by score (in third column)
-    values = arr[:, 2].astype(float)
-    order = np.argsort(values, kind="mergesort")
+    order = np.argsort(arr[:, 2].astype(float), kind="mergesort")
     sarr = arr[order]
 
     n = len(sarr)
-    # even => trivial, chunk neighbors
     if n % 2 == 0:
-        pairs = []
-        total = 0.0
-        for i in range(0, n, 2):
-            a, b = sarr[i], sarr[i + 1]
-            dist = abs(float(b[2]) - float(a[2]))
-            total += dist
-            pairs.append((a.tolist(), b.tolist()))
-        return pairs, total, []
+        return (*get_pairs_totaldiff_via_chunking(sarr, at_column), [])
 
-    # odd => decide which index to drop
-    #
-    #    Let diff[i] = sarr[i+1][2] - sarr[i][2]  (i from 0 to n-2)
-    #    If we drop element j, the pairs are:
-    #        (0,1), (2,3), ... up to the element just before j,
-    #        then (j+1, j+2), (j+3, j+4), ... after j.
-    #
-    #    For fast evaluation we pre-compute two prefix-sums:
-    #        pref_even[i] = sum of diff[0] + diff[2] + ... up to index i (even indices)
-    #        pref_odd[i]  = sum of diff[1] + diff[3] + ... up to index i (odd indices)
-    #
-    #    Obtain the total distance for any possible j
-    #    in O(1) and then pick the minimum.
-    diffs = values[1:] - values[:-1]  # shape (n-1,)
-
-    # prefix sums for even-indexed diffs (0,2,4,...)
-    even_mask = np.arange(len(diffs)) % 2 == 0
-    pref_even = np.cumsum(np.where(even_mask, diffs, 0.0))
-
-    # prefix sums for odd‑indexed diffs (1,3,5,...)
-    odd_mask = ~even_mask
-    pref_odd = np.cumsum(np.where(odd_mask, diffs, 0.0))
-
-    # Helper to get sum of even-indexed diffs up to (and including) idx
-    def sum_even(upto):
-        if upto < 0:
-            return 0.0
-        return float(pref_even[upto])
-
-    # Helper to get sum of odd-indexed diffs up to (and including) idx
-    def sum_odd(upto):
-        if upto < 0:
-            return 0.0
-        return float(pref_odd[upto])
-
-    # check every possible leftover index j (0 ... n-1)
     best_total = np.inf
     best_j = -1
-
+    best_pairs = []
     for j in range(n):
-        # left side (elements before j)
-        # If number of elements before j is even, they are paired (0-1,2-3,...)
-        #   => we need the sum of *even* diffs up to j-2
-        left_len = j  # count of elements left of j
-        left_total = (
-            sum_even(left_len - 2) if left_len % 2 == 0 else sum_odd(left_len - 2)
-        )
+        # remove j, pair the rest
+        remain = np.delete(sarr, j, axis=0)
+        pairs, tot = get_pairs_totaldiff_via_chunking(remain, at_column)
+        if tot < best_total:
+            best_total, best_j, best_pairs = tot, j, pairs
 
-        # right side (elements after j)
-        # After removing j, the parity of the first element on the right flips.
-        #   If left_len is even => the first element on the right takes the
-        #   position with *odd* index in the original diff array,
-        #   otherwise it takes the *even* index.
-        right_len = n - j - 1
-        if right_len == 0:
-            right_total = 0.0
-        else:
-            # The first diff on the right is at index j (between j and j+1)
-            start_idx = j
-            # We need to sum every second diff starting from start_idx.
-            # That is either the even-sum from start_idx to end
-            # or the odd-sum, depending on the parity of start_idx.
-            if start_idx % 2 == 0:
-                # start at an even position => use even-indexed diffs for the right side
-                right_total = sum_even(len(diffs) - 1) - sum_even(start_idx - 2)
-            else:
-                right_total = sum_odd(len(diffs) - 1) - sum_odd(start_idx - 2)
-
-        total_j = left_total + right_total
-        if total_j < best_total:
-            best_total = total_j
-            best_j = j
-
-    # determine optimal pairing and leftover
-    leftover_part = sarr[best_j].tolist()
-    # Remove it from the sorted array
-    remaining = np.delete(sarr, best_j)
-
-    pairs = []
-    for i in range(0, len(remaining), 2):
-        a, b = remaining[i], remaining[i + 1]
-        pairs.append((a.tolist(), b.tolist()))
-
-    return pairs, best_total, [leftover_part]
+    leftover = sarr[best_j].tolist()
+    return best_pairs, best_total, [leftover]
 
 
 def run_pairing(parts, algorithm):
     if algorithm == "Only_Sensor_VBD_closest":
-        return optimal_pairs_with_leftover_1D(parts)
+        return get_optimal_pairs_with_leftover_1D_On2(parts)
 
 
 if __name__ == "__main__":
