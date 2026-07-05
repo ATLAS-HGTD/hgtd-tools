@@ -1234,9 +1234,7 @@ def check_SN_valid(snIn):
 
 
 def get_vbd_for_sensor_via_wafer(sensor_SN, wafer_SN, metric="VBD_AVERAGE"):
-    vbd, api_response = api.fetch_information(
-        f"/sensorvbdv2view?serial_number={wafer_SN}"
-    )
+    vbd, _ = api.fetch_information(f"/sensorvbdv2view?serial_number={wafer_SN}")
     available_vbd_meas_per_sensor = []
     for s in vbd:
         if s["SERIAL_NUMBER"] == sensor_SN:
@@ -1321,10 +1319,8 @@ def get_i_v_from_iv_pad_str(iv_long_formatted_string):
     return I, V
 
 
-def get_vbd_for_sensor_via_iv(sensor_SN):
-    ivs, api_response = api.fetch_information(
-        f"/sensorivview?serial_number={sensor_SN}"
-    )
+def get_ivs_for_all_pads_of_sensor(sensor_SN):
+    ivs, _ = api.fetch_information(f"/sensorivview?serial_number={sensor_SN}")
     types = []
     for iv in ivs:
         if str(iv["RUN_TYPE"]) == "15x15":
@@ -1341,60 +1337,60 @@ def get_vbd_for_sensor_via_iv(sensor_SN):
             types.append("1X1")
     if len(types) == 0:
         return (
-            -999999,
-            f"Could not retrieve VBD via /sensorivview for Sensor {sensor_SN}",
+            {},
+            f"Could not retrieve IV via /sensorivview for Sensor {sensor_SN}",
         )
 
     # there could be different types, just pick one of them in hierarchy
     if "15x15" in types:
-        ivs, api_response = api.fetch_information(
+        ivs, _ = api.fetch_information(
             f"/sensorivview?serial_number={sensor_SN}&run_type=15x15"
         )
     else:
         if "15X15" in types:
-            ivs, api_response = api.fetch_information(
+            ivs, _ = api.fetch_information(
                 f"/sensorivview?serial_number={sensor_SN}&run_type=15X15"
             )
         else:
             if "15x1" in types:
-                ivs, api_response = api.fetch_information(
+                ivs, _ = api.fetch_information(
                     f"/sensorivview?serial_number={sensor_SN}&run_type=15x1"
                 )
             else:
                 if "15X1" in types:
-                    ivs, api_response = api.fetch_information(
+                    ivs, _ = api.fetch_information(
                         f"/sensorivview?serial_number={sensor_SN}&run_type=15X1"
                     )
                 else:
                     if "1x1" in types:
-                        ivs, api_response = api.fetch_information(
+                        ivs, _ = api.fetch_information(
                             f"/sensorivview?serial_number={sensor_SN}&run_type=1x1"
                         )
                     else:
                         if "1X1" in types:
-                            ivs, api_response = api.fetch_information(
+                            ivs, _ = api.fetch_information(
                                 f"/sensorivview?serial_number={sensor_SN}&run_type=1X1"
                             )
                         else:
                             return (
                                 -999999,
-                                f"Could not retrieve VBD via /sensorivview for Sensor {sensor_SN}, unknown run types only {", ".join(types)}",
+                                f"Could not retrieve IV via /sensorivview for Sensor {sensor_SN}, unknown run types only {", ".join(types)}",
                             )
     if len(ivs) == 0:
         print("Len of 15x15 output is zero, does not exist.")
-        ivs, api_response = api.fetch_information(
+        ivs, _ = api.fetch_information(
             f"/sensorivview?serial_number={sensor_SN}&run_type=15X1"
         )
         if len(ivs) == 0:
             print("Len of 15X1 output is also zero, does not exist.")
-            ivs, api_response = api.fetch_information(
+            ivs, _ = api.fetch_information(
                 f"/sensorivview?serial_number={sensor_SN}&run_type=1X1"
             )
             if len(ivs) == 0:
                 print("Len of 1X1 output is also zero, does not exist.")
                 return (
-                    -999999,
-                    f"Could not retrieve VBD via /sensorivview for Sensor {sensor_SN}",
+                    {},
+                    f"Could not retrieve IV via /sensorivview for Sensor {sensor_SN}",
                 )
     ivs_per_pad = {}
     for curve in ivs:
@@ -1411,9 +1407,139 @@ def get_vbd_for_sensor_via_iv(sensor_SN):
                     ):
                         # current curve is newer than previously stored one
                         ivs_per_pad[pad_loc] = curve["IV_PAD"]
+    return ivs_per_pad, ""
+
+
+def get_sum_iv_for_sensor(sensor_SN, ivs_per_pad=None):
+    if ivs_per_pad == None:
+        ivs_per_pad, ivs_response = get_ivs_for_all_pads_of_sensor(sensor_SN)
+        if ivs_per_pad == {}:
+            return [], ivs_response
+    sum_I = []
+    V = []
+    for pad in ivs_per_pad.keys():
+        I, V = get_i_v_from_iv_pad_str(ivs_per_pad[pad])
+        if sum_I == []:
+            sum_I = I
+        else:
+            sum_I = [a + b for a, b in zip(sum_I, I)]
+    return [sum_I, V], ""
+
+
+def get_vbd_for_sensor_via_iv(sensor_SN, threshold_in_A=5e-7, ivs_per_pad=None):
+    if ivs_per_pad == None:
+        ivs_per_pad, ivs_response = get_ivs_for_all_pads_of_sensor(sensor_SN)
+        if ivs_per_pad == {}:
+            return [], ivs_response
     # after all ivs, for each pad, are collected, calculate VBD for each of them using 500nA as threshold
     vbd_per_pad = {}
     for pad in ivs_per_pad.keys():
         i, v = get_i_v_from_iv_pad_str(ivs_per_pad[pad])
-        vbd_per_pad[pad] = float(get_vbd_from_iv(i, v, threshold_in_A=5e-7))
+        vbd_per_pad[pad] = float(get_vbd_from_iv(i, v, threshold_in_A=threshold_in_A))
     return sum(vbd_per_pad.values()) / len(vbd_per_pad.keys()), ""
+
+
+def get_all_hybrid_ivs():
+    ivs, _ = api.fetch_information("/hybridivview")
+    return ivs
+
+
+def get_all_module_ivs():
+    ivs, _ = api.fetch_information("/moduleivview")
+    return ivs
+
+
+def get_iv_for_hybrid_or_module(part_SN, all_ivs=None, KoP=None):
+    """
+    Returns up to one Hybrid (Module) IV for a given Hybrid (Module) SN.
+    If multiple are found, pick the one with less None currents.
+    If the evaluated curves share the same number of None currents,
+    pick the one with larger SR_NO (counts through curves).
+    Ignore curves with I = V (data entry errors).
+
+    Parameters:
+        part_SN: serial number of Hybrid (Module) to get IV curve for
+        all_ivs: list of Hybrid (Module) IVs, or None, if they still need to be obtained from API
+        KoP: choices "Module" or "Hybrid", default: "Hybrid", only necessary if all_ivs = None
+
+    Returns:
+        List of two lists ([list of currents, list of voltages]), if a valid curve was found, else empty list
+        Empty string if IV returned, or reason why no IV returned
+    """
+    if all_ivs == None:
+        if KoP == "Hybrid":
+            all_ivs = get_all_hybrid_ivs()
+        elif KoP == "Module":
+            all_ivs = get_all_module_ivs()
+        else:
+            return (
+                [],
+                "You need to provide a KoP out of Hybrid or Module to proceed. "
+                "There was no list of IV curves provided.",
+            )
+    designated_iv_curve_for_part_SN = None
+    for ivcurve in all_ivs:
+        eval_ivcurve = eval("{" + ivcurve["IV"][1:-1] + "}")
+        if eval_ivcurve != {}:
+            if eval_ivcurve["I"] != eval_ivcurve["V"]:
+                if part_SN == str(ivcurve["SERIAL_NUMBER"]):
+                    if designated_iv_curve_for_part_SN == None:
+                        designated_iv_curve_for_part_SN = {
+                            "IV": eval_ivcurve,
+                            "SR_NO": ivcurve["SR_NO"],
+                        }
+                    else:
+                        # more than one found
+                        # next modifications necessary because many HY/MO IVs do not come with any way to distinguish them (time / user / site etc.)
+                        counting_None_inDesignated = len(
+                            [
+                                i
+                                for i in designated_iv_curve_for_part_SN["IV"]["I"]
+                                if i == "None"
+                            ]
+                        )
+                        counting_None_inCurrent = len(
+                            [i for i in eval_ivcurve["I"] if i == "None"]
+                        )
+                        if counting_None_inDesignated > counting_None_inCurrent:
+                            # replace with another curve with fewer None currents
+                            designated_iv_curve_for_part_SN = {
+                                "IV": eval_ivcurve,
+                                "SR_NO": ivcurve["SR_NO"],
+                            }
+                        elif counting_None_inDesignated == counting_None_inCurrent:
+                            if int(designated_iv_curve_for_part_SN["SR_NO"]) < int(
+                                ivcurve["SR_NO"]
+                            ):
+                                # replace with another curve with higher SR_NO (later upload)
+                                designated_iv_curve_for_part_SN = {
+                                    "IV": eval_ivcurve,
+                                    "SR_NO": ivcurve["SR_NO"],
+                                }
+    if designated_iv_curve_for_part_SN != None:
+        i = [float(i) for i in designated_iv_curve_for_part_SN["IV"]["I"]]
+        v = [float(v) for v in designated_iv_curve_for_part_SN["IV"]["V"]]
+        return [i, v], ""
+    else:
+        return [], f"No valid IV curve found for {part_SN}."
+
+
+def get_vbd_for_hybrid_or_module_via_iv(
+    part_SN, all_ivs=None, KoP=None, threshold_in_A=None
+):
+    if threshold_in_A == None:
+        if KoP == "Hybrid":
+            threshold_in_A = 5e-5  # to check
+        elif KoP == "Module":
+            threshold_in_A = 2 * 5e-5  # to check, just guessing here
+        else:
+            return (
+                -999999,
+                "You need to provide a KoP out of Hybrid or Module to proceed. "
+                "Threshold current could not be inferred. Pass a KoP, or alternatively the threshold in A.",
+            )
+    iv, response = get_iv_for_hybrid_or_module(part_SN, all_ivs, KoP)
+    if response != "":
+        return -999999, response
+    else:
+        return float(get_vbd_from_iv(iv[0], iv[1], threshold_in_A=threshold_in_A))
