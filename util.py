@@ -231,6 +231,8 @@ def select_parts(
     manu_shortname=None,
     manu_name=None,
     manu_id=None,
+    name_label_does_include=None,  # case-insensitive
+    name_label_does_not_include=None,  # case-insensitive
     check_valid_SN_latest_spec=False,
     check_invalid_SN_latest_spec=False,
     check_fake_SN=False,
@@ -274,6 +276,19 @@ def select_parts(
             iP
             for iP in parts
             if str(iP["manufacturer"]["manufacturer_id"]) == str(manu_id)
+        ]
+    if name_label_does_include != None:  # case-insensitive
+        parts = [
+            iP
+            for iP in parts
+            if str(name_label_does_not_include).lower() in str(iP["name_label"]).lower()
+        ]
+    if name_label_does_not_include != None:  # case-insensitive
+        parts = [
+            iP
+            for iP in parts
+            if str(name_label_does_not_include).lower()
+            not in str(iP["name_label"]).lower()
         ]
     if check_valid_SN_latest_spec == True:
         parts = [
@@ -722,31 +737,31 @@ def check_SN_valid(snIn):
                 messageOut = "Attempting to decode Module SN"
                 try:
                     as_ = snIn[5]
-                    if as_ in ("F", "1"):
+                    if as_ == "F":
                         asExplainer = "IFAE"
-                    elif as_ in ("H", "2"):
+                    elif as_ == "H":
                         asExplainer = "IHEP"
-                    elif as_ in ("J", "3"):
+                    elif as_ == "J":
                         asExplainer = "IJCLab"
-                    elif as_ in ("M", "4"):
+                    elif as_ == "M":
                         asExplainer = "Mainz"
-                    elif as_ in ("A", "5"):
+                    elif as_ == "A":
                         asExplainer = "MAScIR"
-                    elif as_ in ("U", "6"):
+                    elif as_ == "U":
                         asExplainer = "USTC"
                     else:
                         asExplainer = "Unknown Assembly site attribute!"
                         return False, asExplainer
                     prod = snIn[6]
-                    if prod in ("M", "0"):
+                    if prod == "M":
                         prodExplainer = "Main production"
                     elif prod == "P":
                         prodExplainer = "Pre-production"
-                    elif prod in ("D", "1"):
+                    elif prod == "D":
                         prodExplainer = "demonstrator"
-                    elif prod in ("T", "2"):
+                    elif prod == "T":
                         prodExplainer = "test"
-                    elif prod in ("O", "3"):
+                    elif prod == "O":
                         prodExplainer = "other"
                     else:
                         prodExplainer = "Unknown Production attribute!"

@@ -59,6 +59,7 @@ local_info/*
 archived/*
 output_invalid.txt
 validation.md
+pairings.md
 
 # ================================================================
 # Other files that should not be committed

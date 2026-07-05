@@ -39,9 +39,9 @@ def module_assembly_all(
 
     Selected sites: {', '.join(all_manus)}.
 
-    Valid Modules: {n_valid_parts_all}, of which correctly connected with children (MF, HY): {n_valid_connected_parts_all}
+    Valid Modules (using latest SN spec, excludes Digital Modules marked with _Digital in Name Label): {n_valid_parts_all}, of which correctly connected with children (MF, HY): {n_valid_connected_parts_all}
 
-    Invalid Modules: {n_invalid_parts_all}
+    Invalid Modules (not using latest SN spec, and including Digital Modules marked with _Digital in Name Label): {n_invalid_parts_all}
 
     Fake Modules: {n_fake_parts_all}
 
@@ -84,9 +84,9 @@ def hybridization_all(
 
     Selected sites: {', '.join(all_manus)}.
 
-    Valid Hybrids: {n_valid_parts_all}, of which correctly connected with children (currently checking only S): {n_valid_connected_parts_all}
+    Valid Hybrids (using latest SN spec): {n_valid_parts_all}, of which correctly connected with children (currently checking only S): {n_valid_connected_parts_all}
 
-    Invalid Hybrids: {n_invalid_parts_all}
+    Invalid Hybrids (not using latest SN spec): {n_invalid_parts_all}
 
     Fake Hybrids: {n_fake_parts_all}
 
@@ -130,9 +130,9 @@ def sensor_par_all(
 
     Selected manufacturers: {', '.join(all_manus)}.
 
-    Valid Sensors: {n_valid_parts_all}, of which correctly connected with parent HY + W: {n_valid_connected_parts_all}; or of which correctly connected with parent W, but not yet to H: {n_valid_new_parts_all}
+    Valid Sensors (using latest SN spec): {n_valid_parts_all}, of which correctly connected with parent HY + W: {n_valid_connected_parts_all}; or of which correctly connected with parent W, but not yet to H: {n_valid_new_parts_all}
 
-    Invalid Sensors: {n_invalid_parts_all}
+    Invalid Sensors (not using latest SN spec): {n_invalid_parts_all}
 
     Fake Sensors: {n_fake_parts_all}
 
@@ -150,7 +150,7 @@ def sensor_par_all(
 
         ![pie_chart_S_valid_connected_all.png](../generated/pie_chart_S_valid_connected_all.png)
 
-    ???+ info "Overview: valid & new (correctly connected to W, not yet to a HY) Sensors by manufacturer"
+    ???+ info "Overview: valid & new Sensors (correctly connected to W, not yet to a HY) by manufacturer"
 
         [.png :material-image-search-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_S_valid_new_all.png){{ .md-button }}
         [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_S_valid_new_all.pdf){{ .md-button }}

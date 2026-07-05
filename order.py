@@ -60,8 +60,30 @@ def prepare_validation_per_subset(parts_subset, mode_alias):
         parts_subset = parts_subset[:10]
 
     # Collect stats from SNs, and proceed only with valid ones
-    valid_parts = util.select_parts(parts_subset, check_valid_SN_latest_spec=True)
-    invalid_parts = util.select_parts(parts_subset, check_invalid_SN_latest_spec=True)
+    if mode_alias == "Module Assembly":
+        # there are valid modules (in terms of SN), but which are digital modules not to be checked
+        valid_SN_parts = util.select_parts(
+            parts_subset, check_valid_SN_latest_spec=True
+        )
+        # filter the valid modules, which are digital modules
+        valid_and_DigitalMod_parts = util.select_parts(
+            valid_SN_parts, name_label_does_include="_Digital"
+        )
+        # and the opposite, non-digital (= full) modules
+        valid_parts = util.select_parts(
+            valid_SN_parts, name_label_does_not_include="_Digital"
+        )
+        # invalid in terms of SN
+        invalid_SN_parts = util.select_parts(
+            parts_subset, check_invalid_SN_latest_spec=True
+        )
+        # add the digital modules on top of the invalid SN modules
+        invalid_parts = invalid_SN_parts + valid_and_DigitalMod_parts
+    else:
+        valid_parts = util.select_parts(parts_subset, check_valid_SN_latest_spec=True)
+        invalid_parts = util.select_parts(
+            parts_subset, check_invalid_SN_latest_spec=True
+        )
     fake_parts = util.select_parts(parts_subset, check_fake_SN=True)
     ## Count and prepare dict for relation validation
     # if the relation validation is of nature parent -> check its children, do not allow unconnected
@@ -218,7 +240,7 @@ def prepare_validation_per_mode(mode_alias, manufacturers=None):
         elif mode_alias == "Sensor_par":
             category = "Sensor"
             filename_postfix_mode_alias = "S"
-            extra_text_mode_alias = "Sensor Parents: Hybrids and Wafers"
+            extra_text_mode_alias = "Sensors"
 
         # Find all relevant parts of category under investigation
         parts = util.get_relevant_parts(category)[0]
@@ -313,9 +335,9 @@ for mode_alias in mode_aliases:
         for m in manufacturers:
             validation_template += f"""??? note "{m}"
 
-    Valid Modules: {validation_all[m]["n_valid_parts"]}, of which correctly connected with children (MF, HY): {validation_all[m]["n_valid_connected_parts"]}
+    Valid Modules (using latest SN spec, excludes Digital Modules marked with _Digital in Name Label): {validation_all[m]["n_valid_parts"]}, of which correctly connected with children (MF, HY): {validation_all[m]["n_valid_connected_parts"]}
 
-    Invalid Modules: {validation_all[m]["n_invalid_parts"]}
+    Invalid Modules (not using latest SN spec, and including Digital Modules marked with _Digital in Name Label): {validation_all[m]["n_invalid_parts"]}
 
     Fake Modules: {validation_all[m]["n_fake_parts"]}
 
@@ -336,9 +358,9 @@ for mode_alias in mode_aliases:
         for m in manufacturers:
             validation_template += f"""??? note "{m}"
 
-    Valid Hybrids: {validation_all[m]["n_valid_parts"]}, of which correctly connected with children (currently checking only S): {validation_all[m]["n_valid_connected_parts"]}
+    Valid Hybrids (using latest SN spec): {validation_all[m]["n_valid_parts"]}, of which correctly connected with children (currently checking only S): {validation_all[m]["n_valid_connected_parts"]}
 
-    Invalid Hybrids: {validation_all[m]["n_invalid_parts"]}
+    Invalid Hybrids (not using latest SN spec): {validation_all[m]["n_invalid_parts"]}
 
     Fake Hybrids: {validation_all[m]["n_fake_parts"]}
 
@@ -360,9 +382,9 @@ for mode_alias in mode_aliases:
         for m in manufacturers:
             validation_template += f"""??? note "{m}"
 
-    Valid Sensors: {validation_all[m]["n_valid_parts"]}, of which correctly connected with parent HY + W: {validation_all[m]["n_valid_connected_parts"]}; or of which correctly connected with parent W, but not yet to HY: {validation_all[m]["n_valid_new_parts"]}
+    Valid Sensors (using latest SN spec): {validation_all[m]["n_valid_parts"]}, of which correctly connected with parent HY + W: {validation_all[m]["n_valid_connected_parts"]}; or of which correctly connected with parent W, but not yet to HY: {validation_all[m]["n_valid_new_parts"]}
 
-    Invalid Sensors: {validation_all[m]["n_invalid_parts"]}
+    Invalid Sensors (not using latest SN spec): {validation_all[m]["n_invalid_parts"]}
 
     Fake Sensors: {validation_all[m]["n_fake_parts"]}
 
