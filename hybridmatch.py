@@ -296,5 +296,5 @@ if __name__ == "__main__":
         hy_a = [str(content) for content in l_pairing[0]]
         hy_b = [str(content) for content in l_pairing[1]]
         md_content += ", ".join(hy_a) + "  +  " + ", ".join(hy_b) + "\n\n"
-    with open(f"pairings.md", "w") as f:
+    with open(f"pairings_{mode_alias}_{location}.md", "w") as f:
         f.write(md_content)

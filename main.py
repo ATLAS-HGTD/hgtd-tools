@@ -4999,14 +4999,16 @@ class App(customtkinter.CTk):
                 )
                 self.combobox_MA_MF_chi.set("- Select -")
                 self.this_MF_relations_MOD = []
-            if update == "all" or update == "HY_HV" or update == "HY_LV":
+            if update == "all" or update == "HY_HV":
                 self.possible_HY_HV, self.last_responseText = util.get_relevant_parts(
                     "Hybrid"
                 )
                 self.combobox_MA_HY_HV_chi.set("- Select -")
                 self.this_HY_HV_relations_MOD = []
             if update == "all" or update == "HY_LV":
-                self.possible_HY_LV = self.possible_HY_HV
+                self.possible_HY_LV, self.last_responseText = util.get_relevant_parts(
+                    "Hybrid"
+                )
                 self.combobox_MA_HY_LV_chi.set("- Select -")
                 self.this_HY_LV_relations_MOD = []
         except (
