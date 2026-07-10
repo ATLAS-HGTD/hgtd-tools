@@ -13,7 +13,7 @@ parser.add_argument(
     dest="mode_alias",
     help="Validation mode alias. (Default: %(default)s)",
     default="all",
-    choices=["Module Assembly", "Sensor_par", "Hybridization", "all"],
+    choices=["Module Assembly", "Sensor_Parents", "Hybridization", "all"],
 )
 parser.add_argument(
     "--single-manufacturer",
@@ -25,6 +25,12 @@ parser.add_argument(
     "--dev",
     dest="dev",
     help="[Optional] Developer mode. Limit number of parts to process.",
+    default=False,
+)
+parser.add_argument(
+    "--merge",
+    dest="merge",
+    help="[Optional] If validation is split into multiple modes, use this to merge the results into a common md file. You must have run all individual modes first one-by-one to collect the results.",
     default=False,
 )
 parser.add_argument(
@@ -44,12 +50,13 @@ args = parser.parse_args()
 mode_alias = args.mode_alias
 single_manufacturer = args.single_manufacturer
 dev = util.str2bool(args.dev)
+merge = util.str2bool(args.merge)
 subtitle = util.str2bool(args.subtitle)
 exp_text = args.customText if args.customText != None else "Production Database"
 
 if mode_alias == "all":
     # need to run multiple validations in this script
-    mode_aliases = ["Module Assembly", "Hybridization", "Sensor_par"]
+    mode_aliases = ["Module Assembly", "Hybridization", "Sensor_Parents"]
 else:
     mode_aliases = [mode_alias]
 
@@ -97,7 +104,7 @@ def prepare_validation_per_subset(parts_subset, mode_alias):
             "relations_template_bad": "",
         }
     # if the relation validation is of nature child -> check its parents, do track / allow unconnected (new)
-    elif mode_alias == "Sensor_par":
+    elif mode_alias == "Sensor_Parents":
         validation_subset = {
             "n_valid_parts": len(valid_parts),
             "n_invalid_parts": len(invalid_parts),
@@ -116,7 +123,7 @@ def prepare_validation_per_subset(parts_subset, mode_alias):
             individual_part_results = relation_validation.validate_module(this_part_id)
         elif mode_alias == "Hybridization":
             individual_part_results = relation_validation.validate_hybrid(this_part_id)
-        elif mode_alias == "Sensor_par":
+        elif mode_alias == "Sensor_Parents":
             individual_part_results = relation_validation.validate_sensor(this_part_id)
 
         if individual_part_results["validation_result_overall"] == True:
@@ -126,7 +133,7 @@ def prepare_validation_per_subset(parts_subset, mode_alias):
                 "relations_template_good"
             ] += f'\t\t[Part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}).\n\n'
         else:
-            if mode_alias == "Sensor_par":
+            if mode_alias == "Sensor_Parents":
                 # Sensors are a special case: there are acceptable failures (sensor not used yet for a Hybrid)
                 # but also non-acceptable failures (sensor not connected to parent Wafer, connection to Hybrid truly faulty)
                 if individual_part_results["validation_result_S_par_HY"] == "new":
@@ -218,7 +225,7 @@ def prepare_validation_per_subset(parts_subset, mode_alias):
         validation_subset["relations_template_good"] = (
             '\t!!! warning "Not a single relation validation passed!"\n\n'
         )
-    if mode_alias == "Sensor_par":
+    if mode_alias == "Sensor_Parents":
         if validation_subset["n_valid_new_parts"] == 0:
             validation_subset["relations_template_new"] = (
                 '\t!!! info "No new Sensors not yet connected to HY."\n\n'
@@ -228,7 +235,7 @@ def prepare_validation_per_subset(parts_subset, mode_alias):
 
 def prepare_validation_per_mode(mode_alias, manufacturers=None):
     validation_all = {}
-    if mode_alias in ["Module Assembly", "Hybridization", "Sensor_par"]:
+    if mode_alias in ["Module Assembly", "Hybridization", "Sensor_Parents"]:
         if mode_alias == "Module Assembly":
             category = "Module"
             filename_postfix_mode_alias = "MA"
@@ -237,7 +244,7 @@ def prepare_validation_per_mode(mode_alias, manufacturers=None):
             category = "Hybrid"
             filename_postfix_mode_alias = "HY"
             extra_text_mode_alias = "Hybridization: Hybrids"
-        elif mode_alias == "Sensor_par":
+        elif mode_alias == "Sensor_Parents":
             category = "Sensor"
             filename_postfix_mode_alias = "S"
             extra_text_mode_alias = "Sensors"
@@ -269,7 +276,7 @@ def prepare_validation_per_mode(mode_alias, manufacturers=None):
                 validation_all[m]["n_fake_parts"] for m in manufacturers
             ),
         }
-        if mode_alias == "Sensor_par":
+        if mode_alias == "Sensor_Parents":
             contributions_new_all = [
                 validation_all[m]["n_valid_new_parts"] for m in manufacturers
             ]
@@ -294,7 +301,7 @@ def prepare_validation_per_mode(mode_alias, manufacturers=None):
             subtitle=subtitle,
             extra_text=extra_text_mode_alias + " (valid & correctly connected). ",
         )
-        if mode_alias == "Sensor_par":
+        if mode_alias == "Sensor_Parents":
             ## All **new** parts, contributions by manufacturer
             plotter.pie_chart(
                 data=validation_all["all"]["contributions_valid_new"],
@@ -309,91 +316,141 @@ def prepare_validation_per_mode(mode_alias, manufacturers=None):
 
 
 # fill in report into template
-validation_template = templates.validation_header()
+if merge:
+    validation_template = templates.validation_header()
+    with open("validation_MA.md", "r") as pre_computed:
+        for line in pre_computed:
+            validation_template += line
+    with open("validation_HY.md", "r") as pre_computed:
+        for line in pre_computed:
+            validation_template += line
+    with open("validation_SP.md", "r") as pre_computed:
+        for line in pre_computed:
+            validation_template += line
+    with open("validation.md", "w") as f:
+        f.write(validation_template)
+if not merge:
+    validation_template = templates.validation_header()
 
-for mode_alias in mode_aliases:
-    if mode_alias == "Module Assembly":
-        manufacturers = data.MA_sites_to_monitor
-    elif mode_alias == "Hybridization":
-        manufacturers = data.HY_sites_to_monitor
-    elif mode_alias == "Sensor_par":
-        manufacturers = data.S_W_manus_to_monitor
-    else:
-        manufacturers = []  # not implemented, but to use same pattern
-    if single_manufacturer != None:
-        manufacturers = [single_manufacturer]
-    validation_all = prepare_validation_per_mode(mode_alias, manufacturers)
-    if mode_alias == "Module Assembly":
-        validation_template += templates.module_assembly_intro()
-        validation_template += templates.module_assembly_all(
-            manufacturers,
-            validation_all["all"]["n_valid_parts"],
-            validation_all["all"]["n_valid_connected_parts"],
-            validation_all["all"]["n_invalid_parts"],
-            validation_all["all"]["n_fake_parts"],
-        )
-        for m in manufacturers:
-            validation_template += f"""??? note "{m}"
+    for mode_alias in mode_aliases:
+        if mode_alias == "Module Assembly":
+            manufacturers = data.MA_sites_to_monitor
+        elif mode_alias == "Hybridization":
+            manufacturers = data.HY_sites_to_monitor
+        elif mode_alias == "Sensor_Parents":
+            manufacturers = data.S_W_manus_to_monitor
+        else:
+            manufacturers = []  # not implemented, but to use same pattern
+        if single_manufacturer != None:
+            manufacturers = [single_manufacturer]
+        validation_all = prepare_validation_per_mode(mode_alias, manufacturers)
+        if mode_alias == "Module Assembly":
+            MA_intro = templates.module_assembly_intro()
+            validation_template += MA_intro
+            if len(mode_aliases) == 1:
+                validation_MA = MA_intro
+            MA_all = templates.module_assembly_all(
+                manufacturers,
+                validation_all["all"]["n_valid_parts"],
+                validation_all["all"]["n_valid_connected_parts"],
+                validation_all["all"]["n_invalid_parts"],
+                validation_all["all"]["n_fake_parts"],
+            )
+            validation_template += MA_all
+            if len(mode_aliases) == 1:
+                validation_MA += MA_all
+            for m in manufacturers:
+                MA_m = f"""??? note "{m}"
 
-    Valid Modules (using latest SN spec, excludes Digital Modules marked with _Digital in Name Label): {validation_all[m]["n_valid_parts"]}, of which correctly connected with children (MF, HY): {validation_all[m]["n_valid_connected_parts"]}
+        Valid Modules (using latest SN spec, excludes Digital Modules marked with _Digital in Name Label): {validation_all[m]["n_valid_parts"]}, of which correctly connected with children (MF, HY): {validation_all[m]["n_valid_connected_parts"]}
 
-    Invalid Modules (not using latest SN spec, and including Digital Modules marked with _Digital in Name Label): {validation_all[m]["n_invalid_parts"]}
+        Invalid Modules (not using latest SN spec, and including Digital Modules marked with _Digital in Name Label): {validation_all[m]["n_invalid_parts"]}
 
-    Fake Modules: {validation_all[m]["n_fake_parts"]}
+        Fake Modules: {validation_all[m]["n_fake_parts"]}
 
-    Details:
+        Details:
 
-{validation_all[m]["relations_template_good"]}
-{validation_all[m]["relations_template_bad"]}
-"""
-    elif mode_alias == "Hybridization":
-        validation_template += templates.hybridization_intro()
-        validation_template += templates.hybridization_all(
-            manufacturers,
-            validation_all["all"]["n_valid_parts"],
-            validation_all["all"]["n_valid_connected_parts"],
-            validation_all["all"]["n_invalid_parts"],
-            validation_all["all"]["n_fake_parts"],
-        )
-        for m in manufacturers:
-            validation_template += f"""??? note "{m}"
+    {validation_all[m]["relations_template_good"]}
+    {validation_all[m]["relations_template_bad"]}
+    """
+                validation_template += MA_m
+                if len(mode_aliases) == 1:
+                    validation_MA += MA_m
+            if len(mode_aliases) == 1:
+                with open("validation_MA.md", "w") as f:
+                    f.write(validation_MA)
+        elif mode_alias == "Hybridization":
+            HY_intro = templates.hybridization_intro()
+            validation_template += HY_intro
+            if len(mode_aliases) == 1:
+                validation_HY = HY_intro
+            HY_all = templates.hybridization_all(
+                manufacturers,
+                validation_all["all"]["n_valid_parts"],
+                validation_all["all"]["n_valid_connected_parts"],
+                validation_all["all"]["n_invalid_parts"],
+                validation_all["all"]["n_fake_parts"],
+            )
+            validation_template += HY_all
+            if len(mode_aliases) == 1:
+                validation_HY += HY_all
+            for m in manufacturers:
+                HY_m = f"""??? note "{m}"
 
-    Valid Hybrids (using latest SN spec): {validation_all[m]["n_valid_parts"]}, of which correctly connected with children (currently checking only S): {validation_all[m]["n_valid_connected_parts"]}
+        Valid Hybrids (using latest SN spec): {validation_all[m]["n_valid_parts"]}, of which correctly connected with children (currently checking only S): {validation_all[m]["n_valid_connected_parts"]}
 
-    Invalid Hybrids (not using latest SN spec): {validation_all[m]["n_invalid_parts"]}
+        Invalid Hybrids (not using latest SN spec): {validation_all[m]["n_invalid_parts"]}
 
-    Fake Hybrids: {validation_all[m]["n_fake_parts"]}
+        Fake Hybrids: {validation_all[m]["n_fake_parts"]}
 
-    Details:
+        Details:
 
-{validation_all[m]["relations_template_good"]}
-{validation_all[m]["relations_template_bad"]}
-"""
-    elif mode_alias == "Sensor_par":
-        validation_template += templates.sensor_par_intro()
-        validation_template += templates.sensor_par_all(
-            manufacturers,
-            validation_all["all"]["n_valid_parts"],
-            validation_all["all"]["n_valid_connected_parts"],
-            validation_all["all"]["n_invalid_parts"],
-            validation_all["all"]["n_fake_parts"],
-            validation_all["all"]["n_valid_new_parts"],
-        )
-        for m in manufacturers:
-            validation_template += f"""??? note "{m}"
+    {validation_all[m]["relations_template_good"]}
+    {validation_all[m]["relations_template_bad"]}
+    """
+                validation_template += HY_m
+                if len(mode_aliases) == 1:
+                    validation_HY += HY_m
+            if len(mode_aliases) == 1:
+                with open("validation_HY.md", "w") as f:
+                    f.write(validation_HY)
+        elif mode_alias == "Sensor_Parents":
+            SP_intro = templates.sensor_par_intro()
+            validation_template += SP_intro
+            if len(mode_aliases) == 1:
+                validation_SP = SP_intro
+            SP_all = templates.sensor_par_all(
+                manufacturers,
+                validation_all["all"]["n_valid_parts"],
+                validation_all["all"]["n_valid_connected_parts"],
+                validation_all["all"]["n_invalid_parts"],
+                validation_all["all"]["n_fake_parts"],
+                validation_all["all"]["n_valid_new_parts"],
+            )
+            validation_template += SP_all
+            if len(mode_aliases) == 1:
+                validation_SP += SP_all
+            for m in manufacturers:
+                SP_m = f"""??? note "{m}"
 
-    Valid Sensors (using latest SN spec): {validation_all[m]["n_valid_parts"]}, of which correctly connected with parent HY + W: {validation_all[m]["n_valid_connected_parts"]}; or of which correctly connected with parent W, but not yet to HY: {validation_all[m]["n_valid_new_parts"]}
+        Valid Sensors (using latest SN spec): {validation_all[m]["n_valid_parts"]}, of which correctly connected with parent HY + W: {validation_all[m]["n_valid_connected_parts"]}; or of which correctly connected with parent W, but not yet to HY: {validation_all[m]["n_valid_new_parts"]}
 
-    Invalid Sensors (not using latest SN spec): {validation_all[m]["n_invalid_parts"]}
+        Invalid Sensors (not using latest SN spec): {validation_all[m]["n_invalid_parts"]}
 
-    Fake Sensors: {validation_all[m]["n_fake_parts"]}
+        Fake Sensors: {validation_all[m]["n_fake_parts"]}
 
-    Details:
+        Details:
 
-{validation_all[m]["relations_template_good"]}
-{validation_all[m]["relations_template_new"]}
-{validation_all[m]["relations_template_bad"]}
-"""
+    {validation_all[m]["relations_template_good"]}
+    {validation_all[m]["relations_template_new"]}
+    {validation_all[m]["relations_template_bad"]}
+    """
+                validation_template += SP_m
+                if len(mode_aliases) == 1:
+                    validation_SP += SP_m
+            if len(mode_aliases) == 1:
+                with open("validation_SP.md", "w") as f:
+                    f.write(validation_SP)
 
-with open("validation.md", "w") as f:
-    f.write(validation_template)
+    with open("validation.md", "w") as f:
+        f.write(validation_template)
