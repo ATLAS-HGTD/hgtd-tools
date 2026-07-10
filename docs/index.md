@@ -42,6 +42,7 @@ The following overview lists the implemented features of `hgtd-tools` and links 
 
 ??? success "Additional scripts / automation"
     - Serial Number reservation for module assembly [with CLI script `SN_reservation.py`](use_cases/SN_reservation.md)
+    - Hybrid matching for module assembly [with CLI script `hybridmatch.py`](use_cases/hybrid_matching.md)
     - Reporting
         - automation with Gitlab CI, using the hgtdbot account
         - runner script producing overviews / reports
@@ -59,6 +60,16 @@ If you walked through the [install](getting_started/install.md) guide, are curre
 
     ```shell
     python SN_reservation.py --user-name <your-user-name> --site <some-site> --prod <some-prod> --batch <some-batchNr> --n-reserve <how-many-SNs-to-reserve> (--dryrun True)
+    ```
+
+??? tip "Using the `hybridmatch.py` script for hybrid matching"
+
+    When doing module assembly, you may want to get the "optimal" pairing of hybrids (e.g. for a new week of module production) that optimizes the total sum of paired breakdown voltage differences. For more information on the hybrid matching process, please read [Hybrid Matching](use_cases/hybrid_matching.md).
+
+    Execute the following from the hgtd-tools directory:
+
+    ```shell
+    python hybridmatch.py --location <your-site>
     ```
 
 ??? tip "Using the `main.py` GUI for Part-to-Part relations, starting from module assembly"

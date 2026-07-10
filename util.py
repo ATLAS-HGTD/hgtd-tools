@@ -1,4 +1,5 @@
 import json
+import re
 import textwrap
 import webbrowser
 
@@ -1492,6 +1493,7 @@ def get_iv_for_hybrid_or_module(part_SN, all_ivs=None, KoP=None):
                         designated_iv_curve_for_part_SN = {
                             "IV": eval_ivcurve,
                             "SR_NO": ivcurve["SR_NO"],
+                            "RUN_END_TIMESTAMP": ivcurve["RUN_END_TIMESTAMP"],
                         }
                     else:
                         # more than one found
@@ -1511,19 +1513,25 @@ def get_iv_for_hybrid_or_module(part_SN, all_ivs=None, KoP=None):
                             designated_iv_curve_for_part_SN = {
                                 "IV": eval_ivcurve,
                                 "SR_NO": ivcurve["SR_NO"],
+                                "RUN_END_TIMESTAMP": ivcurve["RUN_END_TIMESTAMP"],
                             }
                         elif counting_None_inDesignated == counting_None_inCurrent:
-                            if int(designated_iv_curve_for_part_SN["SR_NO"]) < int(
+                            if designated_iv_curve_for_part_SN[
+                                "RUN_END_TIMESTAMP"
+                            ] < ivcurve["RUN_END_TIMESTAMP"] or int(
+                                designated_iv_curve_for_part_SN["SR_NO"]
+                            ) < int(
                                 ivcurve["SR_NO"]
                             ):
                                 # replace with another curve with higher SR_NO (later upload)
                                 designated_iv_curve_for_part_SN = {
                                     "IV": eval_ivcurve,
                                     "SR_NO": ivcurve["SR_NO"],
+                                    "RUN_END_TIMESTAMP": ivcurve["RUN_END_TIMESTAMP"],
                                 }
     if designated_iv_curve_for_part_SN != None:
-        i = [float(i) for i in designated_iv_curve_for_part_SN["IV"]["I"]]
-        v = [float(v) for v in designated_iv_curve_for_part_SN["IV"]["V"]]
+        i = [abs(float(i)) for i in designated_iv_curve_for_part_SN["IV"]["I"]]
+        v = [abs(float(v)) for v in designated_iv_curve_for_part_SN["IV"]["V"]]
         return [i, v], ""
     else:
         return [], f"No valid IV curve found for {part_SN}."
@@ -1548,3 +1556,11 @@ def get_vbd_for_hybrid_or_module_via_iv(
         return -999999, response
     else:
         return float(get_vbd_from_iv(iv[0], iv[1], threshold_in_A=threshold_in_A))
+
+
+def sanitize(str_to_sanitize):
+    san = re.sub(r"[\s-]+", "_", str_to_sanitize)
+    san = re.sub(r"[^\w\.]", "", san)
+    san = re.sub(r"__+", "_", san)
+    san = re.sub(r"\.\.+", ".", san)
+    return san.strip("_.")

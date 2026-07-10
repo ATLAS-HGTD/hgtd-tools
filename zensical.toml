@@ -67,6 +67,7 @@ nav = [
     ]},
     {"Use cases" = [
         "use_cases/SN_reservation.md",
+        "use_cases/hybrid_matching.md",
         "use_cases/gui_relations.md",
         "use_cases/FT_upload_instructions.md",
     ]},

@@ -7,6 +7,8 @@ import numpy as np
 from cycler import cycler
 from matplotlib import rcParams
 
+import util
+
 color_sequence1 = [
     "#3f90da",
     "#ffa90e",
@@ -236,14 +238,6 @@ def iv_curves_for_sns(
     for i, label in enumerate(labels):
         ax.plot(voltages[i], currents[i], label=label, linestyle="-", marker="o")
 
-    ax.legend(
-        title=KoP_legend,
-        fontsize=rcParams["font.size"] / 1.3,
-        facecolor="white",
-        edgecolor="white",
-        framealpha=1,
-        frameon=True,
-    )
     ax.set_xlabel("Voltage [V]")
     ax.set_ylabel("Current [A]")
     ax.set_yscale("log")
@@ -268,10 +262,18 @@ def iv_curves_for_sns(
         fontstyle=("italic", "normal", "italic", "normal"),
     )
 
-    ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 1.05 * 1.05)
+    ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 5)
     max_x = max([max(v) for v in voltages])
     ax.set_xlim(-10, max_x + 10)
-    hep.utils.mpl_magic(ax, soft_fail=True)
+    ax.legend(
+        title=KoP_legend,
+        fontsize=rcParams["font.size"] / 1.3,
+        facecolor="white",
+        edgecolor="white",
+        framealpha=1,
+        frameon=True,
+        loc="upper right",
+    )
     if spanLabelBackground:
         ax.axhspan(
             10
@@ -287,6 +289,7 @@ def iv_curves_for_sns(
             alpha=1,
             color="white",
         )
+    _SNs = util.sanitize(_SNs)
     fig.savefig(
         f"hybrid_ivs{_SNs}{_postfix}.pdf",
         bbox_inches="tight",
