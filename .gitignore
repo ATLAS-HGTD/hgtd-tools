@@ -58,7 +58,7 @@ local/*
 local_info/*
 archived/*
 output_invalid.txt
-validation.md
+validation*.md
 pairings.md
 
 # ================================================================
