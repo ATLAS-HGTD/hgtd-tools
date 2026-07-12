@@ -779,6 +779,7 @@ class App(customtkinter.CTk):
         self.canvas.bind("<Button-1>", self.canvas_event_click)
         self.canvas.grid_remove()
         self.displayedDUtype = "None"
+        self.interlockSlots = []
 
         # *********************************************
         #
@@ -2696,6 +2697,7 @@ class App(customtkinter.CTk):
                         )
 
                         self.displayedDUtype = "None"
+                        self.interlockSlots = []
                         self.this_DU_relations_MODULE = []
                         self.this_MODULE_relations_DU = []
                         self.this_MODULE_relations_SLOT = []
@@ -3286,6 +3288,7 @@ class App(customtkinter.CTk):
 
                     # reload DU etc.
                     self.displayedDUtype = "None"
+                    self.interlockSlots = []
                     self.this_DU_relations_MODULE = []
                     self.this_MODULE_relations_DU = []
                     self.this_MODULE_relations_SLOT = []
@@ -3612,6 +3615,7 @@ class App(customtkinter.CTk):
     def button_mode_event_click(self, value):
         self.operation_mode = value
         self.displayedDUtype = "None"
+        self.interlockSlots = []
         self.this_DU_relations_MODULE = []
         self.this_MODULE_relations_DU = []
         self.this_MODULE_relations_SLOT = []
@@ -3997,38 +4001,80 @@ class App(customtkinter.CTk):
                             )
                             self.button_delete_clicked.configure(state="normal")
                             notAllowedSlot = True
-                            self.canvas_place_rounded_rectangle(
-                                slot["x"],
-                                slot["y"],
-                                slot["w"],
-                                slot["h"],
-                                fill=data.fillColor_AlreadyLoadedSlot,
-                            )
+                            if str(slot["slot"]) in self.interlockSlots:
+                                self.canvas_place_rounded_rectangle(
+                                    slot["x"],
+                                    slot["y"],
+                                    slot["w"],
+                                    slot["h"],
+                                    fill=data.fillColor_AlreadyLoadedSlot,
+                                    outline=data.fillColor_InterlockSlot,
+                                    width=3,
+                                )
+                            else:
+                                self.canvas_place_rounded_rectangle(
+                                    slot["x"],
+                                    slot["y"],
+                                    slot["w"],
+                                    slot["h"],
+                                    fill=data.fillColor_AlreadyLoadedSlot,
+                                )
                         else:
-                            self.canvas_place_rounded_rectangle(
-                                slot["x"],
-                                slot["y"],
-                                slot["w"],
-                                slot["h"],
-                                fill=data.fillColor_ActiveSlot,
-                            )
+                            if str(slot["slot"]) in self.interlockSlots:
+                                self.canvas_place_rounded_rectangle(
+                                    slot["x"],
+                                    slot["y"],
+                                    slot["w"],
+                                    slot["h"],
+                                    fill=data.fillColor_ActiveSlot,
+                                    outline=data.fillColor_InterlockSlot,
+                                    width=3,
+                                )
+                            else:
+                                self.canvas_place_rounded_rectangle(
+                                    slot["x"],
+                                    slot["y"],
+                                    slot["w"],
+                                    slot["h"],
+                                    fill=data.fillColor_ActiveSlot,
+                                )
                     else:
                         if slot["slot"] in alreadyUsedSlots:
-                            self.canvas_place_rounded_rectangle(
-                                slot["x"],
-                                slot["y"],
-                                slot["w"],
-                                slot["h"],
-                                fill=data.fillColor_AlreadyLoadedSlot,
-                            )
+                            if str(slot["slot"]) in self.interlockSlots:
+                                self.canvas_place_rounded_rectangle(
+                                    slot["x"],
+                                    slot["y"],
+                                    slot["w"],
+                                    slot["h"],
+                                    fill=data.fillColor_AlreadyLoadedSlot,
+                                    outline=data.fillColor_InterlockSlot,
+                                    width=3,
+                                )
+                            else:
+                                self.canvas_place_rounded_rectangle(
+                                    slot["x"],
+                                    slot["y"],
+                                    slot["w"],
+                                    slot["h"],
+                                    fill=data.fillColor_AlreadyLoadedSlot,
+                                )
                         else:
-                            self.canvas_place_rounded_rectangle(
-                                slot["x"],
-                                slot["y"],
-                                slot["w"],
-                                slot["h"],
-                                fill=data.fillColor_Slot,
-                            )
+                            if str(slot["slot"]) in self.interlockSlots:
+                                self.canvas_place_rounded_rectangle(
+                                    slot["x"],
+                                    slot["y"],
+                                    slot["w"],
+                                    slot["h"],
+                                    fill=data.fillColor_InterlockSlot,
+                                )
+                            else:
+                                self.canvas_place_rounded_rectangle(
+                                    slot["x"],
+                                    slot["y"],
+                                    slot["w"],
+                                    slot["h"],
+                                    fill=data.fillColor_Slot,
+                                )
                 if (
                     len(alreadyConnectedDUsForModule)
                     + len(alreadyConnectedSLOTsForModule)
@@ -4109,9 +4155,9 @@ class App(customtkinter.CTk):
 
     # https://stackoverflow.com/a/44100075
     def canvas_place_rounded_rectangle(
-        self, x1, y1, width, height, radius=25, **kwargs
+        self, x1, y1, width_rect, height, radius=25, **kwargs
     ):
-        x2 = x1 + width
+        x2 = x1 + width_rect
         y2 = y1 + height
 
         points = [
@@ -4405,6 +4451,7 @@ class App(customtkinter.CTk):
 
     def combobox_p_c_event_select(self, unused_var_to_please_python):
         self.displayedDUtype = "None"
+        self.interlockSlots = []
         self.displayed_PEB_type = "None"
         self.this_DU_relations_MODULE = []
         self.this_MODULE_relations_DU = []
@@ -4525,6 +4572,7 @@ class App(customtkinter.CTk):
                         attribute_SU_m = entry["position"].split("M").pop()
                         if debug:
                             print("self.displayedDUtype", self.displayedDUtype)
+                            print("self.interlockSlots", self.interlockSlots)
                             print("V", V)
                             print("L", L)
                             print("Q", Q)
@@ -4666,12 +4714,26 @@ class App(customtkinter.CTk):
         for key in data.allDUs.keys():
             if key in DU_SN:
                 self.displayedDUtype = key
+                self.interlockSlots = data.DU_Interlock_dict[key]
                 self.label_info.configure(text=" ")
                 self.canvas.create_rectangle(40, 40, 360, 540, fill=data.fillColor_SU)
                 for mod in data.allDUs[self.displayedDUtype]:
-                    self.canvas_place_rounded_rectangle(
-                        mod["x"], mod["y"], mod["w"], mod["h"], fill=data.fillColor_Slot
-                    )
+                    if str(mod["slot"]) in self.interlockSlots:
+                        self.canvas_place_rounded_rectangle(
+                            mod["x"],
+                            mod["y"],
+                            mod["w"],
+                            mod["h"],
+                            fill=data.fillColor_InterlockSlot,
+                        )
+                    else:
+                        self.canvas_place_rounded_rectangle(
+                            mod["x"],
+                            mod["y"],
+                            mod["w"],
+                            mod["h"],
+                            fill=data.fillColor_Slot,
+                        )
                 self.canvas.create_text(
                     140,
                     475,
@@ -4756,13 +4818,24 @@ class App(customtkinter.CTk):
                                 # make the corresponding slot blue if already in use, white if not used
                                 for mod in data.allDUs[self.displayedDUtype]:
                                     if str(mod["slot"]) == str(r["position"]):
-                                        self.canvas_place_rounded_rectangle(
-                                            mod["x"],
-                                            mod["y"],
-                                            mod["w"],
-                                            mod["h"],
-                                            fill=data.fillColor_AlreadyLoadedSlot,
-                                        )
+                                        if str(mod["slot"]) in self.interlockSlots:
+                                            self.canvas_place_rounded_rectangle(
+                                                mod["x"],
+                                                mod["y"],
+                                                mod["w"],
+                                                mod["h"],
+                                                fill=data.fillColor_AlreadyLoadedSlot,
+                                                outline=data.fillColor_InterlockSlot,
+                                                width=3,
+                                            )
+                                        else:
+                                            self.canvas_place_rounded_rectangle(
+                                                mod["x"],
+                                                mod["y"],
+                                                mod["w"],
+                                                mod["h"],
+                                                fill=data.fillColor_AlreadyLoadedSlot,
+                                            )
                                         self.clicked_module = r["part"]
                     if len(self.this_DU_relations_MODULE) == len(
                         data.allDUs[self.displayedDUtype]

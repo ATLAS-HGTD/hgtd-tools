@@ -752,6 +752,7 @@ B_PEBs = ["1F", "1B", "2F", "2B", "3B"]
 fillColor_SU = "#f4f4bb"
 fillColor_Slot = "#ffffff"
 fillColor_SU_Text = "#aaaaaa"
+fillColor_InterlockSlot = "#ffaaaa"
 fillColor_AlreadyLoadedSlot = "#00ddff"
 fillColor_ActiveSlot = "#33ff33"
 
