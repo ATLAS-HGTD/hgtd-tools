@@ -8,6 +8,8 @@ These tools interact with the HGTD Production Database (ProdDB) for the HGTD Pha
 
 To support various use cases not fully implemented on the ProdDB website, we have developed a python application with API client, GUI, automatic reporting and helper scripts.
 
+The [internal part of the project](https://gitlab.cern.ch/anstein/hgtd-tools-internal){target="_blank"} performs nightly checks of yields and consistency validation, as documented on the resulting [reports page](https://hgtd-tools-internal.web.cern.ch/){target="_blank"}.
+
 ## Getting started
 
 Please check the [install](getting_started/install.md) guide for installing hgtd-tools the first time or updating it.
@@ -40,13 +42,13 @@ The following overview lists the implemented features of `hgtd-tools` and links 
         - if operation requires subsequent operations (e.g. connecting modules to slots when placing a DU on the detector), perform those subsequent operations in one go, for FT this involves connecting to Slot, Module, Detector Unit and PEB in one go
         - query selection before choosing parent / child from full list (e.g. DU type, module manufacturer, child not yet connected or all possible children)
 
-??? success "Additional scripts / automation"
+??? success "Additional tools / scripts / automation"
     - Serial Number reservation for module assembly [with CLI script `SN_reservation.py`](use_cases/SN_reservation.md)
     - Hybrid matching for module assembly [with CLI script `hybridmatch.py`](use_cases/hybrid_matching.md)
     - Reporting
         - automation with Gitlab CI, using the hgtdbot account
         - runner script producing overviews / reports
-    - Flex Tail upload provided by [with CLI script `upload_FlexTail_measurements.py`](use_cases/FT_upload_instructions.md)
+    - Flex Tail upload [with CLI script `upload_FlexTail_measurements.py`](use_cases/FT_upload_instructions.md)
 
 ## Quickstart
 
