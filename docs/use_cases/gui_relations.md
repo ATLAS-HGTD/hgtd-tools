@@ -189,6 +189,12 @@ contains the actual user input and buttons to perform the parts tree operations.
 
     ![module_loading_notAllowed.png](../images/for_user/hgtd-tools/module_loading_notAllowed.png)
 
+    **NEW: Display of slots used for Interlock**
+
+    Some slots will be used for Interlock, others only for DCS. For those modules on each DU that need to have functioning NTCs, this is indicated with red.
+
+    ![interlock_interface_tools.png](../images/for_user/hgtd-tools/interlock_interface_tools.png)
+
 ??? info "Detector Assembly (CERN): DU"
 
     **Affected relations**
