@@ -390,12 +390,10 @@ def get_relevant_parts(
             # the following two files result from manually downloading, exporting and converting them
             # this was done because the API endpoint above results in OOMKilled errors!
             with open(
-                "./local/Slot_Table_fullNovember2025_demoV1V2_module0.json"
+                "./local/Slot_Table_fullJuly2026_withPreliminaryNTC.json"
             ) as allSlotsJson:
                 these_parts, responseText = json.load(allSlotsJson), "200: Local File"
-            with open(
-                "./local/Slot_fullNovember2025_demoV1V2_module0.json"
-            ) as slotsJson:
+            with open("./local/Slot_fullJuly2026_withPreliminaryNTC.json") as slotsJson:
                 slots, responseText = json.load(slotsJson), "200: Local File"
 
             for alSl in these_parts:
