@@ -18,7 +18,7 @@ For the algorithm in the current implementation, we pair by `VBD` of the Sensor.
 - `VBD_AVERAGE` as entered to the `VBD` table, if the connection to Wafer-Sensor exists, and the value exists for the given Sensor.
   - We use the latest upload, if there are multiple uploads, a higher `RUN_END_TIMESTAMP` or a higher `RUN_NUMBER` wins.
 - Average over all individual `VBD` values by manually calculating them for all pads, if these values exist. The method to calculate these values follows the interpolation technique, and uses the per-pad threshold current of $5\cdot10^{-7}\,\mathrm{A}$.
-  - Because IV information for Sensors comes in different "flavors" aka `RUN_TYPE`, an assumption had to be made which values to use for the algorithm. `15X15` takes precedence over `15x15`, over `15X1`, over `15x1`, over `1X1`, over `1x1`. Any other run type is not considered.
+  - Because IV information for Sensors comes in different "flavors" aka `RUN_TYPE`, an assumption had to be made which values to use for the algorithm. `15x15` takes precedence over `15X15`, over `15x1`, over `15X1`, over `1x1`, over `1X1`. Any other run type is not considered.
   - We use the latest upload, if there are multiple uploads, a higher `RUN_END_TIMESTAMP` or a higher `RUN_NUMBER` wins.
 - Hybrids for which neither of these techniques yield a score, have to be ignored for the pairing algorithm.
 

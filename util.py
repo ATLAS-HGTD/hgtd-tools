@@ -1380,22 +1380,6 @@ def get_ivs_for_all_pads_of_sensor(sensor_SN):
                                 -999999,
                                 f"Could not retrieve IV via /sensorivview for Sensor {sensor_SN}, unknown run types only {", ".join(types)}",
                             )
-    if len(ivs) == 0:
-        print("Len of 15x15 output is zero, does not exist.")
-        ivs, _ = api.fetch_information(
-            f"/sensorivview?serial_number={sensor_SN}&run_type=15X1"
-        )
-        if len(ivs) == 0:
-            print("Len of 15X1 output is also zero, does not exist.")
-            ivs, _ = api.fetch_information(
-                f"/sensorivview?serial_number={sensor_SN}&run_type=1X1"
-            )
-            if len(ivs) == 0:
-                print("Len of 1X1 output is also zero, does not exist.")
-                return (
-                    {},
-                    f"Could not retrieve IV via /sensorivview for Sensor {sensor_SN}",
-                )
     ivs_per_pad = {}
     for curve in ivs:
         pad_loc = int(curve["PAD_LOCATION"])
