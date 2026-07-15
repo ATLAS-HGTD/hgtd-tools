@@ -768,3 +768,7 @@ hover_color_standard_but_red = "#B02B25"
 progress_color_OK = "#007711"
 progress_color_wait = "#BBAA00"
 progress_color_ERROR = "#ff0000"
+
+
+## Electrical properties
+module_flex_ohm_res = 11000

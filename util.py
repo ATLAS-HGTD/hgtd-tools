@@ -1540,6 +1540,13 @@ def get_vbd_for_hybrid_or_module_via_iv(
         return float(get_vbd_from_iv(iv[0], iv[1], threshold_in_A=threshold_in_A))
 
 
+def module_voltage_correction(currents, voltages):
+    return [
+        (voltages[i] / ((voltages[i] / currents[i]) - data.module_flex_ohm_res))
+        for i in range(len(voltages))
+    ]
+
+
 def sanitize(str_to_sanitize):
     san = re.sub(r"[\s-]+", "_", str_to_sanitize)
     san = re.sub(r"[^\w\.]", "", san)

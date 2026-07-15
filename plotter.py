@@ -222,6 +222,8 @@ def iv_curves_for_sns(
     postfix,
     lineThreshold,
     spanLabelBackground,
+    plot_diff_sumHybridIV_moduleIV,
+    apply_voltage_correction,
 ):
     plt.rcParams["axes.prop_cycle"] = cycler("color", combination_color_sequence)
     if len(list(set(KoPs))) > 1:
@@ -234,11 +236,22 @@ def iv_curves_for_sns(
         elif "Sensor" in KoPs:
             KoP_legend = "Sensors"
 
-    fig, ax = plt.subplots(figsize=(10, 8))
+    if plot_diff_sumHybridIV_moduleIV:
+        fig, (ax, ax_diff) = plt.subplots(
+            2,
+            1,
+            figsize=(12, 10),
+            height_ratios=[10, 5],
+            sharex=True,
+            gridspec_kw={"wspace": 0, "hspace": 0},
+        )
+    else:
+        fig, ax = plt.subplots(figsize=(10, 8))
     for i, label in enumerate(labels):
-        ax.plot(voltages[i], currents[i], label=label, linestyle="-", marker="o")
+        ax.plot(voltages[i], currents[i], label=label, linestyle="-", marker="o", ms=5)
 
-    ax.set_xlabel("Voltage [V]")
+    if not plot_diff_sumHybridIV_moduleIV:
+        ax.set_xlabel("Voltage [V]")
     ax.set_ylabel("Current [A]")
     ax.set_yscale("log")
     if lineThreshold:
@@ -260,20 +273,23 @@ def iv_curves_for_sns(
             rcParams["font.size"] / 1.7,
         ),
         fontstyle=("italic", "normal", "italic", "normal"),
+        ax=ax,
     )
 
-    ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 5)
+    if not apply_voltage_correction:
+        ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 5)
     max_x = max([max(v) for v in voltages])
     ax.set_xlim(-10, max_x + 10)
-    ax.legend(
-        title=KoP_legend,
-        fontsize=rcParams["font.size"] / 1.3,
-        facecolor="white",
-        edgecolor="white",
-        framealpha=1,
-        frameon=True,
-        loc="upper right",
-    )
+    if not apply_voltage_correction:
+        ax.legend(
+            title=KoP_legend,
+            fontsize=rcParams["font.size"] / 1.3,
+            facecolor="white",
+            edgecolor="white",
+            framealpha=1,
+            frameon=True,
+            loc="upper right",
+        )
     if spanLabelBackground:
         ax.axhspan(
             10
@@ -289,15 +305,105 @@ def iv_curves_for_sns(
             alpha=1,
             color="white",
         )
+    if plot_diff_sumHybridIV_moduleIV:
+        minimum_of_maxima = 999
+        for i, kop in enumerate(KoPs):
+            if kop in ["Hybrid", "Module"]:
+                minimum_of_maxima = min(minimum_of_maxima, max(voltages[i]))
+        index_minimum_of_maxima = voltages[-1].index(
+            minimum_of_maxima
+        )  # last allowed index to use for diff plot
+
+        diff_voltages = voltages[-1][:index_minimum_of_maxima]
+        diff_currents_measured_module = currents[-1][:index_minimum_of_maxima]
+        diff_currents_sum_of_hybrids = currents[-2][:index_minimum_of_maxima]
+        diff_currents_to_plot = [
+            diff_currents_measured_module[i] - diff_currents_sum_of_hybrids[i]
+            for i in range(index_minimum_of_maxima)
+        ]
+        ax_diff.plot(
+            diff_voltages,
+            diff_currents_to_plot,
+            label="Difference measured Module IV - sum of Hybrid IVs",
+            color="#94a4a2",
+            linestyle="-",
+            marker="o",
+            ms=5,
+        )
+        ax_diff.set_ylabel("Current [A]")
+        ax_diff.set_xlabel("Voltage [V]")
+        ax_diff.set_yscale("log")
+        ax_diff.grid(alpha=0.5)
+        ax_diff.grid(which="minor", alpha=0.25)
+        if not apply_voltage_correction:
+            ax_diff.legend(
+                fontsize=rcParams["font.size"] / 1.3,
+                facecolor="white",
+                edgecolor="white",
+                framealpha=1,
+                frameon=True,
+                loc="upper right",
+            )
+        _postfix = "_diff" + _postfix
+    if apply_voltage_correction:
+        ax.plot(
+            voltages[-1],
+            util.module_voltage_correction(currents[-1], voltages[-1]),
+            label="Module with voltage correction",
+            color="green",
+            linestyle="-",
+            marker="o",
+            ms=5,
+        )
+        ax.legend(
+            title=KoP_legend,
+            fontsize=rcParams["font.size"] / 1.3,
+            facecolor="white",
+            edgecolor="white",
+            framealpha=1,
+            frameon=True,
+            loc="upper right",
+        )
+        if plot_diff_sumHybridIV_moduleIV:
+            diff_currents_measured_module_corrected = util.module_voltage_correction(
+                diff_currents_measured_module, diff_voltages
+            )
+            diff_corrected_currents_to_plot = [
+                diff_currents_measured_module_corrected[i]
+                - diff_currents_sum_of_hybrids[i]
+                for i in range(index_minimum_of_maxima)
+            ]
+            # ax_diff.set_ylim(ax_diff.get_ylim()[0], ax_diff.get_ylim()[-1] * 5)
+            ax_diff.plot(
+                diff_voltages,
+                diff_corrected_currents_to_plot,
+                label="Difference measured & corrected Module IV - sum of Hybrid IVs",
+                color="green",
+                linestyle="-",
+                marker="o",
+                ms=5,
+            )
+            ax_diff.legend(
+                fontsize=rcParams["font.size"] / 1.3,
+                facecolor="white",
+                edgecolor="white",
+                framealpha=1,
+                frameon=True,
+                loc="upper right",
+            )
+        _postfix = "_correction" + _postfix
+    n_legend_entries = len(ax.get_legend().get_texts())
+    if n_legend_entries > 3:
+        ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 10)
     _SNs = util.sanitize(_SNs)
     fig.savefig(
-        f"hybrid_ivs{_SNs}{_postfix}.pdf",
+        f"ivs_{_SNs}{_postfix}.pdf",
         bbox_inches="tight",
         facecolor="white",
         dpi=300,
     )
     fig.savefig(
-        f"hybrid_ivs{_SNs}{_postfix}.png",
+        f"ivs_{_SNs}{_postfix}.png",
         bbox_inches="tight",
         facecolor="white",
         dpi=300,
