@@ -1512,9 +1512,17 @@ def get_iv_for_hybrid_or_module(part_SN, all_ivs=None, KoP=None):
                                     "RUN_END_TIMESTAMP": ivcurve["RUN_END_TIMESTAMP"],
                                 }
     if designated_iv_curve_for_part_SN != None:
-        i = [abs(float(i)) for i in designated_iv_curve_for_part_SN["IV"]["I"]]
-        v = [abs(float(v)) for v in designated_iv_curve_for_part_SN["IV"]["V"]]
-        return [i, v], ""
+        i_to_return = []
+        v_to_return = []
+        for ind in range(len(designated_iv_curve_for_part_SN["IV"]["I"])):
+            if designated_iv_curve_for_part_SN["IV"]["I"][ind] != "None":
+                i_to_return.append(
+                    abs(float(designated_iv_curve_for_part_SN["IV"]["I"][ind]))
+                )
+                v_to_return.append(
+                    abs(float(designated_iv_curve_for_part_SN["IV"]["V"][ind]))
+                )
+        return [i_to_return, v_to_return], ""
     else:
         return [], f"No valid IV curve found for {part_SN}."
 

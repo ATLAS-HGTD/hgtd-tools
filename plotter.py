@@ -224,17 +224,22 @@ def iv_curves_for_sns(
     spanLabelBackground,
     plot_diff_sumHybridIV_moduleIV,
     apply_voltage_correction,
+    legend_title,
 ):
     plt.rcParams["axes.prop_cycle"] = cycler("color", combination_color_sequence)
-    if len(list(set(KoPs))) > 1:
-        KoP_legend = "Serial Numbers"
+    if legend_title == "default":
+        if len(list(set(KoPs))) > 1:
+            KoP_legend = "Serial Numbers"
+        else:
+            if "Module" in KoPs:
+                KoP_legend = "Modules"
+            elif "Hybrid" in KoPs:
+                KoP_legend = "Hybrids"
+            elif "Sensor" in KoPs:
+                KoP_legend = "Sensors"
     else:
-        if "Module" in KoPs:
-            KoP_legend = "Modules"
-        elif "Hybrid" in KoPs:
-            KoP_legend = "Hybrids"
-        elif "Sensor" in KoPs:
-            KoP_legend = "Sensors"
+        if legend_title == "None":
+            KoP_legend = None
 
     if plot_diff_sumHybridIV_moduleIV:
         fig, (ax, ax_diff) = plt.subplots(
@@ -373,7 +378,6 @@ def iv_curves_for_sns(
                 - diff_currents_sum_of_hybrids[i]
                 for i in range(index_minimum_of_maxima)
             ]
-            # ax_diff.set_ylim(ax_diff.get_ylim()[0], ax_diff.get_ylim()[-1] * 5)
             ax_diff.plot(
                 diff_voltages,
                 diff_corrected_currents_to_plot,
@@ -395,6 +399,10 @@ def iv_curves_for_sns(
     n_legend_entries = len(ax.get_legend().get_texts())
     if n_legend_entries > 3:
         ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 10)
+    if n_legend_entries > 5:
+        leg = ax.get_legend()
+        leg.set_loc("lower right")
+        ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] / 10)
     _SNs = util.sanitize(_SNs)
     fig.savefig(
         f"ivs_{_SNs}{_postfix}.pdf",

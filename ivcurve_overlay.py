@@ -73,6 +73,12 @@ parser.add_argument(
     default="Internal",
 )
 parser.add_argument(
+    "--legend_title",
+    dest="legend_title",
+    help="Custom legend title.",
+    default="default",
+)
+parser.add_argument(
     "--output_postfix",
     dest="output_postfix",
     help="Postfix to append to filename.",
@@ -89,6 +95,7 @@ plot_sum_hybridIV = util.str2bool(args.sum_hybridIV)
 plot_diff_sumHybridIV_moduleIV = util.str2bool(args.diff_sumHybridIV_moduleIV)
 custom_labels = args.custom_labels
 exp_text = args.exp_text
+legend_title = args.legend_title
 output_postfix = args.output_postfix
 
 if __name__ == "__main__":
@@ -162,4 +169,5 @@ if __name__ == "__main__":
         spanLabelBackground=False,
         plot_diff_sumHybridIV_moduleIV=plot_diff_sumHybridIV_moduleIV,
         apply_voltage_correction=apply_voltage_correction,
+        legend_title=legend_title,
     )
