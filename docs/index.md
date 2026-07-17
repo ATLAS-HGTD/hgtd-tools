@@ -45,6 +45,7 @@ The following overview lists the implemented features of `hgtd-tools` and links 
 ??? success "Additional tools / scripts / automation"
     - Serial Number reservation for module assembly [with CLI script `SN_reservation.py`](use_cases/SN_reservation.md)
     - Hybrid matching for module assembly [with CLI script `hybridmatch.py`](use_cases/hybrid_matching.md)
+    - IV curve plotting [with CLI script `ivcurve_overlay.py`](use_cases/ivcurve_plotting.md)
     - Reporting
         - automation with Gitlab CI, using the hgtdbot account
         - runner script producing overviews / reports
@@ -73,6 +74,17 @@ If you walked through the [install](getting_started/install.md) guide, are curre
     ```shell
     python hybridmatch.py --location <your-site>
     ```
+
+??? tip "Using the `ivcurve_overlay.py` script for IV curve plotting"
+
+    At module assembly or other stages of production, you may want to inspect and compare various IV curves against each other, possibly not only for one kind of part, but multiple in the same plot (Sensor(s)/Hybrid(s)/Module(s)). For more information on the IV curve plotting process, please read [IV Curve Plotting](use_cases/ivcurve_plotting.md).
+
+    Execute the following from the hgtd-tools directory (just one example given so you get reminded how to call the script, various combinations possible):
+
+    ```shell
+    python ivcurve_overlay.py --hybrid-sns "HybridASerialNumber,HybridBSerialNumber" <check-out-the-different-parameters>
+    ```
+
 
 ??? tip "Using the `main.py` GUI for Part-to-Part relations, starting from module assembly"
 

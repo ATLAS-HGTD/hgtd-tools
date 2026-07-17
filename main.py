@@ -4009,7 +4009,7 @@ class App(customtkinter.CTk):
                                     slot["h"],
                                     fill=data.fillColor_AlreadyLoadedSlot,
                                     outline=data.fillColor_InterlockSlot,
-                                    width=3,
+                                    width=10,
                                 )
                             else:
                                 self.canvas_place_rounded_rectangle(
@@ -4028,7 +4028,7 @@ class App(customtkinter.CTk):
                                     slot["h"],
                                     fill=data.fillColor_ActiveSlot,
                                     outline=data.fillColor_InterlockSlot,
-                                    width=3,
+                                    width=10,
                                 )
                             else:
                                 self.canvas_place_rounded_rectangle(
@@ -4048,7 +4048,7 @@ class App(customtkinter.CTk):
                                     slot["h"],
                                     fill=data.fillColor_AlreadyLoadedSlot,
                                     outline=data.fillColor_InterlockSlot,
-                                    width=3,
+                                    width=10,
                                 )
                             else:
                                 self.canvas_place_rounded_rectangle(
@@ -4113,9 +4113,9 @@ class App(customtkinter.CTk):
                         self.position_variable.set("- automatic -")
                         info_text = (
                             info_text
-                            + "\n\nWarning: This slot is already in use.\nSelect a different one, or disconnect the already loaded module by inspecting the DU.\nThere you can delete existing relations with the red trash button."
+                            + "\n\nWarning: This slot is already in use.\nSelect a different one, or disconnect the already loaded module.\nFor unloading, use the red button."
                             if info_text != " "
-                            else "Warning: This slot is already in use.\nSelect a different one, or disconnect the already loaded module by inspecting the DU.\nThere you can delete existing relations with the red trash button."
+                            else "Warning: This slot is already in use.\nSelect a different one, or disconnect the already loaded module.\nFor unloading, use the red button."
                         )
                         print(f">>> {info_text}")
                         self.label_info.configure(text=info_text)
@@ -4826,7 +4826,7 @@ class App(customtkinter.CTk):
                                                 mod["h"],
                                                 fill=data.fillColor_AlreadyLoadedSlot,
                                                 outline=data.fillColor_InterlockSlot,
-                                                width=3,
+                                                width=10,
                                             )
                                         else:
                                             self.canvas_place_rounded_rectangle(

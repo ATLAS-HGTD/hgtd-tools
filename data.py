@@ -750,11 +750,11 @@ B_PEBs = ["1F", "1B", "2F", "2B", "3B"]
 
 ### slot colors in DU view
 fillColor_SU = "#f4f4bb"
-fillColor_Slot = "#ffffff"
+fillColor_Slot = "#FFFFFF"
 fillColor_SU_Text = "#aaaaaa"
-fillColor_InterlockSlot = "#ffaaaa"
-fillColor_AlreadyLoadedSlot = "#00ddff"
-fillColor_ActiveSlot = "#33ff33"
+fillColor_InterlockSlot = "#840032"  # "#420019"#"#ffaaaa"
+fillColor_AlreadyLoadedSlot = "#b4adea"  # "#d9dbff"#"#3066be"#"#00ddff"
+fillColor_ActiveSlot = "#edc273"  # "#E5A93B"#"#D4A373"#"#e396df"#"#33ff33"
 
 ### standard buttons
 fg_color_standard_but_active = "#339941"

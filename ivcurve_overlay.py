@@ -43,12 +43,6 @@ parser.add_argument(
     default=False,
 )
 parser.add_argument(
-    "--sum_sensorIV",
-    dest="sum_sensorIV",
-    help="Whether to plot the sum of both summed Sensor IVs.",
-    default=False,
-)
-parser.add_argument(
     "--sum_hybridIV",
     dest="sum_hybridIV",
     help="Whether to plot the sum of both Hybrid IVs.",

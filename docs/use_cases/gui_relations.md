@@ -179,9 +179,9 @@ contains the actual user input and buttons to perform the parts tree operations.
 
     **Further screenshots and explanations**
 
-    HGTD Tools shows already loaded module slots on a selected DU in blue. User actions like switching between Loading / Assembly, or selecting different parent or child parts reloads this view freshly with API calls to the database.
+    HGTD Tools shows already loaded module slots on a selected DU in light blue. User actions like switching between Loading / Assembly, or selecting different parent or child parts reloads this view freshly with API calls to the database.
 
-    When loading a new module to a position on the DU that is not already blocked by another module, this position is highlighted in green. You can proceed with the ADD PARTS TREE button. If loading was successful, the interface will show a refreshed DU image with one more blue slot.
+    When loading a new module to a position on the DU that is not already blocked by another module, this position is highlighted in ~~green~~ yellow (NEW color since including Interlock slots, July 2026). You can proceed with the ADD PARTS TREE button. If loading was successful, the interface will show a refreshed DU image with one more light blue slot.
 
     ![module_loading_new.png](../images/for_user/hgtd-tools/module_loading_new.png)
 
