@@ -238,6 +238,7 @@ def iv_curves_for_sns(
             elif "Sensor" in KoPs:
                 KoP_legend = "Sensors"
     else:
+        KoP_legend = legend_title
         if legend_title == "None":
             KoP_legend = None
 
@@ -403,6 +404,13 @@ def iv_curves_for_sns(
         leg = ax.get_legend()
         leg.set_loc("lower right")
         ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] / 10)
+    if KoP_legend != None:
+        if n_legend_entries > 4:
+            leg = ax.get_legend()
+            leg.set_loc("lower right")
+            ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] / 10)
+        else:
+            ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] * 10)
     _SNs = util.sanitize(_SNs)
     fig.savefig(
         f"ivs_{_SNs}{_postfix}.pdf",
