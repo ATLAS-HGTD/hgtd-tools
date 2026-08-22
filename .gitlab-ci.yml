@@ -30,6 +30,7 @@ api_report:
     strategy: mirror
   variables:
     TRIGGER_TARGET: "api_report_generate_files"
+    IS_REFACTORED: "no"
   rules:
     # Run on schedules
     - if: $CI_PIPELINE_SOURCE == "schedule"
@@ -46,6 +47,7 @@ api_test:
     TRIGGER_TARGET: "api_test_generate_files"
     UPSTREAM_MR_BRANCH: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
     UPSTREAM_PROJECT_URL: $CI_MERGE_REQUEST_SOURCE_PROJECT_URL
+    IS_REFACTORED: "no"
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
