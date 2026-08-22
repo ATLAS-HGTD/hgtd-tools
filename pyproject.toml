@@ -40,6 +40,8 @@ gui = ["customtkinter>=5.2.2", "Pillow>=10.0"]
 [project.scripts]
 hgtd-tools = "hgtd_tools.app.cli:main"
 hgtd-tools-gui = "hgtd_tools.app.gui:main"
+order = "hgtd_tools.app.scripts.order:main"
+report-stats = "hgtd_tools.app.scripts.report_stats:main"
 
 [project.urls]
 Homepage = "https://gitlab.cern.ch/anstein/hgtd-tools"
