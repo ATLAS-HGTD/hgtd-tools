@@ -8,6 +8,7 @@
 # ================================================================
 *.ipynb_checkpoints*
 .virtual_documents*
+*.ipynb
 
 # ================================================================
 # Development, local only, envs
@@ -33,6 +34,7 @@ site/
 *.pdf
 *.png
 *.json
+*.csv
 
 # ================================================================
 # Local docker_tag must not be committed
@@ -45,6 +47,7 @@ version.txt
 # ================================================================
 config_api
 *config_api*
+*/config_api
 
 # ================================================================
 # Names of testing dirs and local files, reporting output
@@ -60,6 +63,7 @@ archived/*
 output_invalid.txt
 validation*.md
 pairings*.md
+MOVED*
 
 # ================================================================
 # Other files that should not be committed

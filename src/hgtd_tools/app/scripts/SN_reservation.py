@@ -3,12 +3,11 @@ import time
 from argparse import ArgumentParser
 from pprint import pprint
 
+import hgtd_tools.api as api
+import hgtd_tools.data as data
+import hgtd_tools.util as util
 import requests
 import yaml
-
-import api
-import data
-import util
 
 manus = data.relevant_manufacturer_IDs_by_shortname
 locs = data.relevant_location_IDs_by_shortname

@@ -4,13 +4,11 @@ import os
 from argparse import ArgumentParser
 from collections import Counter
 
+import hgtd_tools.data as data
+import hgtd_tools.plotter as plotter
+import hgtd_tools.util as util
 import numpy as np
 import pandas as pd
-
-import data
-import plotter
-import util
-
 
 # === CONFIGURATION FOR DATA ACCESS ===
 parser = ArgumentParser("CLI for reporting (parts stats)")

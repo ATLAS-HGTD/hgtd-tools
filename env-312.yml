@@ -7,18 +7,12 @@ channels:
 
 dependencies:
   - python=3.12.*
-  - conda
-  - jupyterlab
-  - matplotlib
-  - numpy
-  - pandas
-  - pip
-  - pre-commit
-  - pyyaml
-  - scikit-learn
-  - scipy
+  # Linux needs a conda-built Tk (system Tk is usually broken/missing)
+  - sel(linux): tk[build=xft_*]
+  - numpy>=1.26
+  - requests
 
+  - pip
   - pip:
-    - customtkinter
+    - hgtd-tools[dev,gui]==2.0.0
     - mplhep
-    - zensical

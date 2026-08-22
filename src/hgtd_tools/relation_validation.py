@@ -1,5 +1,5 @@
-import data
-import util
+import hgtd_tools.data as data
+import hgtd_tools.util as util
 
 # =============================================================================
 # This file contains validation functions to make sure relations are in order

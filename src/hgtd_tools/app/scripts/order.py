@@ -1,11 +1,11 @@
 from argparse import ArgumentParser
 
-import api
-import data
-import plotter
-import relation_validation
-import templates
-import util
+import hgtd_tools.api as api
+import hgtd_tools.data as data
+import hgtd_tools.plotter as plotter
+import hgtd_tools.relation_validation as relation_validation
+import hgtd_tools.templates as templates
+import hgtd_tools.util as util
 
 parser = ArgumentParser("CLI for reporting (relation validation)")
 parser.add_argument(

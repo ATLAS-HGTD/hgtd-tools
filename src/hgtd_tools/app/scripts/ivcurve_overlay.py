@@ -2,10 +2,9 @@ from argparse import ArgumentParser
 from datetime import datetime
 from datetime import UTC
 
+import hgtd_tools.plotter as plotter
+import hgtd_tools.util as util
 import numpy as np
-
-import plotter
-import util
 
 parser = ArgumentParser("IV curve plotting wrapper")
 parser.add_argument(

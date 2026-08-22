@@ -6,11 +6,10 @@ import time
 from argparse import ArgumentParser
 from pprint import pprint
 
+import hgtd_tools.api as api
+import hgtd_tools.data as data
+import hgtd_tools.util as util
 import requests
-
-import api
-import data
-import util
 
 
 INFO = "[INFO] : "

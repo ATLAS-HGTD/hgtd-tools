@@ -2,6 +2,7 @@ import datetime
 import getpass
 import json
 import os
+from pathlib import Path
 from pprint import pprint
 
 import requests
@@ -30,6 +31,137 @@ userinfo_endpoint = kc_server + "/auth/realms/cern/protocol/openid-connect/useri
 
 # === For checking against latest version
 hgtd_tools_version_endpoint = "https://cernbox.cern.ch/remote.php/dav/public-files/lFlRlPYl6EO4J3N/hgtd-tools-version"
+
+CONFIG_API_FILENAME = "config_api"
+SETTINGS_DIRNAME = ".hgtd_tools"
+SETTINGS_FILENAME = "config.json"
+
+# Module-level override, set by cli/gui before any API call runs.
+_client_secret_source_override = None
+
+
+def set_client_secret_source(path):
+    """Override the config_api file location. Called by gui.run() when the
+    user passes --config on the CLI."""
+    global _client_secret_source_override
+    _client_secret_source_override = Path(path).expanduser().resolve() if path else None
+
+
+def save_config_api_path(path):
+    """Persist a user-chosen config_api path so future runs find it
+    automatically, without needing --config every time.
+    Best-effort: silently does nothing if the home directory isn't writable.
+    """
+    settings_dir = Path.home() / SETTINGS_DIRNAME
+    try:
+        settings_dir.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return
+    settings_file = settings_dir / SETTINGS_FILENAME
+    settings = {}
+    if settings_file.is_file():
+        try:
+            settings = json.loads(settings_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            settings = {}
+    settings["config_api_path"] = str(Path(path).expanduser().resolve())
+    try:
+        settings_file.write_text(json.dumps(settings, indent=2), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def _read_saved_settings():
+    """Read ~/.hgtd_tools/config.json. Returns dict, or {} on any failure."""
+    path = Path.home() / SETTINGS_DIRNAME / SETTINGS_FILENAME
+    if not path.is_file():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _candidate_config_api_paths():
+    """Locations to look for config_api, in priority order.
+
+    NOTE: in the distributed-package world, main.py lives inside
+    site-packages/hgtd_tools/, which is the wrong place for a user-editable
+    file (permissions, gets wiped on reinstall). So the priorities here are:
+
+      1. Explicit --config flag from the CLI (highest priority).
+      2. Saved location from ~/.hgtd_tools/config.json (a previous run).
+      3. ~/.hgtd_tools/config_api - the recommended default location.
+      4. ./config_api in the current working directory.
+    """
+    candidates = []
+
+    # 1. Explicit CLI override
+    if _client_secret_source_override is not None:
+        candidates.append(_client_secret_source_override)
+
+    # 2. Saved location
+    saved = _read_saved_settings().get("config_api_path")
+    if saved:
+        saved_path = Path(saved).expanduser()
+        if saved_path not in candidates:
+            candidates.append(saved_path)
+
+    # 3. Home directory (the canonical, recommended location)
+    home_candidate = Path.home() / SETTINGS_DIRNAME / CONFIG_API_FILENAME
+    if home_candidate not in candidates:
+        candidates.append(home_candidate)
+
+    # 4. Current working directory
+    cwd_candidate = Path.cwd() / CONFIG_API_FILENAME
+    if cwd_candidate not in candidates:
+        candidates.append(cwd_candidate)
+
+    return candidates
+
+
+def _load_client_secret():
+    for candidate in _candidate_config_api_paths():
+        if candidate.is_file():
+            try:
+                with open(candidate) as secret_file:
+                    content = secret_file.readline().strip()
+            except OSError as e:
+                raise RuntimeError(
+                    f"Found `config_api` at {candidate} but could not read it "
+                    f"({e}). Please check the file permissions."
+                )
+            if not content:
+                raise RuntimeError(
+                    f"The file {candidate} exists but is empty. It should "
+                    f"contain the client secret on its first line."
+                )
+            for line in content.splitlines():
+                stripped = line.strip()
+                if stripped:
+                    return stripped
+            raise RuntimeError(
+                f"The file {candidate} contains no non-empty lines. It "
+                f"should contain the client secret on its first line."
+            )
+
+    searched = "\n".join(f"      {p}" for p in _candidate_config_api_paths())
+    raise RuntimeError(
+        "\n"
+        "Could not find the `config_api` file.\n"
+        "\n"
+        "This file contains the API client secret and is distributed\n"
+        "separately to trusted users. It is NOT included in the package.\n"
+        "\n"
+        "Please place the `config_api` file in one of these locations:\n"
+        f"{searched}\n"
+        "\n"
+        "The recommended location is your home directory:\n"
+        f"      {Path.home() / SETTINGS_DIRNAME / CONFIG_API_FILENAME}\n"
+        "\n"
+        "If you have not received the `config_api` file, please contact\n"
+        "the project maintainers.\n"
+    )
 
 
 def get_version(debug=False):
@@ -160,13 +292,7 @@ def get_access_token(grant_type="client_credentials", debug=False):
     applicationDetails["grant_type"] = (None, grant_type)
     if grant_type == "client_credentials":
         applicationDetails["client_id"] = (None, "hgtd-api-client")
-        with open(
-            os.path.dirname(os.path.realpath(__file__)) + "/config_api"
-        ) as config_api:
-            applicationDetails["client_secret"] = (
-                None,
-                config_api.readline().strip(),
-            )
+        applicationDetails["client_secret"] = (None, _load_client_secret())
         applicationDetails["audience"] = (None, "webframeworks-paas-hgtddb")
         url_to_use = access_token_url
     else:

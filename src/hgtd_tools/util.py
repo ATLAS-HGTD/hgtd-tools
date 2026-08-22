@@ -3,11 +3,10 @@ import re
 import textwrap
 import webbrowser
 
+import hgtd_tools.api as api
+import hgtd_tools.data as data
 import numpy as np
 import requests
-
-import api
-import data
 
 # === Helper for argparse
 
