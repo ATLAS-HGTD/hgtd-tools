@@ -31,6 +31,7 @@ api_report:
   variables:
     IS_REFACTORED: "yes"
     TRIGGER_TARGET: "api_report_generate_files"
+    IS_REFACTORED: "no"
   rules:
     # Run on schedules
     - if: $CI_PIPELINE_SOURCE == "schedule"
