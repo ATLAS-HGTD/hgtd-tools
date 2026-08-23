@@ -1787,7 +1787,7 @@ class App(customtkinter.CTk):
                 f"Version of hgtd-tools could not be compared to upstream, check your web connection!"
             )
         else:
-            if self.my_version != upstream_version:
+            if self.my_version != upstream_version and "rc" not in self.my_version:
                 print(f"You are not running the most recent version of hgtd-tools.")
                 print(
                     f"Your release: {self.my_version} / latest published release: {upstream_version}."

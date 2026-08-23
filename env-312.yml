@@ -1,5 +1,5 @@
 # run: conda env create -f env-312.yml
-name: hgtd
+name: hgtd-testing
 
 channels:
   - conda-forge
@@ -14,4 +14,4 @@ dependencies:
 
   - pip
   - pip:
-    - hgtd-tools[gui]==2.0.0
+    - hgtd-tools[dev,gui]==3.0.0rc1
