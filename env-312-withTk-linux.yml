@@ -1,4 +1,4 @@
-# run: conda env create -f env-312.yml
+# run: conda env create -f env-312-withTk-linux.yml
 name: hgtd-testing
 
 channels:
@@ -7,6 +7,8 @@ channels:
 
 dependencies:
   - python=3.12.*
+  # Linux needs a conda-built Tk (system Tk is usually broken/missing)
+  - tk[build=xft_*]
   - numpy>=2.3
   - requests>=2.31
 

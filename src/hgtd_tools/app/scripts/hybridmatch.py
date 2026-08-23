@@ -280,7 +280,7 @@ def hybridmatch(mode_alias, location, dev, printouts=False):
     return ignored_parts, kept_parts_and_scoring, pairings, total, leftover
 
 
-if __name__ == "__main__":
+def main():
     (ignored_parts, kept_parts_and_scoring, pairings, total, leftover) = hybridmatch(
         mode_alias, location, dev, printouts=True
     )
@@ -297,3 +297,7 @@ if __name__ == "__main__":
         md_content += ", ".join(hy_a) + "  +  " + ", ".join(hy_b) + "\n\n"
     with open(f"pairings_{mode_alias}_{location}.md", "w") as f:
         f.write(md_content)
+
+
+if __name__ == "__main__":
+    main()

@@ -34,10 +34,14 @@ hgtd_tools_version_endpoint = "https://cernbox.cern.ch/remote.php/dav/public-fil
 
 CONFIG_API_FILENAME = "config_api"
 SETTINGS_DIRNAME = ".hgtd_tools"
-SETTINGS_FILENAME = "config.json"
+LOCAL_INFO_DIRNAME = "local_info"
 
 # Module-level override, set by cli/gui before any API call runs.
 _client_secret_source_override = None
+
+# Module-level override for the local_info folder, set by cli/gui before any
+# folder-using API call runs. Mirrors _client_secret_source_override.
+_local_folder_override = None
 
 
 def set_client_secret_source(path):
@@ -47,39 +51,11 @@ def set_client_secret_source(path):
     _client_secret_source_override = Path(path).expanduser().resolve() if path else None
 
 
-def save_config_api_path(path):
-    """Persist a user-chosen config_api path so future runs find it
-    automatically, without needing --config every time.
-    Best-effort: silently does nothing if the home directory isn't writable.
-    """
-    settings_dir = Path.home() / SETTINGS_DIRNAME
-    try:
-        settings_dir.mkdir(parents=True, exist_ok=True)
-    except OSError:
-        return
-    settings_file = settings_dir / SETTINGS_FILENAME
-    settings = {}
-    if settings_file.is_file():
-        try:
-            settings = json.loads(settings_file.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            settings = {}
-    settings["config_api_path"] = str(Path(path).expanduser().resolve())
-    try:
-        settings_file.write_text(json.dumps(settings, indent=2), encoding="utf-8")
-    except OSError:
-        pass
-
-
-def _read_saved_settings():
-    """Read ~/.hgtd_tools/config.json. Returns dict, or {} on any failure."""
-    path = Path.home() / SETTINGS_DIRNAME / SETTINGS_FILENAME
-    if not path.is_file():
-        return {}
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
+def set_local_folder(path):
+    """Override the local_info folder location. Called by the CLI when the
+    user passes --local-folder."""
+    global _local_folder_override
+    _local_folder_override = Path(path).expanduser().resolve() if path else None
 
 
 def _candidate_config_api_paths():
@@ -90,9 +66,8 @@ def _candidate_config_api_paths():
     file (permissions, gets wiped on reinstall). So the priorities here are:
 
       1. Explicit --config flag from the CLI (highest priority).
-      2. Saved location from ~/.hgtd_tools/config.json (a previous run).
-      3. ~/.hgtd_tools/config_api - the recommended default location.
-      4. ./config_api in the current working directory.
+      2. ~/.hgtd_tools/config_api - the recommended default location.
+      3. ./config_api in the current working directory.
     """
     candidates = []
 
@@ -100,19 +75,12 @@ def _candidate_config_api_paths():
     if _client_secret_source_override is not None:
         candidates.append(_client_secret_source_override)
 
-    # 2. Saved location
-    saved = _read_saved_settings().get("config_api_path")
-    if saved:
-        saved_path = Path(saved).expanduser()
-        if saved_path not in candidates:
-            candidates.append(saved_path)
-
-    # 3. Home directory (the canonical, recommended location)
+    # 2. Home directory (the canonical, recommended location)
     home_candidate = Path.home() / SETTINGS_DIRNAME / CONFIG_API_FILENAME
     if home_candidate not in candidates:
         candidates.append(home_candidate)
 
-    # 4. Current working directory
+    # 3. Current working directory
     cwd_candidate = Path.cwd() / CONFIG_API_FILENAME
     if cwd_candidate not in candidates:
         candidates.append(cwd_candidate)
@@ -164,6 +132,66 @@ def _load_client_secret():
     )
 
 
+def _candidate_local_folder_paths():
+    """Locations to look for the local_info folder, in priority order.
+    Mirrors _candidate_config_api_paths():
+
+      1. Explicit --local-folder flag from the CLI (highest priority).
+      2. ~/.hgtd_tools/local_info - the recommended default location.
+      3. ./local_info in the current working directory.
+    """
+    candidates = []
+
+    # 1. Explicit CLI override
+    if _local_folder_override is not None:
+        candidates.append(_local_folder_override)
+
+    # 2. Home directory (the canonical, recommended location)
+    home_candidate = Path.home() / SETTINGS_DIRNAME / LOCAL_INFO_DIRNAME
+    if home_candidate not in candidates:
+        candidates.append(home_candidate)
+
+    # 3. Current working directory
+    cwd_candidate = Path.cwd() / LOCAL_INFO_DIRNAME
+    if cwd_candidate not in candidates:
+        candidates.append(cwd_candidate)
+
+    return candidates
+
+
+def resolve_local_folder(create=True):
+    """Resolve which local_info folder to use, ensuring it exists and is
+    writable. Walks the candidate paths in priority order and returns the
+    first one that can be created (if create=True) and written to. Raises
+    RuntimeError with a helpful message if none of them work.
+    """
+    for candidate in _candidate_local_folder_paths():
+        try:
+            if create:
+                candidate.mkdir(parents=True, exist_ok=True)
+            # Verify writability with a tiny touch/unlink round-trip.
+            test_file = candidate / ".hgtd_tools_write_test"
+            test_file.touch()
+            test_file.unlink()
+            return candidate
+        except OSError:
+            continue
+
+    searched = "\n".join(f"      {p}" for p in _candidate_local_folder_paths())
+    raise RuntimeError(
+        "\n"
+        "Could not find a writable local folder for storing DB tokens\n"
+        "and temporary upload data.\n"
+        "\n"
+        "Please pass --local-folder to point at a writable directory,\n"
+        "or make sure one of these locations is writable:\n"
+        f"{searched}\n"
+        "\n"
+        "The recommended location is your home directory:\n"
+        f"      {Path.home() / SETTINGS_DIRNAME / LOCAL_INFO_DIRNAME}\n"
+    )
+
+
 def get_version(debug=False):
     try:
         request = requests.get(hgtd_tools_version_endpoint)
@@ -171,6 +199,44 @@ def get_version(debug=False):
         if debug:
             print(">> GET response:", request.status_code, request.reason)
         return request.text, f"{request.status_code}, {request.reason}"
+    except requests.exceptions.HTTPError as errh:
+        if debug:
+            print("Http Error:", errh)
+        raise requests.exceptions.HTTPError("Http Error:", errh)
+    except requests.exceptions.ConnectionError as errc:
+        if debug:
+            print("Error Connecting:", errc)
+        raise requests.exceptions.ConnectionError("Error Connecting:", errc)
+    except requests.exceptions.Timeout as errt:
+        if debug:
+            print("Timeout Error:", errt)
+        raise requests.exceptions.Timeout("Timeout Error:", errt)
+    except requests.exceptions.RequestException as err:
+        if debug:
+            print("OOps: Something Else", err)
+        raise requests.exceptions.RequestException("OOps: Something Else", err)
+
+
+def get_access_token(grant_type="client_credentials", debug=False):
+    applicationDetails = {}
+    applicationDetails["grant_type"] = (None, grant_type)
+    if grant_type == "client_credentials":
+        applicationDetails["client_id"] = (None, "hgtd-api-client")
+        applicationDetails["client_secret"] = (None, _load_client_secret())
+        applicationDetails["audience"] = (None, "webframeworks-paas-hgtddb")
+        url_to_use = access_token_url
+    else:
+        raise NotImplementedError(
+            "Error: hgtddb-api does only accept grant_type = 'client_credentials'"
+        )
+    headers = {"content-type": "application/x-www-form-urlencoded"}
+
+    try:
+        request = requests.post(url_to_use, data=applicationDetails, headers=headers)
+        request.raise_for_status()
+        if debug:
+            print(request.text)
+        return json.loads(request.text)["access_token"]
     except requests.exceptions.HTTPError as errh:
         if debug:
             print("Http Error:", errh)
@@ -255,7 +321,8 @@ def authenticate(u_name, pw, totp, local_folder):
         token = get_access_token()
         # write token and valid user name to localFolder,
         # this overwrites if a previous one existed
-        with open(local_folder + "/" + u_name, "w") as outfile:
+        token_path = local_folder / u_name
+        with open(token_path, "w") as outfile:
             outfile.write(token)
 
 
@@ -263,9 +330,10 @@ def test_for_existing_token_file(username, local_folder):
     """check the existance of token file and that its last modification was not too long ago
     not strictly respecting actual lifetime of token, but timedelta of 480min (one work day)
     """
-    if os.path.isfile(local_folder + "/" + username):
+    token_path = local_folder / username
+    if token_path.is_file():
         if datetime.datetime.now() - datetime.datetime.fromtimestamp(
-            os.path.getmtime(local_folder + "/" + username)
+            token_path.stat().st_mtime
         ) < datetime.timedelta(minutes=480):
             return True
         else:
@@ -285,44 +353,6 @@ def user_auth_cli(username, local_folder):
         )
 
         authenticate(username, password, sixdigit, local_folder)
-
-
-def get_access_token(grant_type="client_credentials", debug=False):
-    applicationDetails = {}
-    applicationDetails["grant_type"] = (None, grant_type)
-    if grant_type == "client_credentials":
-        applicationDetails["client_id"] = (None, "hgtd-api-client")
-        applicationDetails["client_secret"] = (None, _load_client_secret())
-        applicationDetails["audience"] = (None, "webframeworks-paas-hgtddb")
-        url_to_use = access_token_url
-    else:
-        raise NotImplementedError(
-            "Error: hgtddb-api does only accept grant_type = 'client_credentials'"
-        )
-    headers = {"content-type": "application/x-www-form-urlencoded"}
-
-    try:
-        request = requests.post(url_to_use, data=applicationDetails, headers=headers)
-        request.raise_for_status()
-        if debug:
-            print(request.text)
-        return json.loads(request.text)["access_token"]
-    except requests.exceptions.HTTPError as errh:
-        if debug:
-            print("Http Error:", errh)
-        raise requests.exceptions.HTTPError("Http Error:", errh)
-    except requests.exceptions.ConnectionError as errc:
-        if debug:
-            print("Error Connecting:", errc)
-        raise requests.exceptions.ConnectionError("Error Connecting:", errc)
-    except requests.exceptions.Timeout as errt:
-        if debug:
-            print("Timeout Error:", errt)
-        raise requests.exceptions.Timeout("Timeout Error:", errt)
-    except requests.exceptions.RequestException as err:
-        if debug:
-            print("OOps: Something Else", err)
-        raise requests.exceptions.RequestException("OOps: Something Else", err)
 
 
 def fetch_information(endpoint, authorized=True, debug=False, existing_token=None):

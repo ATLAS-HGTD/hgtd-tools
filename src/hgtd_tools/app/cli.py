@@ -24,7 +24,6 @@ def build_parser() -> argparse.ArgumentParser:
     check = sub.add_parser(
         "check", help="Verify ProdDB API connectivity and tool version."
     )
-    check.add_argument("--verbose", "-v", action="store_true")
 
     return p
 
