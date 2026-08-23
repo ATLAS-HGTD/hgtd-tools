@@ -159,8 +159,8 @@ def _load_client_secret():
         "The recommended location is your home directory:\n"
         f"      {Path.home() / SETTINGS_DIRNAME / CONFIG_API_FILENAME}\n"
         "\n"
-        "If you have not received the `config_api` file, please contact\n"
-        "the project maintainers.\n"
+        "If you do not have the `config_api` file, please see\n"
+        "https://hgtd-tools.docs.cern.ch/getting_started/install/\n"
     )
 
 
