@@ -1,5 +1,5 @@
 # run: conda env create -f env-312.yml
-name: hgtd-testing
+name: hgtd
 
 channels:
   - conda-forge
