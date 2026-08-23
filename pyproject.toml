@@ -51,11 +51,25 @@ report-stats = "hgtd_tools.app.scripts.report_stats:main"
 [tool.hatch.build]
 targets.wheel.packages = [ "src/hgtd_tools" ]
 targets.wheel.exclude = [
-  "**/config_api",     # exact basename, no extension
-  "**/config_api.*",   # any extension
-  ".github",
-  "notebooks/*.ipynb",
-  "tests",
+  "**/config_api",   # exact basename, no extension
+  "**/config_api.*", # any extension
+  # this defensive, should some of that ever move into the actual package dir
+  "archived/",
+  "archived/**",
+  "docs/",
+  "docs/**",
+  "local/",
+  "local/**",
+  "local_info/",
+  "local_info/**",
+  "notebooks/",
+  "notebooks/**",
+  "public/",
+  "public/**",
+  "tests/",
+  "tests/**",
+  "*.md",
+  "zensical.toml"
 ]
 targets.wheel.artifacts = [
   "src/hgtd_tools/assets/*.png",
