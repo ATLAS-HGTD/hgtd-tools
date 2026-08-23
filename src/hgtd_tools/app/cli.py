@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import argparse
 import sys
+from importlib import metadata
 from typing import Sequence
 
-from .. import __version__
+__version__ = metadata.version("hgtd_tools")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -18,13 +19,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     # gui (default)
     gui = sub.add_parser("gui", help="Launch the graphical interface (default).")
-    gui.add_argument("--user", default=None, help="Pre-fill the username on startup.")
 
     # check
-    chk = sub.add_parser(
+    check = sub.add_parser(
         "check", help="Verify ProdDB API connectivity and tool version."
     )
-    chk.add_argument("--verbose", "-v", action="store_true")
+    check.add_argument("--verbose", "-v", action="store_true")
 
     return p
 
@@ -39,13 +39,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "gui":
-        from .main import run_gui  # see section 3
+        from hgtd_tools.app.gui import run_gui
 
-        run_gui(prefill_user=args.user)
+        run_gui()
         return 0
 
     if args.command == "check":
-        from .. import api, util
+        import hgtd_tools.api as api
+        import hgtd_tools.util as util
 
         try:
             upstream, txt = api.get_version()

@@ -9,10 +9,9 @@ dependencies:
   - python=3.12.*
   # Linux needs a conda-built Tk (system Tk is usually broken/missing)
   - sel(linux): tk[build=xft_*]
-  - numpy>=1.26
-  - requests
+  - numpy>=2.3
+  - requests>=2.31
 
   - pip
   - pip:
-    - hgtd-tools[dev,gui]==2.0.0
-    - mplhep
+    - hgtd-tools[gui]==2.0.0

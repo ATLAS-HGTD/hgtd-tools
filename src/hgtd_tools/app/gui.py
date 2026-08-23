@@ -5896,10 +5896,10 @@ class App(customtkinter.CTk):
                 self.progressbar.configure(progress_color=data.progress_color_OK)
 
 
-def main():
+def run_gui():
     app = App()
     app.mainloop()
 
 
 if __name__ == "__main__":
-    main()
+    run_gui()

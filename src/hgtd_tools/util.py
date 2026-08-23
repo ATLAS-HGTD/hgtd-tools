@@ -7,6 +7,7 @@ import hgtd_tools.api as api
 import hgtd_tools.data as data
 import numpy as np
 import requests
+from hgtd_tools.assets import load_json_from_assets
 
 # === Helper for argparse
 
@@ -349,10 +350,6 @@ def get_relevant_parts(
                 these_parts, responseText = api.fetch_information(
                     f"/partattributelistbykop/{KoP_ID}/"
                 )
-                with open("./local/all_slots.json", "w") as f:
-                    json.dump(these_parts, f)
-                with open("./local/slots.json", "w") as f:
-                    json.dump(slots, f)
                 for alSl in these_parts:
                     for s in slots:
                         if str(alSl["part_serial_number"]) == str(s["serial_number"]):
@@ -371,29 +368,21 @@ def get_relevant_parts(
             # contains the various location definitions (local & global) but during
             # the lifetime of the detector, the Slot table itself stays constant
             # => can be stored as a local file, don't need to load it freshly each time
-            # (at least that's my understanding now during R&D of the database tools)
-
-            # the following two files result from dumping the API-accessed files
-            """
-            with open('./local/all_slots.json') as allSlotsJson:
-                these_parts, responseText = json.load(allSlotsJson), '200: Local File'
-            with open('./local/slots.json') as slotsJson:
-                slots, responseText = json.load(slotsJson), '200: Local File'
-
-            for alSl in these_parts:
-                for s in slots:
-                    if alSl['part_serial_number'] == s['serial_number']:
-                        alSl['part_id'] = s['part_id']
-            """
-
             # the following two files result from manually downloading, exporting and converting them
             # this was done because the API endpoint above results in OOMKilled errors!
-            with open(
-                "./local/Slot_Table_fullJuly2026_withPreliminaryNTC.json"
-            ) as allSlotsJson:
-                these_parts, responseText = json.load(allSlotsJson), "200: Local File"
-            with open("./local/Slot_fullJuly2026_withPreliminaryNTC.json") as slotsJson:
-                slots, responseText = json.load(slotsJson), "200: Local File"
+            if partKoP_shortname != "Slot":
+                raise NotImplementedError
+            these_parts = load_json_from_assets(
+                "Slot_Table_fullJuly2026_withPreliminaryNTC.json"
+            )
+            slots = load_json_from_assets("Slot_fullJuly2026_withPreliminaryNTC.json")
+            response_text = "200: Local File"
+            #            with open(
+            #                "./local/Slot_Table_fullJuly2026_withPreliminaryNTC.json"
+            #            ) as allSlotsJson:
+            #                these_parts, responseText = json.load(allSlotsJson), "200: Local File"
+            #            with open("./local/Slot_fullJuly2026_withPreliminaryNTC.json") as slotsJson:
+            #                slots, responseText = json.load(slotsJson), "200: Local File"
 
             for alSl in these_parts:
                 for s in slots:
@@ -406,6 +395,8 @@ def get_relevant_parts(
         requests.exceptions.Timeout,
         requests.exceptions.RequestException,
     ) as e:
+        raise e
+    except NotImplementedError as e:
         raise e
     except ValueError as e:
         raise e
@@ -507,18 +498,9 @@ def get_manufacturers(onlyNonDeleted=True):
 
 
 # this loads the full partstree, quite slow (and big!)
-def load_partstree(onlyNonDeleted=True, useLocal=False):
+def load_partstree(onlyNonDeleted=True):
     try:
-        if not useLocal:
-            partstree, responseText = api.fetch_information(f"/partstreelist")
-            with open("./local/partstreelist.json", "w") as f:
-                json.dump(partstree, f)
-        else:
-            # WARNING: relations OTOH are dynamic in nature and should not be accidentally
-            # picked up from possibly outdated local files!!!
-            # Please use for testing purposes only, you should now not need this anymore.
-            with open("./local/partstreelist.json") as partstreeJson:
-                partstree, responseText = json.load(partstreeJson), "200: Local File"
+        partstree, responseText = api.fetch_information(f"/partstreelist")
         interesting_partstree = []
         for p in partstree:
             if str(p["is_record_deleted"]) == "F":
