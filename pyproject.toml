@@ -25,6 +25,7 @@ dependencies = [
   "matplotlib>=3.11",
   "mplhep>=1.3",
   "numpy>=2.3",
+  "pandas>=2.3",
   "pyyaml>=6",
   "requests>=2.31",
 ]
@@ -33,7 +34,7 @@ name = "Annika Stein"
 email = "annika.stein@cern.ch"
 [project.optional-dependencies]
 dev = [ "pre-commit>=4.3" ]
-dev-extra = [ "jupyterlab>=4.4", "pandas>=2.3" ]
+dev-extra = [ "jupyterlab>=4.4" ]
 docs = [ "zensical>=0.0.57" ]
 gui = [ "customtkinter>=5.2.2", "pillow>=10" ]
 [project.urls]
