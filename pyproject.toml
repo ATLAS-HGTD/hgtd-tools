@@ -56,6 +56,8 @@ targets.wheel.exclude = [
   # this defensive, should some of that ever move into the actual package dir
   "archived/",
   "archived/**",
+  "dist/",
+  "dist/**",
   "docs/",
   "docs/**",
   "local/",
