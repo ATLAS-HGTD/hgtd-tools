@@ -46,7 +46,7 @@ _local_folder_override = None
 
 def set_client_secret_source(path):
     """Override the config_api file location. Called by gui.run() when the
-    user passes --config on the CLI."""
+    user passes --local-folder on the CLI."""
     global _client_secret_source_override
     _client_secret_source_override = Path(path).expanduser().resolve() if path else None
 
@@ -65,7 +65,7 @@ def _candidate_config_api_paths():
     site-packages/hgtd_tools/, which is the wrong place for a user-editable
     file (permissions, gets wiped on reinstall). So the priorities here are:
 
-      1. Explicit --config flag from the CLI (highest priority).
+      1. Explicit --local-folder flag from the CLI (highest priority).
       2. ~/.hgtd_tools/config_api - the recommended default location.
       3. ./config_api in the current working directory.
     """
