@@ -34,7 +34,7 @@ name = "Annika Stein"
 email = "annika.stein@cern.ch"
 [project.optional-dependencies]
 dev = [ "pre-commit>=4.3" ]
-dev-extra = [ "jupyterlab>=4.4" ]
+dev-extra = [ "build", "jupyterlab>=4.4", "twine" ]
 docs = [ "zensical>=0.0.57" ]
 gui = [ "customtkinter>=5.2.2", "pillow>=10" ]
 [project.urls]
@@ -69,7 +69,8 @@ targets.wheel.exclude = [
   "tests/",
   "tests/**",
   "*.md",
-  "zensical.toml"
+  ".gitlab-ci.yml",
+  "zensical.toml",
 ]
 targets.wheel.artifacts = [
   "src/hgtd_tools/assets/*.png",
