@@ -49,17 +49,21 @@ order = "hgtd_tools.app.scripts.order:main"
 report-stats = "hgtd_tools.app.scripts.report_stats:main"
 
 [tool.hatch.build]
-targets.wheel.packages = [ "src/hgtd_tools" ]
-targets.wheel.exclude = [
-  "**/config_api",   # exact basename, no extension
-  "**/config_api.*", # any extension
+exclude = [
+  "**/config_api",            # exact basename, no extension
+  "**/config_api.*",          # any extension
+  "**/.*cache",
+  "**/.cache",
+  "**/.pytest_cache",
+  "**/__pycache__",
+  "**/.ipynb_checkpoints",
+  "**/.ipynb_checkpoints/**",
   # this defensive, should some of that ever move into the actual package dir
   "archived/",
   "archived/**",
   "dist/",
   "dist/**",
-  "docs/",
-  "docs/**",
+  "**/docs/**",
   "local/",
   "local/**",
   "local_info/",
@@ -70,11 +74,16 @@ targets.wheel.exclude = [
   "public/**",
   "tests/",
   "tests/**",
-  "*.md",
+  ".pre-commit-config.yaml",
+  "env-312.yml",
+  ".gitattributes",
   ".gitlab-ci.yml",
+  "windowIcon.svg",
   "zensical.toml",
 ]
-targets.wheel.artifacts = [
-  "src/hgtd_tools/assets/*.png",
-  "src/hgtd_tools/assets/*.json",
-]
+[tool.hatch.build.targets.sdist]
+artifacts = [ "src/hgtd_tools/assets/*" ]
+# exclude inherited from [tool.hatch.build]
+[tool.hatch.build.targets.wheel]
+packages = [ "src/hgtd_tools" ]
+artifacts = [ "src/hgtd_tools/assets/*" ]
