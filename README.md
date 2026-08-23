@@ -1,7 +1,7 @@
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./src/hgtd_tools/assets/windowIcon.png">
-    <img src="./src/hgtd_tools/assets/windowIcon.png" width=240>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/ATLAS-HGTD/hgtd-tools/v2.0.0/windowIcon.png">
+    <img src="https://raw.githubusercontent.com/ATLAS-HGTD/hgtd-tools/v2.0.0/windowIcon.png" width=240>
   </picture>
 </div>
 
