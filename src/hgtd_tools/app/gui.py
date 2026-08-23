@@ -1,17 +1,15 @@
-import base64
-import io
 import threading
 import time
 import tkinter
 from importlib import metadata
-from importlib import resources
 
 import customtkinter
 import hgtd_tools.api as api
 import hgtd_tools.data as data
 import hgtd_tools.util as util
 import requests
-from PIL import Image
+from hgtd_tools.asset_helpers import load_image_from_assets
+from hgtd_tools.asset_helpers import load_image_from_assets_as_b64
 
 customtkinter.set_appearance_mode(
     "System"
@@ -22,12 +20,6 @@ customtkinter.set_default_color_theme(
 
 wrapped_text = util.CustomTextWrapper(width=90)
 __version__ = metadata.version("hgtd_tools")
-
-
-def load_asset_image(filename: str) -> Image.Image:
-    """Loads a PNG asset from the package as a PIL Image object."""
-    img_bytes = resources.files("hgtd_tools.assets").joinpath(filename).read_bytes()
-    return Image.open(io.BytesIO(img_bytes))
 
 
 class ToplevelWindow(customtkinter.CTkToplevel):
@@ -137,11 +129,7 @@ class App(customtkinter.CTk):
         # configure window
         self.title("HGTD Tools")
         self.geometry(f"{1500}x{1000}")
-        img_bytes = (
-            resources.files("hgtd_tools.assets").joinpath("windowIcon.png").read_bytes()
-        )
-        b64_data = base64.b64encode(img_bytes).decode("utf-8")
-        icon = tkinter.PhotoImage(data=b64_data)
+        icon = tkinter.PhotoImage(data=load_image_from_assets_as_b64("windowIcon.png"))
         self.wm_iconbitmap()
         self.iconphoto(True, icon)
 
@@ -408,7 +396,7 @@ class App(customtkinter.CTk):
         self.optionmenu_scaling.set("100%")
 
         self.help_image = customtkinter.CTkImage(
-            load_asset_image("circle-question.png"), size=(20, 20)
+            load_image_from_assets("circle-question.png"), size=(20, 20)
         )
         self.btnHelp = customtkinter.CTkButton(
             self.frame_sidebar_left,
@@ -424,7 +412,7 @@ class App(customtkinter.CTk):
         self.help_window = None
 
         self.exit_image = customtkinter.CTkImage(
-            load_asset_image("right-from-bracket-solid.png"), size=(20, 20)
+            load_image_from_assets("right-from-bracket-solid.png"), size=(20, 20)
         )
         self.btnLogout = customtkinter.CTkButton(
             self.frame_sidebar_left,
@@ -673,7 +661,7 @@ class App(customtkinter.CTk):
         )
         self.entry_child_SN_filter.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
         self.filter_image = customtkinter.CTkImage(
-            load_asset_image("searchIcon.png"), size=(20, 20)
+            load_image_from_assets("searchIcon.png"), size=(20, 20)
         )
         self.btn_child_filter_SN = customtkinter.CTkButton(
             self.frame_child_SN_filter,
@@ -893,7 +881,7 @@ class App(customtkinter.CTk):
             row=0, column=0, padx=5, pady=5, sticky="nsew"
         )
         self.filter_image = customtkinter.CTkImage(
-            load_asset_image("searchIcon.png"), size=(20, 20)
+            load_image_from_assets("searchIcon.png"), size=(20, 20)
         )
         self.btn_module_parent_filter_SN = customtkinter.CTkButton(
             self.frame_module_parent_SN_filter,
@@ -953,7 +941,8 @@ class App(customtkinter.CTk):
         self.button_inspect_parent_module.grid(row=4, column=2, padx=5, pady=5)
 
         self.module_image = customtkinter.CTkImage(
-            load_asset_image("Module.png"), size=(1920 / 7, (1920 / 7) * 1080 / 1920)
+            load_image_from_assets("Module.png"),
+            size=(1920 / 7, (1920 / 7) * 1080 / 1920),
         )
         self.label_module_image_in = customtkinter.CTkLabel(
             self.frame_module_parent, text="", image=self.module_image
@@ -1587,7 +1576,7 @@ class App(customtkinter.CTk):
             row=0, column=0, padx=5, pady=5, sticky="nsew"
         )
         self.filter_image = customtkinter.CTkImage(
-            load_asset_image("searchIcon.png"), size=(20, 20)
+            load_image_from_assets("searchIcon.png"), size=(20, 20)
         )
         self.btn_childFT_filter_SN = customtkinter.CTkButton(
             self.frame_childFT_SN_filter,

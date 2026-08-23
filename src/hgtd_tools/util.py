@@ -7,7 +7,7 @@ import hgtd_tools.api as api
 import hgtd_tools.data as data
 import numpy as np
 import requests
-from hgtd_tools.assets import load_json_from_assets
+from hgtd_tools.asset_helpers import load_json_from_assets
 
 # === Helper for argparse
 
@@ -376,7 +376,7 @@ def get_relevant_parts(
                 "Slot_Table_fullJuly2026_withPreliminaryNTC.json"
             )
             slots = load_json_from_assets("Slot_fullJuly2026_withPreliminaryNTC.json")
-            response_text = "200: Local File"
+            responseText = "200: Local File"
             #            with open(
             #                "./local/Slot_Table_fullJuly2026_withPreliminaryNTC.json"
             #            ) as allSlotsJson:
