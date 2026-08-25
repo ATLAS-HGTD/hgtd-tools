@@ -1,0 +1,95 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = [ "hatchling" ]
+
+[project]
+name = "hgtd-tools"
+version = "3.0.0rc2"
+description = "Tools for the HGTD production database"
+readme = "README.md"
+keywords = [ "atlas", "cern", "database", "hgtd", "physics" ]
+license = "Apache-2.0"
+requires-python = ">=3.12"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+  "matplotlib>=3.11",
+  "mplhep>=1.3",
+  "numpy>=2.3",
+  "pandas>=2.3",
+  "pyyaml>=6",
+  "requests>=2.31",
+]
+[[project.authors]]
+name = "Annika Stein"
+email = "annika.stein@cern.ch"
+[project.optional-dependencies]
+dev = [ "jupyterlab>=4.4", "pre-commit>=4.3" ]
+dev-extra = [ "build", "twine" ]
+docs = [ "zensical>=0.0.57" ]
+gui = [ "customtkinter>=5.2.2", "pillow>=10" ]
+[project.urls]
+Documentation = "https://hgtd-tools.docs.cern.ch/"
+Homepage = "https://gitlab.cern.ch/anstein/hgtd-tools"
+Reports = "https://hgtd-tools-internal.web.cern.ch/"
+[project.scripts]
+hgtd-tools = "hgtd_tools.app.cli:main"
+hgtd-tools-gui = "hgtd_tools.app.gui:run_gui"
+# scripts used primarily in GitLab CI with their own standalone entrypoints
+hybridmatch = "hgtd_tools.app.scripts.hybridmatch:main"
+ivcurve-overlay = "hgtd_tools.app.scripts.ivcurve_overlay:main"
+order = "hgtd_tools.app.scripts.order:main"
+report-stats = "hgtd_tools.app.scripts.report_stats:main"
+SN-reservation = "hgtd_tools.app.scripts.SN_reservation:main"
+upload-FlexTail-measurement = "hgtd_tools.app.scripts.upload_FlexTail_measurement:main"
+
+[tool.hatch.build]
+exclude = [
+  "**/config_api",                  # exact basename, no extension
+  "**/config_api.*",                # any extension
+  "**/.*cache",
+  "**/.cache",
+  "**/.pytest_cache",
+  "**/__pycache__",
+  "**/assets/.ipynb_checkpoints/*",
+  "**/.ipynb_checkpoints/",
+  "**/.ipynb_checkpoints/**",
+  # this defensive, should some of that ever move into the actual package dir
+  "archived/",
+  "archived/**",
+  "dist/",
+  "dist/**",
+  "**/docs/**",
+  "local/",
+  "local/**",
+  "local_info/",
+  "local_info/**",
+  "notebooks/",
+  "notebooks/**",
+  "public/",
+  "public/**",
+  "tests/",
+  "tests/**",
+  ".pre-commit-config.yaml",
+  "env-312.yml",
+  "env-312-withTk-linux.yml",
+  ".gitattributes",
+  ".gitlab-ci.yml",
+  "windowIcon.svg",
+  "zensical.toml",
+]
+[tool.hatch.build.targets.sdist]
+artifacts = [ "src/hgtd_tools/assets/*" ]
+# exclude inherited from [tool.hatch.build]
+[tool.hatch.build.targets.wheel]
+packages = [ "src/hgtd_tools" ]
+artifacts = [ "src/hgtd_tools/assets/*" ]

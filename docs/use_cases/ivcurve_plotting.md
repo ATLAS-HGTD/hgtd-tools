@@ -4,15 +4,15 @@
 
 Endpoints storing IV curves are available for Sensors (per pad, or combining them manually into a sum - which is done in hgtd-tools), Hybrids, Modules.
 
-## Using the `ivcuve_overlay.py` script for curve plotting
+## Using the `ivcurve-overlay` script for curve plotting
 
 You can combine an arbitrary number of serial numbers with customizable plotting style / labels.
 
 Execute the following from the hgtd-tools directory (using either Anaconda Prompt or your preferred shell with which you installed miniconda or any environment with the required packages). You do not need to provide all Kinds of Parts for plotting, just one out of Sensor/Hybrid/Module is enough, but indeed you can combine them arbitrarily:
 
 ```shell
-conda activate hgtd
-python ivcurve_overlay.py --sensor_sns "comma-separated,list,of,Sensor,SNs" --hybrid_sns "comma-separated,list,of,Hybrid,SNs" --module_sns "comma-separated,list,of,Module,SNs"
+conda activate hgtd # or another method with which you activate your environment, such as: source hgtd/bin/activate
+ivcurve-overlay --sensor_sns "comma-separated,list,of,Sensor,SNs" --hybrid_sns "comma-separated,list,of,Hybrid,SNs" --module_sns "comma-separated,list,of,Module,SNs"
 ```
 
 This generates (if all data sources could be found) matplotlib / mplhep figures using the pattern `ivs_{custom_strings_depending_on_config}.pdf` and similar in `.png`.

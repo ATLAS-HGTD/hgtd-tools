@@ -2,11 +2,10 @@ from argparse import ArgumentParser
 from datetime import datetime
 from datetime import UTC
 
+import hgtd_tools.data as data
+import hgtd_tools.relation_validation as relation_validation
+import hgtd_tools.util as util
 import numpy as np
-
-import data
-import relation_validation
-import util
 
 parser = ArgumentParser(
     "Hybrid matcher (recommender system to pair Hybrids for HV- and LV-side)"
@@ -281,7 +280,7 @@ def hybridmatch(mode_alias, location, dev, printouts=False):
     return ignored_parts, kept_parts_and_scoring, pairings, total, leftover
 
 
-if __name__ == "__main__":
+def main():
     (ignored_parts, kept_parts_and_scoring, pairings, total, leftover) = hybridmatch(
         mode_alias, location, dev, printouts=True
     )
@@ -298,3 +297,7 @@ if __name__ == "__main__":
         md_content += ", ".join(hy_a) + "  +  " + ", ".join(hy_b) + "\n\n"
     with open(f"pairings_{mode_alias}_{location}.md", "w") as f:
         f.write(md_content)
+
+
+if __name__ == "__main__":
+    main()
