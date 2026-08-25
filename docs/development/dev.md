@@ -8,7 +8,7 @@ The basic types of requests are:
 - **POST**: sends a payload (dictionary as json, or more involved types like a tar for measurement data, with another dictionary for human-readable requests)
 - **DELETE**: without payload, remove some record
 
-Those three variants are implemented as `api.fetch_information`, `api.post_information`, `api.delete_information` handling the endpoint, headers etc. for you so you don't have to worry about anything besides the actual information received, posted or deleted.
+Those three variants are implemented as `hgtd_tools.api.fetch_information`, `hgtd_tools.api.post_information`, `hgtd_tools.api.delete_information` handling the endpoint, headers etc. for you so you don't have to worry about anything besides the actual information received, posted or deleted.
 
 ### REST API HTTP Status Codes 101
 
@@ -21,11 +21,11 @@ Please refer to this overview of the most common status codes and what you can l
 More codes and their explanation are documented for example over at [wikipedia](https://en.wikipedia.org/wiki/List_of_HTTP_status_codes){target="_blank"}.
 
 ### Worked out standalone example and the API client in action
-Have a look at the notebook `example_API_usage.ipynb` to see the included API module in action. The notebook shows two use cases for user interaction with the DB that can be implemented as part of scripts (as in FADAPro, for example): adding a value for a single attribute (useful for e.g. module metrology) or complete bulk upload of a tar containing various files (useful for e.g. module electrical measurements). For proper authentication, these steps to get started are included as well.
+Have a look at the notebook `notebooks/01_example_API_usage.ipynb` to see the included API module in action. The notebook shows two use cases for user interaction with the DB that can be implemented as part of scripts (as in FADAPro, for example): adding a value for a single attribute (useful for e.g. module metrology) or complete bulk upload of a tar containing various files (useful for e.g. module electrical measurements). For proper authentication, these steps to get started are included as well.
 
 The interface to FADAPro is implemented in the [MR](https://gitlab.cern.ch/atlas-hgtd/Electronics/fadapro/-/merge_requests/9){target="_blank"}, documented in [FADAPro docs on `DB_interface.py`](https://hgtd-fadapro.docs.cern.ch/commandlist/#upload-to-database){target="_blank"}.
 
-Flex tail measurement uploads are implemented [with the CLI script `upload_FlexTail_measurements.py`](../use_cases/FT_upload_instructions.md).
+Flex tail measurement uploads are implemented [with the CLI script `upload-FlexTail-measurements`](../use_cases/FT_upload_instructions.md).
 
 ## pre-commit
 
@@ -43,7 +43,7 @@ pre-commit run --all-files
 
 ## Contributing
 
-If you are developing features yourself or want to resolve an issue, please [Fork](https://gitlab.cern.ch/anstein/hgtd-tools/-/forks/new){target="_blank"} this repository and then submit a [Merge Request](https://gitlab.cern.ch/anstein/hgtd-tools/-/merge_requests/new){target="_blank"} to the [master branch](https://gitlab.cern.ch/anstein/hgtd-tools){target="_blank"}. Add `anstein` as a member of your private fork with at least `Reporter` rights, such that during MR review, your reviewer can see the pipelines in your fork. If you give `Developer` rights, this will allow `anstein` to also push co-authored commits into your development-branch to ease the MR review and merging.
+If you are developing features yourself or want to resolve an issue, please [Fork](https://gitlab.cern.ch/anstein/hgtd-tools/-/forks/new){target="_blank"} this repository and then submit a [Merge Request](https://gitlab.cern.ch/anstein/hgtd-tools/-/merge_requests/new){target="_blank"} to the [master branch](https://gitlab.cern.ch/anstein/hgtd-tools){target="_blank"}. Should you have a private fork (not recommended, as the main repo is by now public), add `anstein` as a member of your private fork with at least `Reporter` rights, such that during MR review, your reviewer can see the pipelines in your fork. If you give `Developer` rights, this will allow `anstein` to also push co-authored commits into your development-branch to ease the MR review and merging.
 
 We run a set of basic pre-commit checks for your MR, so be prepared to modify the changed files according to the `.gitlab-ci.yaml` pipeline before your MR can be merged. Test your changes locally before pushing (and avoid using unneccessary CI time + core-h), using the instructions outlined in the pre-commit paragraph.
 

@@ -1,13 +1,12 @@
 from datetime import datetime
 
+import hgtd_tools.util as util
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
 from cycler import cycler
 from matplotlib import rcParams
-
-import util
 
 color_sequence1 = [
     "#3f90da",

@@ -22,15 +22,15 @@ For the algorithm in the current implementation, we pair by `VBD` of the Sensor.
   - We use the latest upload, if there are multiple uploads, a higher `RUN_END_TIMESTAMP` or a higher `RUN_NUMBER` wins.
 - Hybrids for which neither of these techniques yield a score, have to be ignored for the pairing algorithm.
 
-## Using the `hybridmatch.py` script for module assembly
+## Using the `hybridmatch` script for module assembly
 
 When performing module assembly, you can pair Hybrids that are available for your use case.
 
 Execute the following from the hgtd-tools directory (using either Anaconda Prompt or your preferred shell with which you installed miniconda or any environment with the required packages):
 
 ```shell
-conda activate hgtd
-python hybridmatch.py --location <your-site>
+conda activate hgtd # or another method with which you activate your environment, such as: source hgtd/bin/activate
+hybridmatch --location <your-site>
 ```
 
 This shows the pairing algorithm results in the CLI, but also stores a report for further use as markdown document using the pattern `pairings_Only_Sensor_VBD_closest_{location}.md`.

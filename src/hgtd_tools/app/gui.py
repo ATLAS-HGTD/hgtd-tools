@@ -1,14 +1,15 @@
 import threading
 import time
 import tkinter
+from importlib import metadata
 
 import customtkinter
+import hgtd_tools.api as api
+import hgtd_tools.data as data
+import hgtd_tools.util as util
 import requests
-from PIL import Image
-
-import api
-import data
-import util
+from hgtd_tools.asset_helpers import load_image_from_assets
+from hgtd_tools.asset_helpers import load_image_from_assets_as_b64
 
 customtkinter.set_appearance_mode(
     "System"
@@ -18,6 +19,7 @@ customtkinter.set_default_color_theme(
 )  # Themes: "blue" (standard), "green", "dark-blue"
 
 wrapped_text = util.CustomTextWrapper(width=90)
+__version__ = metadata.version("hgtd_tools")
 
 
 class ToplevelWindow(customtkinter.CTkToplevel):
@@ -127,7 +129,7 @@ class App(customtkinter.CTk):
         # configure window
         self.title("HGTD Tools")
         self.geometry(f"{1500}x{1000}")
-        icon = tkinter.PhotoImage(file="windowIcon.png")
+        icon = tkinter.PhotoImage(data=load_image_from_assets_as_b64("windowIcon.png"))
         self.wm_iconbitmap()
         self.iconphoto(True, icon)
 
@@ -149,9 +151,9 @@ class App(customtkinter.CTk):
             font=customtkinter.CTkFont(size=20, weight="bold"),
         )
         self.label_logo.grid(row=0, column=0, padx=10, pady=(10, 5), columnspan=2)
-        self.my_version = "2.0.0"
+        self.my_version = __version__
         self.version_full_text = (
-            f"v{self.my_version} - July 2026\nAnnika Stein (JGU Mainz)"
+            f"v{self.my_version} - August 2026\nAnnika Stein (JGU Mainz)"
         )
         self.label_credits = customtkinter.CTkLabel(
             self.frame_sidebar_left, text=self.version_full_text
@@ -394,7 +396,7 @@ class App(customtkinter.CTk):
         self.optionmenu_scaling.set("100%")
 
         self.help_image = customtkinter.CTkImage(
-            Image.open("circle-question.png"), size=(20, 20)
+            load_image_from_assets("circle-question.png"), size=(20, 20)
         )
         self.btnHelp = customtkinter.CTkButton(
             self.frame_sidebar_left,
@@ -410,7 +412,7 @@ class App(customtkinter.CTk):
         self.help_window = None
 
         self.exit_image = customtkinter.CTkImage(
-            Image.open("right-from-bracket-solid.png"), size=(20, 20)
+            load_image_from_assets("right-from-bracket-solid.png"), size=(20, 20)
         )
         self.btnLogout = customtkinter.CTkButton(
             self.frame_sidebar_left,
@@ -659,7 +661,7 @@ class App(customtkinter.CTk):
         )
         self.entry_child_SN_filter.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
         self.filter_image = customtkinter.CTkImage(
-            Image.open("searchIcon.png"), size=(20, 20)
+            load_image_from_assets("searchIcon.png"), size=(20, 20)
         )
         self.btn_child_filter_SN = customtkinter.CTkButton(
             self.frame_child_SN_filter,
@@ -879,7 +881,7 @@ class App(customtkinter.CTk):
             row=0, column=0, padx=5, pady=5, sticky="nsew"
         )
         self.filter_image = customtkinter.CTkImage(
-            Image.open("searchIcon.png"), size=(20, 20)
+            load_image_from_assets("searchIcon.png"), size=(20, 20)
         )
         self.btn_module_parent_filter_SN = customtkinter.CTkButton(
             self.frame_module_parent_SN_filter,
@@ -939,7 +941,8 @@ class App(customtkinter.CTk):
         self.button_inspect_parent_module.grid(row=4, column=2, padx=5, pady=5)
 
         self.module_image = customtkinter.CTkImage(
-            Image.open("Module.png"), size=(1920 / 7, (1920 / 7) * 1080 / 1920)
+            load_image_from_assets("Module.png"),
+            size=(1920 / 7, (1920 / 7) * 1080 / 1920),
         )
         self.label_module_image_in = customtkinter.CTkLabel(
             self.frame_module_parent, text="", image=self.module_image
@@ -1573,7 +1576,7 @@ class App(customtkinter.CTk):
             row=0, column=0, padx=5, pady=5, sticky="nsew"
         )
         self.filter_image = customtkinter.CTkImage(
-            Image.open("searchIcon.png"), size=(20, 20)
+            load_image_from_assets("searchIcon.png"), size=(20, 20)
         )
         self.btn_childFT_filter_SN = customtkinter.CTkButton(
             self.frame_childFT_SN_filter,
@@ -1784,7 +1787,7 @@ class App(customtkinter.CTk):
                 f"Version of hgtd-tools could not be compared to upstream, check your web connection!"
             )
         else:
-            if self.my_version != upstream_version:
+            if self.my_version != upstream_version and "rc" not in self.my_version:
                 print(f"You are not running the most recent version of hgtd-tools.")
                 print(
                     f"Your release: {self.my_version} / latest published release: {upstream_version}."
@@ -5882,6 +5885,10 @@ class App(customtkinter.CTk):
                 self.progressbar.configure(progress_color=data.progress_color_OK)
 
 
-if __name__ == "__main__":
+def run_gui():
     app = App()
     app.mainloop()
+
+
+if __name__ == "__main__":
+    run_gui()

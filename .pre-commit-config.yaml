@@ -13,6 +13,11 @@ repos:
         exclude: local
         args: [--markdown-linebreak-ext=md]
     -   id: requirements-txt-fixer
+-   repo: https://github.com/tox-dev/pyproject-fmt
+    rev: v2.28.0
+    hooks:
+    -   id: pyproject-fmt
+        args: ["--table-format=long"]
 -   repo: https://github.com/asottile/reorder-python-imports
     rev: v3.15.0
     hooks:
