@@ -6,7 +6,7 @@ icon: lucide/rocket
 
 These tools interact with the High-Granularity Timing Detector (HGTD) Production Database (ProdDB) for the Phase-II Upgrade of the ATLAS Experiment at CERN.
 
-This python application comes with API client, GUI, automatic reporting and command-line scripts implementing consistent data uploads as well as their retrieval, analysis, plotting and more complex tasks like runing a matching algorithm.
+This python application comes with API client, GUI, automatic reporting and command-line scripts implementing consistent data uploads as well as their retrieval, analysis, plotting and more complex tasks like running a matching algorithm.
 
 The [internal part of the project](https://gitlab.cern.ch/anstein/hgtd-tools-internal){target="_blank"} performs nightly checks of yields and consistency validation, as documented on the resulting [reports page](https://hgtd-tools-internal.web.cern.ch/){target="_blank"}.
 
