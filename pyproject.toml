@@ -33,8 +33,8 @@ dependencies = [
 name = "Annika Stein"
 email = "annika.stein@cern.ch"
 [project.optional-dependencies]
-dev = [ "pre-commit>=4.3" ]
-dev-extra = [ "build", "jupyterlab>=4.4", "twine" ]
+dev = [ "jupyterlab>=4.4", "pre-commit>=4.3" ]
+dev-extra = [ "build", "twine" ]
 docs = [ "zensical>=0.0.57" ]
 gui = [ "customtkinter>=5.2.2", "pillow>=10" ]
 [project.urls]

@@ -4,9 +4,9 @@ icon: lucide/rocket
 
 # Welcome to hgtd-tools!
 
-These tools interact with the HGTD Production Database (ProdDB) for the HGTD Phase-II Upgrade of the ATLAS Experiment at CERN.
+These tools interact with the High-Granularity Timing Detector (HGTD) Production Database (ProdDB) for the Phase-II Upgrade of the ATLAS Experiment at CERN.
 
-To support various use cases not fully implemented on the ProdDB website, we have developed a python application with API client, GUI, automatic reporting and helper scripts.
+This python application comes with API client, GUI, automatic reporting and command-line scripts implementing consistent data uploads as well as their retrieval, analysis, plotting and more complex tasks like runing a matching algorithm.
 
 The [internal part of the project](https://gitlab.cern.ch/anstein/hgtd-tools-internal){target="_blank"} performs nightly checks of yields and consistency validation, as documented on the resulting [reports page](https://hgtd-tools-internal.web.cern.ch/){target="_blank"}.
 
@@ -37,63 +37,67 @@ The following overview lists the implemented features of `hgtd-tools` and links 
         - Detector Assembly (CERN): FT (SLOT -> FT; includes global to local coordinate conversion via Slot table)
     - Logic
         - new relations can overwrite old ones, if user agrees to do so (implementing replacement of existing relations)
-        - for Module Assembly, the above also takes care of two hybrids being allowed per module, separating the side
+        - for Module Assembly, the above also takes care of two hybrids being allowed per module, but on different sides
         - user can not load / assemble parts that are not allowed to take that spot (implementing constraints for already used positions, and parts not matching the target position by type)
         - if operation requires subsequent operations (e.g. connecting modules to slots when placing a DU on the detector), perform those subsequent operations in one go, for FT this involves connecting to Slot, Module, Detector Unit and PEB in one go
         - query selection before choosing parent / child from full list (e.g. DU type, module manufacturer, child not yet connected or all possible children)
 
 ??? success "Additional tools / scripts / automation"
-    - Serial Number reservation for module assembly [with CLI script `SN_reservation.py`](use_cases/SN_reservation.md)
-    - Hybrid matching for module assembly [with CLI script `hybridmatch.py`](use_cases/hybrid_matching.md)
-    - IV curve plotting [with CLI script `ivcurve_overlay.py`](use_cases/ivcurve_plotting.md)
+    - Serial Number reservation for module assembly [with CLI script `SN-reservation`](use_cases/SN_reservation.md)
+    - Hybrid matching for module assembly [with CLI script `hybridmatch`](use_cases/hybrid_matching.md)
+    - IV curve plotting [with CLI script `ivcurve-overlay`](use_cases/ivcurve_plotting.md)
     - Reporting
         - automation with Gitlab CI, using the hgtdbot account
-        - runner script producing overviews / reports
-    - Flex Tail upload [with CLI script `upload_FlexTail_measurements.py`](use_cases/FT_upload_instructions.md)
+        - runner script producing overviews / reports: yields and relation validation
+    - Flex Tail upload [with CLI script `upload-FlexTail-measurements.py`](use_cases/FT_upload_instructions.md)
 
 ## Quickstart
 
-If you walked through the [install](getting_started/install.md) guide, are currently in the `hgtd-tools` dir and you activated the environment with `conda activate hgtd`, the following tools will be available:
+If you walked through the [install](getting_started/install.md) guide and you activated the your `hgtd` environment, the following tools will be available:
 
-??? tip "Using the `SN_reservation.py` script for module serial number reservation"
+??? tip "Using the `SN-reservation` script for module serial number reservation"
 
-    When doing module assembly, you may want to reserve serial numbers (e.g. for a new week of module production) that no one else can pick after you reserved them. For more information on the reservation process, please read [SN_reservation](use_cases/SN_reservation.md).
+    When doing module assembly, you may want to reserve serial numbers (e.g. for a new week of module production) that no one else can pick after you reserved them. For more information on the reservation process, please read [SN Reservation](use_cases/SN_reservation.md).
 
-    Execute the following from the hgtd-tools directory:
+    Execute the following:
 
     ```shell
-    python SN_reservation.py --user-name <your-user-name> --site <some-site> --prod <some-prod> --batch <some-batchNr> --n-reserve <how-many-SNs-to-reserve> (--dryrun True)
+    SN-reservation --user-name <your-user-name> --site <some-site> --prod <some-prod> --batch <some-batchNr> --n-reserve <how-many-SNs-to-reserve> (--dryrun True)
     ```
 
-??? tip "Using the `hybridmatch.py` script for hybrid matching"
+??? tip "Using the `hybridmatch` script for hybrid matching"
 
     When doing module assembly, you may want to get the "optimal" pairing of hybrids (e.g. for a new week of module production) that optimizes the total sum of paired breakdown voltage differences. For more information on the hybrid matching process, please read [Hybrid Matching](use_cases/hybrid_matching.md).
 
-    Execute the following from the hgtd-tools directory:
+    Execute the following:
 
     ```shell
-    python hybridmatch.py --location <your-site>
+    hybridmatch --location <your-site>
     ```
 
-??? tip "Using the `ivcurve_overlay.py` script for IV curve plotting"
+??? tip "Using the `ivcurve-overlay` script for IV curve plotting"
 
     At module assembly or other stages of production, you may want to inspect and compare various IV curves against each other, possibly not only for one kind of part, but multiple in the same plot (Sensor(s)/Hybrid(s)/Module(s)). For more information on the IV curve plotting process, please read [IV Curve Plotting](use_cases/ivcurve_plotting.md).
 
-    Execute the following from the hgtd-tools directory (just one example given so you get reminded how to call the script, various combinations possible):
+    Execute the following (just one example given so you get reminded how to call the script, various combinations possible):
 
     ```shell
-    python ivcurve_overlay.py --hybrid-sns "HybridASerialNumber,HybridBSerialNumber" <check-out-the-different-parameters>
+    ivcurve-overlay --hybrid-sns "HybridASerialNumber,HybridBSerialNumber" <check-out-the-different-parameters>
     ```
 
 
-??? tip "Using the `main.py` GUI for Part-to-Part relations, starting from module assembly"
+??? tip "Using the `gui` for Part-to-Part relations, starting from module assembly"
 
     If you have done some connections between multi-relation parts, like module assembly, module loading, detector assembly with DUs, PEBs or Flex Tails, or you want to get assistance on what to pick, use the GUI of hgtd-tools.
 
-    To open the main window with GUI, execute the following from the hgtd-tools directory (using either Anaconda Prompt or your preferred shell with which you installed miniconda):
+    To open the main window with GUI, execute the following:
 
     ```shell
-    python main.py
+    hgtd-tools gui
+    ```
+    Or the shortcut
+    ```shell
+    hgtd-tools
     ```
 
     Closing the application works like you would expect from other applications, e.g. you'll find a red button to close hgtd-tools, you could quit the application with shortcuts of your operating system (e.g. MacOS: cmd+Q), or interrupting the python program from command line with ctrl+c.
@@ -104,14 +108,14 @@ If you walked through the [install](getting_started/install.md) guide, are curre
 
         Previously, this was hosted on the main ProdDB [documentation page](https://hgtd-database.docs.cern.ch/){target="_blank"}, which contains a [section on hgtd-tools](https://hgtd-database.docs.cern.ch/content/user/parts_tree_hgtd-tools/){target="_blank"} as well.
 
-??? tip "Using the `upload_FlexTail_measurement.py` script for uploading flex tail measurements"
+??? tip "Using the `upload-FlexTail-measurement` script for uploading flex tail measurements"
 
     After performing all electrical and mechanical measurements of a batch of flex tails, upload the folder containing all measurements to the database. The optional `--dryrun` argument can be useful to test if the upload will succeed or not. For more information on the uploading procedure, please read [FT_upload_instructions](use_cases/FT_upload_instructions.md).
 
-    Execute the following from the hgtd-tools directory:
+    Execute the following:
 
     ```shell
-    python upload_FlexTail_measurement.py --analysis-folder FT_Measurements --user-name myName --meas_location test --meas_start_date YYYY-MM-DD --meas_end_date YYYY-MM-DD --run_type FT_characterisation_test (--dryrun True)
+    upload-FlexTail-measurement --analysis-folder FT_Measurements --user-name myName --meas_location test --meas_start_date YYYY-MM-DD --meas_end_date YYYY-MM-DD --run_type FT_characterisation_test (--dryrun True)
     ```
 
 ## Contributing

@@ -11,5 +11,3 @@ dependencies:
   - requests>=2.31
 
   - pip
-  - pip:
-    - hgtd-tools[dev,gui]==3.0.0rc1

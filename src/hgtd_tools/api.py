@@ -314,7 +314,7 @@ def authenticate(u_name, pw, totp, local_folder):
         raise RuntimeError("User authentication failed")
     else:
         print(
-            "[INFO]"
+            "[INFO] "
             + "User authenticated."
             + "\nPreparing an access token, valid for the next 480 minutes."
         )
