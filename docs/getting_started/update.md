@@ -26,7 +26,7 @@ conda env create -f <the-right-file-for-your-platform>.yml -n a-new-env-name-if-
 Afterwards, you will need to install the actual package:
 
 ```bash
-pip install hgtd-tools[gui]
+pip install "hgtd-tools[gui]"
 ```
 (but note that the `[gui]` is optional, you only need it if you want to work with the GUI).
 

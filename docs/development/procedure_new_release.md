@@ -12,7 +12,7 @@ twine upload --repository testpypi dist/*
 ```
 4. test the new package via (again, using testpypi as a reference inside active env):
 ```bash
-pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple hgtd-tools[dev,gui]==3.0.0rc1
+pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "hgtd-tools[dev,gui]==3.0.0rc1"
 ```
 5. tag the new version (at vX.Y.Z)
 6. push tag

@@ -2,11 +2,11 @@
 
 Last update: August 2026
 
-This suite is written in python, and after placing yourself into a virtual environment or conda environment (more on that below), the tools themselves can be installed via `pip install hgtd-tools` (or with optional dependencies, such as `pip install hgtd-tools[gui]`). Presently the optional dependencies are: `[dev,dev-extra,docs,gui]`, you can mix them in any combination).
+This suite is written in python, and after placing yourself into a virtual environment or conda environment (more on that below), the tools themselves can be installed via `pip install hgtd-tools` (or with optional dependencies, such as `pip install "hgtd-tools[gui]"`). Presently the optional dependencies are: `[dev,dev-extra,docs,gui]`, you can mix them in any combination).
 
 The package is now published on [PyPI](https://pypi.org/project/hgtd-tools/){target="_blank"}, so installing it **no longer requires cloning the gitlab repository** — cloning is only needed if you want to develop the tools themselves (see the [Developer setup](#developer-setup) section below). Detailed step-by-step instructions differ slightly depending on platform (especially relevant for the GUI part). Linux users should go the install route via conda if they wish to use the GUI, because it depends on `Tk`. The corresponding `env-312-withTk-linux.yml` file is provided in the root of the [gitlab repository](https://gitlab.cern.ch/anstein/hgtd-tools){target="_blank"} — just download it and follow the step-by-step instructions below.
 
-For non-linux users, you can either use the conda environment as shown below, or simply create a venv/conda env, activate it, and `pip install hgtd-tools[gui]` directly.
+For non-linux users, you can either use the conda environment as shown below, or simply create a venv/conda env, activate it, and `pip install "hgtd-tools[gui]"` directly.
 
 ## First time usage / requirements (recommended way)
 
@@ -19,7 +19,7 @@ With the help of our growing user base, we can announce that the tools have been
     1. (If not already installed): install miniconda: go to [anaconda docs](https://www.anaconda.com/docs/getting-started/miniconda/install/linux-install#wget){target="_blank"} and follow the instructions there.
     2. Download the conda environment YAML from the root of the [gitlab repository](https://gitlab.cern.ch/anstein/hgtd-tools){target="_blank"}: [`env-312-withTk-linux.yml`](https://gitlab.cern.ch/anstein/hgtd-tools/-/raw/master/env-312-withTk-linux.yml){target="_blank"} (recommended if you want to use the GUI, because it ships Tk) — or `env-312.yml` if you don't need the GUI.
     3. Install the environment: open a Terminal, navigate (`cd`) to the directory where you downloaded the YAML, and run `conda env create -f env-312-withTk-linux.yml`. Activate the environment with `conda activate hgtd`.
-    4. Install the package from PyPI: `pip install hgtd-tools[gui]` (or, if you do not need the GUI, `pip install hgtd-tools`).
+    4. Install the package from PyPI: `pip install "hgtd-tools[gui]"` (or, if you do not need the GUI, `pip install hgtd-tools`).
     5. Get the API secret from [cernbox](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/config_api){target="_blank"} and place the file in one of these locations:
 
         - `~/.hgtd_tools/config_api` (recommended), or
@@ -34,7 +34,7 @@ With the help of our growing user base, we can announce that the tools have been
         1. (If not already installed): install miniconda: go to [anaconda docs](https://www.anaconda.com/docs/getting-started/miniconda/install/mac-cli-install){target="_blank"} and follow the instructions there. By default, this will activate the `(base)` environment when a new shell is started. The command to tune this behavior to your liking is discussed [in the troubleshooting section of anaconda docs](https://www.anaconda.com/docs/getting-started/miniconda/install/mac-cli-install#set-auto-activate-base-to-true){target="_blank"}.
         2. Download the conda environment YAML from the root of the [gitlab repository](https://gitlab.cern.ch/anstein/hgtd-tools){target="_blank"}: [`env-312.yml`](https://gitlab.cern.ch/anstein/hgtd-tools/-/raw/master/env-312.yml){target="_blank"}.
         3. Install the environment: open a Terminal, navigate (`cd`) to the directory where you downloaded the YAML, and run `conda env create -f env-312.yml`. Activate the environment with `conda activate hgtd`.
-        4. Install the package from PyPI: `pip install hgtd-tools[gui]` (or, if you do not need the GUI, `pip install hgtd-tools`).
+        4. Install the package from PyPI: `pip install "hgtd-tools[gui]"` (or, if you do not need the GUI, `pip install hgtd-tools`).
         5. Get the API secret from [cernbox](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/config_api){target="_blank"} and place the file in one of these locations:
 
             - `~/.hgtd_tools/config_api` (recommended), or
@@ -47,7 +47,7 @@ With the help of our growing user base, we can announce that the tools have been
         1. Install python with the relevant tk graphics `brew install python-tk`
         2. Create an empty virtual environment with the name hgtd `python3 -m venv hgtd`
         3. Activate the so far empty environment `source hgtd/bin/activate`
-        4. Install the package from PyPI: `pip install hgtd-tools[gui]` (or, if you do not need the GUI, `pip install hgtd-tools`).
+        4. Install the package from PyPI: `pip install "hgtd-tools[gui]"` (or, if you do not need the GUI, `pip install hgtd-tools`).
         5. Get the API secret from [cernbox](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/config_api){target="_blank"} and place the file in one of these locations:
 
             - `~/.hgtd_tools/config_api` (recommended), or
@@ -60,7 +60,7 @@ With the help of our growing user base, we can announce that the tools have been
     1. (If not already installed): install miniconda: go to [anaconda docs](https://www.anaconda.com/docs/getting-started/miniconda/install/windows-cli-install){target="_blank"} and follow the instructions there.
     2. Download the conda environment YAML from the root of the [gitlab repository](https://gitlab.cern.ch/anstein/hgtd-tools){target="_blank"}: [`env-312.yml`](https://gitlab.cern.ch/anstein/hgtd-tools/-/raw/master/env-312.yml){target="_blank"}.
     3. Install the environment: open Anaconda Prompt, navigate (`cd`) to the directory where you downloaded the YAML, and run `conda env create -f env-312.yml`. Activate the environment with `conda activate hgtd`.
-    4. Install the package from PyPI: `pip install hgtd-tools[gui]` (or, if you do not need the GUI, `pip install hgtd-tools`).
+    4. Install the package from PyPI: `pip install "hgtd-tools[gui]"` (or, if you do not need the GUI, `pip install hgtd-tools`).
     5. Get the API secret from [cernbox](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/config_api){target="_blank"} and place the file in one of these locations:
 
         - `%USERPROFILE%\.hgtd_tools\config_api` (recommended), or

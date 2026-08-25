@@ -81,6 +81,7 @@ exclude = [
   "tests/**",
   ".pre-commit-config.yaml",
   "env-312.yml",
+  "env-312-withTk-linux.yml",
   ".gitattributes",
   ".gitlab-ci.yml",
   "windowIcon.svg",
