@@ -54,10 +54,15 @@ If you do not find the relation you wish to enter in this table, refer to the [a
 !!! success "Get ready to use hgtd-tools"
     Please follow the [install guide](../getting_started/install.md) to learn more about how you can install hgtd-tools on your machine and read the [quickstart instructions](../index.md#quickstart). This should take no more than one hour when starting the installation from scratch, including first ever install of miniconda3 as a package manager for python3 if you had never done so on your machine.
 
-    Once you are done with installation (and have activated your environment, e.g. with `conda activate hgtd` as in the instructions), start the GUI:
+    Once you are done with installation, start the GUI:
 
     ```shell
-    python main.py
+    conda activate hgtd # or another method with which you activate your environment, such as: source hgtd/bin/activate
+    hgtd-tools gui
+    ```
+    Or the shortcut
+    ```shell
+    hgtd-tools
     ```
 
 ## User Manual
@@ -175,7 +180,7 @@ contains the actual user input and buttons to perform the parts tree operations.
 
     **:construction: Work-in-progress functionality**
 
-    None at the moment.
+    - Interlock conditions for module loading, depending on quality flags.
 
     **Further screenshots and explanations**
 
@@ -319,7 +324,7 @@ contains the actual user input and buttons to perform the parts tree operations.
 
         This only knows about the theory, if you just need the translation between labeling schemes.
 
-        1. Open [slot table](https://gitlab.cern.ch/anstein/slotsflextailspreproduction/-/blob/master/SlotTable/all_slots_withOutdatedPlaceholder.csv?ref_type=heads){target="_blank"}. (You may want to download a local copy and periodically check for updates, although now with all CAD drawings and corresponding FT categories, no fundamental changes are expected).
+        1. Open [slot table](https://gitlab.cern.ch/anstein/slotsflextailspreproduction/-/blob/master/SlotTable/all_slots.csv?ref_type=heads){target="_blank"}. (You may want to download a local copy and periodically check for updates, although now with all CAD drawings and corresponding FT categories, no fundamental changes are expected).
         2. Search for slot to cross-check its local position, slot serial numbers use global scheme, i.e.  
             which vessel? D, M, 1, 2  
             which layer? 0,...,3  
@@ -362,7 +367,7 @@ contains the actual user input and buttons to perform the parts tree operations.
 
 ??? question "Not authorized issue"
 
-    Have you followed the steps from the [install guide](../getting_started/install.md) fully, for example, did you also download the `config_api` file into the main directory of `hgtd-tools`? This is likely missing if you are not authorized to perform operations despite trying with login. This file is only accessible to proddb-users (you need to join the e-group first). For the latter, you can follow the steps [here](https://hgtd-database.docs.cern.ch/content/user/user_tasks/){target="_blank"}.
+    Have you followed the steps from the [install guide](../getting_started/install.md) fully, for example, did you also download the most recent `config_api` file into the main directory of `hgtd-tools`? This is likely missing if you are not authorized to perform operations despite trying with login. This file is only accessible to proddb-users (you need to join the e-group first). For the latter, you can follow the steps [here](https://hgtd-database.docs.cern.ch/content/user/user_tasks/){target="_blank"}.
 
 ??? question "Parts take too long to load after selecting based on connection status"
 
