@@ -37,35 +37,45 @@ class ToplevelWindow(customtkinter.CTkToplevel):
         self.textbox.configure(state="disabled")
 
 
-class AuthenticateWindow(customtkinter.CTkToplevel):
-    def __init__(self, callback, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.title("HGTD Tools - Authenticate new user")
-        self.geometry("900x300")
-
-        self.grid_columnconfigure((0, 1, 2), weight=1)
-        self.grid_rowconfigure((0, 1), weight=1)
-
+class LoginDialog(customtkinter.CTkToplevel):
+    def __init__(self, callback):
+        super().__init__()
         self.callback = callback
+        self.title("HGTD Tools — Login")
+        self.geometry("500x400")
 
-        self.frame_entries = customtkinter.CTkFrame(self, corner_radius=0)
-        self.frame_entries.grid(row=0, column=0, rowspan=3, columnspan=3, sticky="nsew")
+        self.frame_entries = customtkinter.CTkFrame(self)
+        self.frame_entries.grid(padx=10, pady=10, sticky="nsew")
+        self.frame_entries.grid_columnconfigure(0, weight=1)
 
-        self.label_auth_info = customtkinter.CTkLabel(
-            self.frame_entries,
-            text="Type in your user data to authenticate as a new user of HGTD-Tools.",
+        self._build_username_field(row=0)
+        self._build_password_field(row=2)
+        self._build_totp_field(row=4)
+        self._build_auth_button(row=6)
+
+        self.auth_user, self.last_responseText = None, None
+
+    def _build_username_field(self, row):
+        self.label_username = customtkinter.CTkLabel(
+            self.frame_entries, text="Username (CERN account)", anchor="w"
         )
-        self.label_auth_info.grid(row=0, column=0, padx=10, pady=10, columnspan=3)
+        self.label_username.grid(row=row, column=0, padx=10, pady=(10, 2), sticky="ew")
 
         self.username_variable = customtkinter.StringVar(value="")
         self.username_entry = customtkinter.CTkEntry(
-            self.frame_entries, textvariable=self.username_variable, state="normal"
+            self.frame_entries,
+            textvariable=self.username_variable,
+            state="normal",
         )
-        self.username_entry.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
-        self.label_username = customtkinter.CTkLabel(
-            self.frame_entries, text="Username"
+        self.username_entry.grid(
+            row=row + 1, column=0, padx=10, pady=(0, 10), sticky="ew"
         )
-        self.label_username.grid(row=2, column=0, padx=10, pady=10)
+
+    def _build_password_field(self, row):
+        self.label_password = customtkinter.CTkLabel(
+            self.frame_entries, text="Password", anchor="w"
+        )
+        self.label_password.grid(row=row, column=0, padx=10, pady=(10, 2), sticky="ew")
 
         self.password_variable = customtkinter.StringVar(value="")
         self.password_entry = customtkinter.CTkEntry(
@@ -74,33 +84,32 @@ class AuthenticateWindow(customtkinter.CTkToplevel):
             state="normal",
             show="*",
         )
-        self.password_entry.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
-        self.label_password = customtkinter.CTkLabel(
-            self.frame_entries, text="Password"
+        self.password_entry.grid(
+            row=row + 1, column=0, padx=10, pady=(0, 10), sticky="ew"
         )
-        self.label_password.grid(row=2, column=1, padx=10, pady=10)
+
+    def _build_totp_field(self, row):
+        self.label_totp = customtkinter.CTkLabel(
+            self.frame_entries,
+            text="2FA 6-digit code, if configured (leave empty if you are not using 2FA yet)",
+            anchor="w",
+        )
+        self.label_totp.grid(row=row, column=0, padx=10, pady=(10, 2), sticky="ew")
 
         self.totp_variable = customtkinter.StringVar(value="")
         self.totp_entry = customtkinter.CTkEntry(
             self.frame_entries, textvariable=self.totp_variable, state="normal"
         )
-        self.totp_entry.grid(row=1, column=2, padx=10, pady=10, sticky="nsew")
-        self.label_totp = customtkinter.CTkLabel(
-            self.frame_entries,
-            text="2FA 6-digit code, if configured (leave empty if you are not using 2FA yet)",
-        )
-        self.label_totp.grid(row=2, column=2, padx=10, pady=10)
+        self.totp_entry.grid(row=row + 1, column=0, padx=10, pady=(0, 10), sticky="ew")
 
+    def _build_auth_button(self, row):
         self.button_auth = customtkinter.CTkButton(
             self.frame_entries, text="Authenticate me!", command=self.auth
         )
-        self.button_auth.grid(row=3, column=1, padx=10, pady=10)
-
-        self.auth_user, self.last_responseText = None, None
+        self.button_auth.grid(row=row, column=0, padx=10, pady=(15, 10))
 
     def auth(self):
         try:
-            # this authentication method survives for as long as the GUI is open
             self.auth_user, self.last_responseText = api.get_user(
                 self.username_variable.get(),
                 self.password_variable.get(),
@@ -116,9 +125,7 @@ class AuthenticateWindow(customtkinter.CTkToplevel):
         except ValueError as e:
             self.last_responseText = str(e)
 
-        self.callback(
-            self.auth_user, self.last_responseText
-        )  # send back to the other class.
+        self.callback(self.auth_user, self.last_responseText)
         self.destroy()
 
 
@@ -402,309 +409,7 @@ class App(customtkinter.CTk):
 
         # === build the left sidebar in one call ===
         self._build_sidebar()
-        """
-        # configure window
-        self.title("HGTD Tools")
-        self.geometry(f"{1500}x{1000}")
-        icon = tkinter.PhotoImage(data=load_image_from_assets_as_b64("windowIcon.png"))
-        self.wm_iconbitmap()
-        self.iconphoto(True, icon)
 
-        self.n_items_to_show_in_cbx = 16
-        # configure grid layout
-        self.grid_columnconfigure((0, 1, 2), weight=1)
-        self.grid_rowconfigure((0, 1), weight=1)
-
-        # create sidebar frame with widgets
-        self.frame_sidebar_left = customtkinter.CTkFrame(self, corner_radius=0)
-        self.frame_sidebar_left.grid(row=0, column=0, rowspan=4, sticky="nsew")
-        self.frame_sidebar_left.grid_columnconfigure((0, 1), weight=1)
-        self.frame_sidebar_left.grid_rowconfigure(5, weight=1)
-
-        # fill sidebar
-        self.label_logo = customtkinter.CTkLabel(
-            self.frame_sidebar_left,
-            text="HGTD Tools",
-            font=customtkinter.CTkFont(size=20, weight="bold"),
-        )
-        self.label_logo.grid(row=0, column=0, padx=10, pady=(10, 5), columnspan=2)
-        self.my_version = __version__
-        self.version_full_text = (
-            f"v{self.my_version} - August 2026\nAnnika Stein (JGU Mainz)"
-        )
-        self.label_credits = customtkinter.CTkLabel(
-            self.frame_sidebar_left, text=self.version_full_text
-        )
-        self.label_credits.grid(row=1, column=0, padx=10, pady=5, columnspan=2)
-
-        self.label_progress = customtkinter.CTkLabel(
-            self.frame_sidebar_left, text="API Request Status"
-        )
-        self.label_progress.grid(row=2, column=0, padx=10, pady=5, columnspan=2)
-        self.progressbar = customtkinter.CTkProgressBar(
-            self.frame_sidebar_left,
-            orientation="horizontal",
-            progress_color=data.progress_color_OK,
-        )
-        self.progressbar.grid(row=3, column=0, padx=10, pady=5, columnspan=2)
-        self.progressbar.set(1)
-
-        # buttons to select use case of the tool
-        self.frame_operation_mode = customtkinter.CTkFrame(self.frame_sidebar_left)
-        self.frame_operation_mode.grid(
-            row=4, column=0, padx=5, pady=(10, 5), sticky="nsew", columnspan=2
-        )
-        self.frame_operation_mode.grid_columnconfigure((0, 1), weight=1)
-        self.operation_mode = "Module Assembly"  # default
-
-        self.label_operation_mode = customtkinter.CTkLabel(
-            self.frame_operation_mode,
-            text="Operation Mode",
-            font=customtkinter.CTkFont(size=16, weight="bold"),
-        )
-        self.label_operation_mode.grid(row=0, column=0, padx=10, pady=5, columnspan=2)
-
-        self.button_operation_mode_MA = customtkinter.CTkButton(
-            self.frame_operation_mode,
-            text="Module Assembly",
-            command=lambda: self.button_mode_event_click("Module Assembly"),
-            fg_color=data.fg_color_standard_but_active,
-            hover_color=data.hover_color_standard_but_active,
-        )
-        self.button_operation_mode_MA.grid(
-            row=1, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
-        )
-
-        self.button_operation_mode_ML = customtkinter.CTkButton(
-            self.frame_operation_mode,
-            text="Module Loading",
-            command=lambda: self.button_mode_event_click("Module Loading"),
-            fg_color=data.fg_color_standard_but_inactive,
-            hover_color=data.hover_color_standard_but_inactive,
-        )
-        self.button_operation_mode_ML.grid(
-            row=2, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
-        )
-
-        self.button_operation_mode_DA_DU = customtkinter.CTkButton(
-            self.frame_operation_mode,
-            text="Detector Assembly (CERN): DU",
-            command=lambda: self.button_mode_event_click(
-                "Detector Assembly (CERN): DU"
-            ),
-            fg_color=data.fg_color_standard_but_inactive,
-            hover_color=data.hover_color_standard_but_inactive,
-        )
-        self.button_operation_mode_DA_DU.grid(
-            row=3, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
-        )
-
-        self.button_operation_mode_DA_PEB = customtkinter.CTkButton(
-            self.frame_operation_mode,
-            text="Detector Assembly (CERN): PEB",
-            command=lambda: self.button_mode_event_click(
-                "Detector Assembly (CERN): PEB"
-            ),
-            fg_color=data.fg_color_standard_but_inactive,
-            hover_color=data.hover_color_standard_but_inactive,
-        )
-        self.button_operation_mode_DA_PEB.grid(
-            row=4, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
-        )
-
-        self.button_operation_mode_DA_FT = customtkinter.CTkButton(
-            self.frame_operation_mode,
-            text="Detector Assembly (CERN): FT",
-            command=lambda: self.button_mode_event_click(
-                "Detector Assembly (CERN): FT"
-            ),
-            fg_color=data.fg_color_standard_but_inactive,
-            hover_color=data.hover_color_standard_but_inactive,
-        )
-        self.button_operation_mode_DA_FT.grid(
-            row=5, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
-        )
-
-        # buttons to go to external useful pages
-
-        self.frame_useful_links = customtkinter.CTkFrame(self.frame_sidebar_left)
-        self.frame_useful_links.grid(
-            row=5, column=0, padx=5, pady=5, sticky="nsew", columnspan=2
-        )
-        self.frame_useful_links.grid_columnconfigure((0, 1), weight=1)
-
-        self.label_useful_links = customtkinter.CTkLabel(
-            self.frame_useful_links,
-            text="Useful Links",
-            font=customtkinter.CTkFont(size=16, weight="bold"),
-        )
-        self.label_useful_links.grid(row=0, column=0, padx=10, pady=5, columnspan=2)
-
-        self.button_useful_links_Frontend = customtkinter.CTkButton(
-            self.frame_useful_links,
-            text="DB Frontend",
-            command=lambda: util.open_webbrowser_with_url(
-                api.frontendUrlPrefix, noExtraPrefix=True
-            ),
-            fg_color=data.fg_color_standard_but_inactive,
-            hover_color=data.hover_color_standard_but_inactive,
-        )
-        self.button_useful_links_Frontend.grid(
-            row=1, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
-        )
-
-        self.button_useful_links_Mockup = customtkinter.CTkButton(
-            self.frame_useful_links,
-            text="SN Decoder/Encoder",
-            command=lambda: util.open_webbrowser_with_url(
-                "https://annika-stein.web.cern.ch/module_mockup/serialnumber.html",
-                noExtraPrefix=True,
-            ),
-            fg_color=data.fg_color_standard_but_inactive,
-            hover_color=data.hover_color_standard_but_inactive,
-        )
-        self.button_useful_links_Mockup.grid(
-            row=2, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
-        )
-
-        self.button_useful_links_Docs = customtkinter.CTkButton(
-            self.frame_useful_links,
-            text="ProdDB Documentation",
-            command=lambda: util.open_webbrowser_with_url(
-                "https://hgtd-database.docs.cern.ch/", noExtraPrefix=True
-            ),
-            fg_color=data.fg_color_standard_but_inactive,
-            hover_color=data.hover_color_standard_but_inactive,
-        )
-        self.button_useful_links_Docs.grid(
-            row=3, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
-        )
-
-        self.button_useful_links_MM = customtkinter.CTkButton(
-            self.frame_useful_links,
-            text="ProdDB Mattermost",
-            command=lambda: util.open_webbrowser_with_url(
-                "https://mattermost.web.cern.ch/atlas/channels/hgtd-production-database",
-                noExtraPrefix=True,
-            ),
-            fg_color=data.fg_color_standard_but_inactive,
-            hover_color=data.hover_color_standard_but_inactive,
-        )
-        self.button_useful_links_MM.grid(
-            row=4, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
-        )
-
-        self.button_useful_links_meetings = customtkinter.CTkButton(
-            self.frame_useful_links,
-            text="ProdDB Meetings",
-            command=lambda: util.open_webbrowser_with_url(
-                "https://indico.cern.ch/category/9458/", noExtraPrefix=True
-            ),
-            fg_color=data.fg_color_standard_but_inactive,
-            hover_color=data.hover_color_standard_but_inactive,
-        )
-        self.button_useful_links_meetings.grid(
-            row=5, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
-        )
-
-        self.button_useful_links_GL_repo = customtkinter.CTkButton(
-            self.frame_useful_links,
-            text="hgtd-tools gitlab",
-            command=lambda: util.open_webbrowser_with_url(
-                "https://gitlab.cern.ch/anstein/hgtd-tools", noExtraPrefix=True
-            ),
-            fg_color=data.fg_color_standard_but_inactive,
-            hover_color=data.hover_color_standard_but_inactive,
-        )
-        self.button_useful_links_GL_repo.grid(
-            row=6, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
-        )
-
-        self.button_useful_links_tools_docs = customtkinter.CTkButton(
-            self.frame_useful_links,
-            text="hgtd-tools Documentation",
-            command=lambda: util.open_webbrowser_with_url(
-                "https://hgtd-tools.docs.cern.ch/", noExtraPrefix=True
-            ),
-            fg_color=data.fg_color_standard_but_inactive,
-            hover_color=data.hover_color_standard_but_inactive,
-        )
-        self.button_useful_links_tools_docs.grid(
-            row=7, column=0, padx=5, pady=(3, 0), sticky="nsew", columnspan=2
-        )
-
-        self.label_user = customtkinter.CTkLabel(
-            self.frame_sidebar_left, text="User:", anchor="e"
-        )
-        self.label_user.grid(row=8, column=0, padx=5, pady=5)
-        self.optionmenu_user = customtkinter.CTkOptionMenu(
-            self.frame_sidebar_left,
-            values=["None", "new..."],
-            command=self.change_user_event,
-            width=60,
-        )
-        self.optionmenu_user.grid(row=8, column=1, padx=5, pady=5)
-        self.optionmenu_user.set("None")
-        self.user_window = None
-
-        self.label_appearance_mode = customtkinter.CTkLabel(
-            self.frame_sidebar_left, text="Theme:", anchor="e"
-        )
-        self.label_appearance_mode.grid(row=9, column=0, padx=5, pady=5)
-        self.optionmenu_appearance_mode = customtkinter.CTkOptionMenu(
-            self.frame_sidebar_left,
-            values=["Light", "Dark", "System"],
-            command=self.change_appearance_mode_event,
-            width=60,
-        )
-        self.optionmenu_appearance_mode.grid(row=9, column=1, padx=5, pady=5)
-        self.optionmenu_appearance_mode.set("System")
-
-        self.label_scaling = customtkinter.CTkLabel(
-            self.frame_sidebar_left, text="UI Scaling:", anchor="e"
-        )
-        self.label_scaling.grid(row=10, column=0, padx=5, pady=5)
-        self.optionmenu_scaling = customtkinter.CTkOptionMenu(
-            self.frame_sidebar_left,
-            values=["80%", "90%", "100%", "110%", "120%"],
-            command=self.change_scaling_event,
-            width=60,
-        )
-        self.optionmenu_scaling.grid(row=10, column=1, padx=5, pady=5)
-        self.optionmenu_scaling.set("100%")
-
-        self.help_image = customtkinter.CTkImage(
-            load_image_from_assets("circle-question.png"), size=(20, 20)
-        )
-        self.btnHelp = customtkinter.CTkButton(
-            self.frame_sidebar_left,
-            image=self.help_image,
-            text="Help",
-            compound="left",
-            fg_color=data.fg_color_standard_but_active,
-            hover_color=data.hover_color_standard_but_active,
-            command=self.help,
-            width=60,
-        )
-        self.btnHelp.grid(row=11, column=0, pady=10, padx=5, columnspan=2)
-        self.help_window = None
-
-        self.exit_image = customtkinter.CTkImage(
-            load_image_from_assets("right-from-bracket-solid.png"), size=(20, 20)
-        )
-        self.btnLogout = customtkinter.CTkButton(
-            self.frame_sidebar_left,
-            image=self.exit_image,
-            text="Close",
-            compound="left",
-            fg_color=data.fg_color_standard_but_red,
-            hover_color=data.hover_color_standard_but_red,
-            command=self.exit,
-            width=60,
-        )
-        self.btnLogout.grid(row=12, column=0, pady=10, padx=5, columnspan=2)
-        """
-        self._build_sidebar()
         # work in main widget (column w.r.t. root >= 1)
 
         # create main frame with widgets
@@ -2281,7 +1986,7 @@ class App(customtkinter.CTk):
     def authenticate_user(self):
         # open a tiny window with extra inputs, return new_authenticated_user
         if self.user_window is None or not self.user_window.winfo_exists():
-            self.user_window = AuthenticateWindow(
+            self.user_window = LoginDialog(
                 self.authenticate_return_function
             )  # create window if its None or destroyed
         else:
@@ -3998,28 +3703,6 @@ class App(customtkinter.CTk):
         self.label_info.configure(text=" ")
         self.canvas.delete("all")
         if self.operation_mode == "Module Assembly":
-            """
-            self.button_operation_mode_MA.configure(
-                fg_color=data.fg_color_standard_but_active,
-                hover_color=data.hover_color_standard_but_active,
-            )
-            self.button_operation_mode_ML.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_DA_DU.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_DA_PEB.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_DA_FT.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            """
             self.frame_ma.grid()
             self.frame_combobox.grid_remove()
             self.label_canvas.grid_remove()
@@ -4037,28 +3720,6 @@ class App(customtkinter.CTk):
             self.update_progressbar(self.loading_wheel)
 
         elif self.operation_mode == "Module Loading":
-            """
-            self.button_operation_mode_MA.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_ML.configure(
-                fg_color=data.fg_color_standard_but_active,
-                hover_color=data.hover_color_standard_but_active,
-            )
-            self.button_operation_mode_DA_DU.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_DA_PEB.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_DA_FT.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            """
             self.frame_ma.grid_remove()
             self.frame_combobox.grid()
             self.label_canvas.grid()
@@ -4093,28 +3754,6 @@ class App(customtkinter.CTk):
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
         elif self.operation_mode == "Detector Assembly (CERN): DU":
-            """
-            self.button_operation_mode_MA.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_ML.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_DA_DU.configure(
-                fg_color=data.fg_color_standard_but_active,
-                hover_color=data.hover_color_standard_but_active,
-            )
-            self.button_operation_mode_DA_PEB.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_DA_FT.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            """
             self.frame_ma.grid_remove()
             self.frame_combobox.grid()
             self.label_canvas.grid()
@@ -4159,28 +3798,6 @@ class App(customtkinter.CTk):
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
         elif self.operation_mode == "Detector Assembly (CERN): PEB":
-            """
-            self.button_operation_mode_MA.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_ML.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_DA_DU.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_DA_PEB.configure(
-                fg_color=data.fg_color_standard_but_active,
-                hover_color=data.hover_color_standard_but_active,
-            )
-            self.button_operation_mode_DA_FT.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            """
             self.frame_ma.grid_remove()
             self.frame_combobox.grid()
             self.label_canvas.grid_remove()
@@ -4225,28 +3842,6 @@ class App(customtkinter.CTk):
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
         elif self.operation_mode == "Detector Assembly (CERN): FT":
-            """
-            self.button_operation_mode_MA.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_ML.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_DA_DU.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_DA_PEB.configure(
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
-            )
-            self.button_operation_mode_DA_FT.configure(
-                fg_color=data.fg_color_standard_but_active,
-                hover_color=data.hover_color_standard_but_active,
-            )
-            """
             self.frame_ma.grid_remove()
             self.frame_combobox.grid_remove()
             self.label_canvas.grid_remove()
