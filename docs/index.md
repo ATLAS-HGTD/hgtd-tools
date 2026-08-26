@@ -12,7 +12,7 @@ The [internal part of the project](https://gitlab.cern.ch/anstein/hgtd-tools-int
 
 ## Getting started
 
-Please check the [install](getting_started/install.md) guide for installing hgtd-tools the first time or updating it.
+Please check the [install](getting_started/install.md) guide for installing hgtd-tools the first time or the [update page](getting_started/update.md) when updating it.
 
 ## Features
 
@@ -49,7 +49,7 @@ The following overview lists the implemented features of `hgtd-tools` and links 
     - Reporting
         - automation with Gitlab CI, using the hgtdbot account
         - runner script producing overviews / reports: yields and relation validation
-    - Flex Tail upload [with CLI script `upload-FlexTail-measurements.py`](use_cases/FT_upload_instructions.md)
+    - Flex Tail upload [with CLI script `upload-FlexTail-measurements`](use_cases/FT_upload_instructions.md)
 
 ## Quickstart
 
@@ -127,7 +127,7 @@ For any problems, do not hesitate to ask on [mattermost](https://mattermost.web.
 ### Open points requiring implementation
 New features, bugs, compatibility improvements and other items are collected with the [Issues](https://gitlab.cern.ch/anstein/hgtd-tools/-/issues){target="_blank"} on gitlab.
 
-Some of them are also bound to [Milestones](https://gitlab.cern.ch/anstein/hgtd-tools/-/milestones){target="_blank"}, currently entailing Pre-Production and Production.
+Some of them are also bound to [Milestones](https://gitlab.cern.ch/anstein/hgtd-tools/-/milestones){target="_blank"}, currently entailing `Package refactor` and `Production`.
 
 ## Acknowledgements
 Thanks to an unknown reddit user who gave me hope when the PyQt6 installation wouldn't want to work with my setup / machine. This [link](https://www.reddit.com/r/Tkinter/comments/snrb1f/comment/hw4bylf/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button){target="_blank"} brought me to [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter){target="_blank"} and the GUI is built on top of the tutorial.

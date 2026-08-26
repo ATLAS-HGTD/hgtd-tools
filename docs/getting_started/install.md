@@ -2,11 +2,11 @@
 
 Last update: August 2026
 
-This suite is written in python, and after placing yourself into a virtual environment or conda environment (more on that below), the tools themselves can be installed via `pip install hgtd-tools` (or with optional dependencies, such as `pip install "hgtd-tools[gui]"`). Presently the optional dependencies are: `[dev,dev-extra,docs,gui]`, you can mix them in any combination).
+This suite is written in python, and after placing yourself into a virtual environment or conda environment (more on that below), the tools themselves can be installed via `pip install hgtd-tools` (or with optional dependencies, such as `pip install "hgtd-tools[gui]"`). Presently the optional dependencies are: `[dev,dev-extra,docs,gui]`, you can mix them in any combination.
 
 The package is now published on [PyPI](https://pypi.org/project/hgtd-tools/){target="_blank"}, so installing it **no longer requires cloning the gitlab repository** — cloning is only needed if you want to develop the tools themselves (see the [Developer setup](#developer-setup) section below). Detailed step-by-step instructions differ slightly depending on platform (especially relevant for the GUI part). Linux users should go the install route via conda if they wish to use the GUI, because it depends on `Tk`. The corresponding `env-312-withTk-linux.yml` file is provided in the root of the [gitlab repository](https://gitlab.cern.ch/anstein/hgtd-tools){target="_blank"} — just download it and follow the step-by-step instructions below.
 
-For non-linux users, you can either use the conda environment as shown below, or simply create a venv/conda env, activate it, and `pip install "hgtd-tools[gui]"` directly.
+For non-linux users, you can either use the conda environment as shown below, or simply create a venv, activate it, and `pip install "hgtd-tools[gui]"` directly.
 
 ## First time usage / requirements (recommended way)
 
