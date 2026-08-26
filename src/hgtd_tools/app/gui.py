@@ -123,9 +123,286 @@ class AuthenticateWindow(customtkinter.CTkToplevel):
 
 
 class App(customtkinter.CTk):
+    def _build_sidebar_logo(self):
+        """Top-of-sidebar app logo + version / author line."""
+        self.label_logo = customtkinter.CTkLabel(
+            self.frame_sidebar_left,
+            text="HGTD Tools",
+            font=customtkinter.CTkFont(size=20, weight="bold"),
+        )
+        self.label_logo.grid(row=0, column=0, padx=10, pady=(10, 5), columnspan=2)
+
+        self.my_version = __version__
+        self.version_full_text = (
+            f"v{self.my_version} - August 2026\nAnnika Stein (JGU Mainz)"
+        )
+        self.label_credits = customtkinter.CTkLabel(
+            self.frame_sidebar_left, text=self.version_full_text
+        )
+        self.label_credits.grid(row=1, column=0, padx=10, pady=5, columnspan=2)
+
+    def _build_sidebar_progress(self):
+        """Label + progress bar reflecting the latest ProdDB API request."""
+        self.label_progress = customtkinter.CTkLabel(
+            self.frame_sidebar_left, text="API Request Status"
+        )
+        self.label_progress.grid(row=2, column=0, padx=10, pady=5, columnspan=2)
+
+        self.progressbar = customtkinter.CTkProgressBar(
+            self.frame_sidebar_left,
+            orientation="horizontal",
+            progress_color=data.progress_color_OK,
+        )
+        self.progressbar.grid(row=3, column=0, padx=10, pady=5, columnspan=2)
+        self.progressbar.set(1)
+
+    def _build_sidebar_operation_mode(self):
+        """Five buttons that switch the tool between the operation modes."""
+        self.frame_operation_mode = customtkinter.CTkFrame(self.frame_sidebar_left)
+        self.frame_operation_mode.grid(
+            row=4,
+            column=0,
+            padx=5,
+            pady=(10, 5),
+            sticky="nsew",
+            columnspan=2,
+        )
+        self.frame_operation_mode.grid_columnconfigure((0, 1), weight=1)
+
+        self.operation_mode = "Module Assembly"  # default
+        self.operation_mode_buttons = {}  # NEW: id -> CTkButton
+
+        header = customtkinter.CTkLabel(
+            self.frame_operation_mode,
+            text="Operation Mode",
+            font=customtkinter.CTkFont(size=16, weight="bold"),
+        )
+        header.grid(row=0, column=0, padx=10, pady=5, columnspan=2)
+
+        # (label_text, mode_id, short_id, is_active_by_default)
+        modes = [
+            ("Module Assembly", "Module Assembly", "MA", True),
+            ("Module Loading", "Module Loading", "ML", False),
+            (
+                "Detector Assembly (CERN): DU",
+                "Detector Assembly (CERN): DU",
+                "DU",
+                False,
+            ),
+            (
+                "Detector Assembly (CERN): PEB",
+                "Detector Assembly (CERN): PEB",
+                "PEB",
+                False,
+            ),
+            (
+                "Detector Assembly (CERN): FT",
+                "Detector Assembly (CERN): FT",
+                "FT",
+                False,
+            ),
+        ]
+        for i, (text, mode_id, short_id, is_active) in enumerate(modes, start=1):
+            btn = customtkinter.CTkButton(
+                self.frame_operation_mode,
+                text=text,
+                command=lambda m=mode_id: self.button_mode_event_click(m),
+                fg_color=(
+                    data.fg_color_standard_but_active
+                    if is_active
+                    else data.fg_color_standard_but_inactive
+                ),
+                hover_color=(
+                    data.hover_color_standard_but_active
+                    if is_active
+                    else data.hover_color_standard_but_inactive
+                ),
+            )
+            btn.grid(
+                row=i,
+                column=0,
+                padx=5,
+                pady=(3, 0),
+                sticky="nsew",
+                columnspan=2,
+            )
+            self.operation_mode_buttons[short_id] = btn  # NEW
+
+    def _build_sidebar_useful_links(self):
+        """External links panel: DB frontend, docs, gitlab, mattermost, etc."""
+        self.frame_useful_links = customtkinter.CTkFrame(self.frame_sidebar_left)
+        self.frame_useful_links.grid(
+            row=5,
+            column=0,
+            padx=5,
+            pady=5,
+            sticky="nsew",
+            columnspan=2,
+        )
+        self.frame_useful_links.grid_columnconfigure((0, 1), weight=1)
+
+        header = customtkinter.CTkLabel(
+            self.frame_useful_links,
+            text="Useful Links",
+            font=customtkinter.CTkFont(size=16, weight="bold"),
+        )
+        header.grid(row=0, column=0, padx=10, pady=5, columnspan=2)
+
+        # Each entry: (button_text, url) — all use the helper from util
+        links = [
+            ("DB Frontend", api.frontendUrlPrefix),
+            (
+                "SN Decoder/Encoder",
+                "https://annika-stein.web.cern.ch/module_mockup/serialnumber.html",
+            ),
+            ("ProdDB Documentation", "https://hgtd-database.docs.cern.ch/"),
+            (
+                "ProdDB Mattermost",
+                "https://mattermost.web.cern.ch/atlas/channels/hgtd-production-database",
+            ),
+            ("ProdDB Meetings", "https://indico.cern.ch/category/9458/"),
+            ("hgtd-tools gitlab", "https://gitlab.cern.ch/anstein/hgtd-tools"),
+            ("hgtd-tools Documentation", "https://hgtd-tools.docs.cern.ch/"),
+        ]
+        for i, (text, url) in enumerate(links, start=1):
+            btn = customtkinter.CTkButton(
+                self.frame_useful_links,
+                text=text,
+                command=lambda u=url: util.open_webbrowser_with_url(
+                    u, noExtraPrefix=True
+                ),
+                fg_color=data.fg_color_standard_but_inactive,
+                hover_color=data.hover_color_standard_but_inactive,
+            )
+            btn.grid(
+                row=i,
+                column=0,
+                padx=5,
+                pady=(3, 0),
+                sticky="nsew",
+                columnspan=2,
+            )
+
+    def _build_sidebar_user_and_appearance(self):
+        """User selector, theme picker, UI scaling — three option-menus in a row."""
+        self._build_user_selector(row=8)
+        self._build_appearance_mode(row=9)
+        self._build_ui_scaling(row=10)
+
+    def _build_user_selector(self, row):
+        label = customtkinter.CTkLabel(
+            self.frame_sidebar_left, text="User:", anchor="e"
+        )
+        label.grid(row=row, column=0, padx=5, pady=5)
+
+        self.optionmenu_user = customtkinter.CTkOptionMenu(
+            self.frame_sidebar_left,
+            values=["None", "new..."],
+            command=self.change_user_event,
+            width=60,
+        )
+        self.optionmenu_user.grid(row=row, column=1, padx=5, pady=5)
+        self.optionmenu_user.set("None")
+        self.user_window = None  # lazily-created login window
+
+    def _build_appearance_mode(self, row):
+        label = customtkinter.CTkLabel(
+            self.frame_sidebar_left, text="Theme:", anchor="e"
+        )
+        label.grid(row=row, column=0, padx=5, pady=5)
+
+        self.optionmenu_appearance_mode = customtkinter.CTkOptionMenu(
+            self.frame_sidebar_left,
+            values=["Light", "Dark", "System"],
+            command=self.change_appearance_mode_event,
+            width=60,
+        )
+        self.optionmenu_appearance_mode.grid(row=row, column=1, padx=5, pady=5)
+        self.optionmenu_appearance_mode.set("System")
+
+    def _build_ui_scaling(self, row):
+        label = customtkinter.CTkLabel(
+            self.frame_sidebar_left, text="UI Scaling:", anchor="e"
+        )
+        label.grid(row=row, column=0, padx=5, pady=5)
+
+        self.optionmenu_scaling = customtkinter.CTkOptionMenu(
+            self.frame_sidebar_left,
+            values=["80%", "90%", "100%", "110%", "120%"],
+            command=self.change_scaling_event,
+            width=60,
+        )
+        self.optionmenu_scaling.grid(row=row, column=1, padx=5, pady=5)
+        self.optionmenu_scaling.set("100%")
+
+    def _build_sidebar_help_and_close(self):
+        """Help (green) + Close (red) buttons at the bottom of the sidebar."""
+        self.help_image = customtkinter.CTkImage(
+            load_image_from_assets("circle-question.png"), size=(20, 20)
+        )
+        self.btnHelp = customtkinter.CTkButton(
+            self.frame_sidebar_left,
+            image=self.help_image,
+            text="Help",
+            compound="left",
+            fg_color=data.fg_color_standard_but_active,
+            hover_color=data.hover_color_standard_but_active,
+            command=self.help,
+            width=60,
+        )
+        self.btnHelp.grid(row=11, column=0, pady=10, padx=5, columnspan=2)
+        self.help_window = None  # lazily-created help window
+
+        self.exit_image = customtkinter.CTkImage(
+            load_image_from_assets("right-from-bracket-solid.png"), size=(20, 20)
+        )
+        self.btnLogout = customtkinter.CTkButton(
+            self.frame_sidebar_left,
+            image=self.exit_image,
+            text="Close",
+            compound="left",
+            fg_color=data.fg_color_standard_but_red,
+            hover_color=data.hover_color_standard_but_red,
+            command=self.exit,
+            width=60,
+        )
+        self.btnLogout.grid(row=12, column=0, pady=10, padx=5, columnspan=2)
+
+    def _build_sidebar(self):
+        """Create the left sidebar frame and populate it in sub-steps."""
+        self.frame_sidebar_left = customtkinter.CTkFrame(self, corner_radius=0)
+        self.frame_sidebar_left.grid(row=0, column=0, rowspan=4, sticky="nsew")
+        self.frame_sidebar_left.grid_columnconfigure((0, 1), weight=1)
+        # row 5 is the stretchy "Useful Links" section
+        self.frame_sidebar_left.grid_rowconfigure(5, weight=1)
+
+        self._build_sidebar_logo()
+        self._build_sidebar_progress()
+        self._build_sidebar_operation_mode()
+        self._build_sidebar_useful_links()
+        self._build_sidebar_user_and_appearance()
+        self._build_sidebar_help_and_close()
+
     def __init__(self):
         super().__init__()
 
+        # === window-level configuration ===
+        self.title("HGTD Tools")
+        self.geometry(f"{1500}x{1000}")
+        icon = tkinter.PhotoImage(data=load_image_from_assets_as_b64("windowIcon.png"))
+        self.wm_iconbitmap()
+        self.iconphoto(True, icon)
+
+        # === global constants used by comboboxes ===
+        self.n_items_to_show_in_cbx = 16
+
+        # === root-level grid ===
+        self.grid_columnconfigure((0, 1, 2), weight=1)
+        self.grid_rowconfigure((0, 1), weight=1)
+
+        # === build the left sidebar in one call ===
+        self._build_sidebar()
+        """
         # configure window
         self.title("HGTD Tools")
         self.geometry(f"{1500}x{1000}")
@@ -249,6 +526,7 @@ class App(customtkinter.CTk):
         )
 
         # buttons to go to external useful pages
+
         self.frame_useful_links = customtkinter.CTkFrame(self.frame_sidebar_left)
         self.frame_useful_links.grid(
             row=5, column=0, padx=5, pady=5, sticky="nsew", columnspan=2
@@ -425,7 +703,8 @@ class App(customtkinter.CTk):
             width=60,
         )
         self.btnLogout.grid(row=12, column=0, pady=10, padx=5, columnspan=2)
-
+        """
+        self._build_sidebar()
         # work in main widget (column w.r.t. root >= 1)
 
         # create main frame with widgets
@@ -3643,6 +3922,28 @@ class App(customtkinter.CTk):
         self.possible_HY_HV = []
         self.possible_HY_LV = []
 
+        # === NEW: re-color all five buttons based on the new mode ===
+        active_color = data.fg_color_standard_but_active
+        active_hover = data.hover_color_standard_but_active
+        inactive_color = data.fg_color_standard_but_inactive
+        inactive_hover = data.hover_color_standard_but_inactive
+
+        # Map mode_id -> short_id so we can flip exactly one button "on"
+        mode_to_short = {
+            "Module Assembly": "MA",
+            "Module Loading": "ML",
+            "Detector Assembly (CERN): DU": "DU",
+            "Detector Assembly (CERN): PEB": "PEB",
+            "Detector Assembly (CERN): FT": "FT",
+        }
+        active_short = mode_to_short[value]
+        for short_id, btn in self.operation_mode_buttons.items():
+            is_active = short_id == active_short
+            btn.configure(
+                fg_color=active_color if is_active else inactive_color,
+                hover_color=active_hover if is_active else inactive_hover,
+            )
+
         self.slots = None
         self.partstree = None
         self.clicked_module = []
@@ -3697,6 +3998,7 @@ class App(customtkinter.CTk):
         self.label_info.configure(text=" ")
         self.canvas.delete("all")
         if self.operation_mode == "Module Assembly":
+            """
             self.button_operation_mode_MA.configure(
                 fg_color=data.fg_color_standard_but_active,
                 hover_color=data.hover_color_standard_but_active,
@@ -3717,7 +4019,7 @@ class App(customtkinter.CTk):
                 fg_color=data.fg_color_standard_but_inactive,
                 hover_color=data.hover_color_standard_but_inactive,
             )
-
+            """
             self.frame_ma.grid()
             self.frame_combobox.grid_remove()
             self.label_canvas.grid_remove()
@@ -3735,6 +4037,7 @@ class App(customtkinter.CTk):
             self.update_progressbar(self.loading_wheel)
 
         elif self.operation_mode == "Module Loading":
+            """
             self.button_operation_mode_MA.configure(
                 fg_color=data.fg_color_standard_but_inactive,
                 hover_color=data.hover_color_standard_but_inactive,
@@ -3755,7 +4058,7 @@ class App(customtkinter.CTk):
                 fg_color=data.fg_color_standard_but_inactive,
                 hover_color=data.hover_color_standard_but_inactive,
             )
-
+            """
             self.frame_ma.grid_remove()
             self.frame_combobox.grid()
             self.label_canvas.grid()
@@ -3790,6 +4093,7 @@ class App(customtkinter.CTk):
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
         elif self.operation_mode == "Detector Assembly (CERN): DU":
+            """
             self.button_operation_mode_MA.configure(
                 fg_color=data.fg_color_standard_but_inactive,
                 hover_color=data.hover_color_standard_but_inactive,
@@ -3810,7 +4114,7 @@ class App(customtkinter.CTk):
                 fg_color=data.fg_color_standard_but_inactive,
                 hover_color=data.hover_color_standard_but_inactive,
             )
-
+            """
             self.frame_ma.grid_remove()
             self.frame_combobox.grid()
             self.label_canvas.grid()
@@ -3855,6 +4159,7 @@ class App(customtkinter.CTk):
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
         elif self.operation_mode == "Detector Assembly (CERN): PEB":
+            """
             self.button_operation_mode_MA.configure(
                 fg_color=data.fg_color_standard_but_inactive,
                 hover_color=data.hover_color_standard_but_inactive,
@@ -3875,7 +4180,7 @@ class App(customtkinter.CTk):
                 fg_color=data.fg_color_standard_but_inactive,
                 hover_color=data.hover_color_standard_but_inactive,
             )
-
+            """
             self.frame_ma.grid_remove()
             self.frame_combobox.grid()
             self.label_canvas.grid_remove()
@@ -3920,6 +4225,7 @@ class App(customtkinter.CTk):
             self.loading_wheel.start()
             self.update_progressbar(self.loading_wheel)
         elif self.operation_mode == "Detector Assembly (CERN): FT":
+            """
             self.button_operation_mode_MA.configure(
                 fg_color=data.fg_color_standard_but_inactive,
                 hover_color=data.hover_color_standard_but_inactive,
@@ -3940,7 +4246,7 @@ class App(customtkinter.CTk):
                 fg_color=data.fg_color_standard_but_active,
                 hover_color=data.hover_color_standard_but_active,
             )
-
+            """
             self.frame_ma.grid_remove()
             self.frame_combobox.grid_remove()
             self.label_canvas.grid_remove()
