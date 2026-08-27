@@ -4607,7 +4607,6 @@ class App(customtkinter.CTk):
                 ) as e:
                     self.module_parents = []
                     self.last_responseText = str(e)
-
                 if not self._report_api_status(expected_prefix="200"):
                     self._show_error(
                         "Module relations could not be loaded from ProdDB API."
@@ -4615,21 +4614,7 @@ class App(customtkinter.CTk):
                     self.this_MODULE_relations_DU = []
                     self.this_MODULE_relations_SLOT = []
                     return
-                """
-                if self.last_responseText[:3] != "200":
-                    self.api_status = 0
-                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
-                    info_text = wrapped_text.fill(
-                        f"Error: Module relations could not be loaded from ProdDB API.\n{self.last_responseText}"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                    self.this_MODULE_relations_DU = []
-                    self.this_MODULE_relations_SLOT = []
-                else:
-                    self.api_status = 1
-                    self.progressbar.configure(progress_color=data.progress_color_OK)
-                """
+
                 for r in self.module_parents:
                     if debug:
                         print(r)
@@ -4738,22 +4723,7 @@ class App(customtkinter.CTk):
                     )
                     self.this_DU_relations_MODULE = []
                     return
-                """
-                if self.last_responseText[:3] != "200":
-                    self.api_status = 0
-                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
-                    info_text = wrapped_text.fill(
-                        f"Error: DU relations could not be loaded from ProdDB API.\n{self.last_responseText}"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                    self.this_DU_relations_MODULE = []
-                    break
-                else:
-                    self.api_status = 1
-                    self.progressbar.configure(progress_color=data.progress_color_OK)
-                """
-                # self.this_DU_fully_loaded = False
+
                 for r in self.partstree:
                     if str(r["part_parent"]["part_id"]) == str(parentDU_partID):
                         if str(r["part"]["kind_of_part"]["kind_of_part_id"]) == str(
@@ -4827,25 +4797,11 @@ class App(customtkinter.CTk):
             RuntimeError,
         ) as e:
             ft_par, self.last_responseText = [], str(e)
-
         if not self._report_api_status(expected_prefix="200"):
             self._show_error("FT relations could not be loaded from ProdDB API.")
             self.this_FT_relations_SLOT = []
             return
-        """
-        if self.last_responseText[:3] != "200":
-            self.api_status = 0
-            self.progressbar.configure(progress_color=data.progress_color_ERROR)
-            info_text = wrapped_text.fill(
-                f"Error: FT relations could not be loaded from ProdDB API.\n{self.last_responseText}"
-            )
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
-            self.this_FT_relations_SLOT = []
-        else:
-            self.api_status = 1
-            self.progressbar.configure(progress_color=data.progress_color_OK)
-        """
+
         if ft_par != []:
             # this FT is already connected to some slot!!
             for r in ft_par:
@@ -4888,26 +4844,12 @@ class App(customtkinter.CTk):
                 ) as e:
                     detector = []
                     self.last_responseText = str(e)
-
                 if not self._report_api_status(expected_prefix="200"):
                     self._show_error(
                         "PEB relations could not be loaded from ProdDB API."
                     )
                     break
-                """
-                if self.last_responseText[:3] != "200":
-                    self.api_status = 0
-                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
-                    info_text = wrapped_text.fill(
-                        f"Error: PEB relations could not be loaded from ProdDB API.\n{self.last_responseText}"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                    break
-                else:
-                    self.api_status = 1
-                    self.progressbar.configure(progress_color=data.progress_color_OK)
-                """
+
                 if detector != []:
                     # this PEB was already placed somewhere in the detector!!
                     for r in detector:
@@ -4936,23 +4878,10 @@ class App(customtkinter.CTk):
         ) as e:
             self.possible_ft = []
             self.last_responseText = str(e)
-
         if not self._report_api_status(expected_prefix="200"):
             self._show_error("Slots / FT could not be loaded from ProdDB API.")
             return
-        """
-        if self.last_responseText[:3] != "200":
-            self.api_status = 0
-            self.progressbar.configure(progress_color=data.progress_color_ERROR)
-            info_text = wrapped_text.fill(
-                f"Error: Slots / FT could not be loaded from ProdDB API.\n{self.last_responseText}"
-            )
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
-        else:
-            self.api_status = 1
-            self.progressbar.configure(progress_color=data.progress_color_OK)
-        """
+
         if self.ft_filter != "":
             gen = self.ft_filter.split("+")[0].split("/")  # multiple generations
             cat = self.ft_filter[-2:]  # the last two chars make the category
@@ -5064,46 +4993,10 @@ class App(customtkinter.CTk):
                 self.combobox_MA_HY_LV_chi.set("- Select -")
                 self.this_HY_LV_relations_MOD = []
             self.last_responseText = str(e)
-        """
-        except (ValueError, RuntimeError) as e:
-            if update == "all" or update == "Module":
-                self.possible_MA_mod_par = []
-                self.combobox_MA_mod_par.set("- Select -")
-                self.this_MOD_relations_MF = []
-                self.this_MOD_relations_HY_HV = []
-                self.this_MOD_relations_HY_LV = []
-                self.this_MOD_relations_HY_unknownPosition = []
-                self.this_MOD_relations_HY_invalidPosition = []
-            if update == "all" or update == "Module Flex":
-                self.possible_MF = []
-                self.combobox_MA_MF_chi.set("- Select -")
-                self.this_MF_relations_MOD = []
-            if update == "all" or update == "HY_HV" or update == "HY_LV":
-                self.possible_HY_HV = []
-                self.combobox_MA_HY_HV_chi.set("- Select -")
-                self.this_HY_HV_relations_MOD = []
-            if update == "all" or update == "HY_LV":
-                self.possible_HY_LV = []
-                self.combobox_MA_HY_LV_chi.set("- Select -")
-                self.this_HY_LV_relations_MOD = []
-            self.last_responseText = str(e)
-        """
         if not self._report_api_status(expected_prefix="200"):
             self._show_error("Parents / Children could not be loaded from ProdDB API.")
             return
-        """
-        if self.last_responseText[:3] != "200":
-            self.api_status = 0
-            self.progressbar.configure(progress_color=data.progress_color_ERROR)
-            info_text = wrapped_text.fill(
-                f"Error: Parents / Children could not be loaded from ProdDB API.\n{self.last_responseText}"
-            )
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
-        else:
-            self.api_status = 1
-            self.progressbar.configure(progress_color=data.progress_color_OK)
-        """
+
         if update == "all" or update == "Module":
             no_filters_except_conn = True
             if (
@@ -5406,7 +5299,6 @@ class App(customtkinter.CTk):
             RuntimeError,
         ) as e:
             par, self.last_responseText = [], str(e)
-
         if not self._report_api_status(expected_prefix="200"):
             self._show_error("Module relations could not be loaded from ProdDB API.")
             self.this_MOD_relations_MF = []
@@ -5415,24 +5307,7 @@ class App(customtkinter.CTk):
             self.this_MOD_relations_HY_unknownPosition = []
             self.this_MOD_relations_HY_invalidPosition = []
             return
-        """
-        if self.last_responseText[:3] != "200":
-            self.api_status = 0
-            self.progressbar.configure(progress_color=data.progress_color_ERROR)
-            info_text = wrapped_text.fill(
-                f"Error: Module relations could not be loaded from ProdDB API.\n{self.last_responseText}"
-            )
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
-            self.this_MOD_relations_MF = []
-            self.this_MOD_relations_HY_HV = []
-            self.this_MOD_relations_HY_LV = []
-            self.this_MOD_relations_HY_unknownPosition = []
-            self.this_MOD_relations_HY_invalidPosition = []
-        else:
-            self.api_status = 1
-            self.progressbar.configure(progress_color=data.progress_color_OK)
-        """
+
         if par != []:
             info_text = f"Info: This Module is already connected to some children."
             print(f">>> {info_text}")
