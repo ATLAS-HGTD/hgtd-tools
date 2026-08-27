@@ -122,7 +122,7 @@ class LoginDialog(customtkinter.CTkToplevel):
             requests.exceptions.RequestException,
         ) as e:
             self.last_responseText = str(e)
-        except ValueError as e:
+        except (ValueError, RuntimeError) as e:
             self.last_responseText = str(e)
 
         self.callback(self.auth_user, self.last_responseText)
@@ -130,6 +130,34 @@ class LoginDialog(customtkinter.CTkToplevel):
 
 
 class App(customtkinter.CTk):
+    def _report_api_status(self, expected_prefix="200"):
+        """Set self.api_status and progressbar color from self.last_responseText.
+
+        Returns True if the response starts with expected_prefix (e.g. "200" or "20"),
+        False otherwise. Does not touch self.label_info; the caller decides what
+        message to show.
+        """
+        ok = str(self.last_responseText).startswith(expected_prefix)
+        self.api_status = 1 if ok else 0
+        color = data.progress_color_OK if ok else data.progress_color_ERROR
+        self.progressbar.configure(progress_color=color)
+        return ok
+
+    def _show_error(self, prefix, exception=None):
+        """Show an error message on the info label using either self.last_responseText
+        or the provided exception string. Always also prints to stdout for the log.
+        """
+        msg = self.last_responseText if exception is None else str(exception)
+        info_text = wrapped_text.fill(f"Error: {prefix}\n{msg}")
+        print(f">>> {info_text}")
+        self.label_info.configure(text=info_text)
+
+    def _show_info(self, prefix):
+        """Show a non-error success/info message on the info label and stdout."""
+        info_text = wrapped_text.fill(f"Info: {prefix}")
+        print(f">>> {info_text}")
+        self.label_info.configure(text=info_text)
+
     def _build_sidebar_logo(self):
         """Top-of-sidebar app logo + version / author line."""
         self.label_logo = customtkinter.CTkLabel(
@@ -1763,7 +1791,7 @@ class App(customtkinter.CTk):
             requests.exceptions.RequestException,
         ) as e:
             upstream_version_last_responseText = str(e)
-        except ValueError as e:
+        except (ValueError, RuntimeError) as e:
             upstream_version_last_responseText = str(e)
 
         if upstream_version_last_responseText[:3] != "200":
@@ -1815,7 +1843,7 @@ class App(customtkinter.CTk):
             self.possible_HY_HV = []
             self.possible_HY_LV = []
             self.last_responseText = str(e)
-        except ValueError as e:
+        except (ValueError, RuntimeError) as e:
             self.manufacturers = []
             self.locations = []
             self.possible_MA_mod_par = []
@@ -2086,7 +2114,7 @@ class App(customtkinter.CTk):
                     requests.exceptions.RequestException,
                 ) as e:
                     self.last_responseText = str(e)
-                except ValueError as e:
+                except (ValueError, RuntimeError) as e:
                     self.last_responseText = str(e)
 
                 if self.last_responseText[:2] != "20":
@@ -2244,7 +2272,7 @@ class App(customtkinter.CTk):
                     requests.exceptions.RequestException,
                 ) as e:
                     self.last_responseText = str(e)
-                except ValueError as e:
+                except (ValueError, RuntimeError) as e:
                     self.last_responseText = str(e)
 
                 if self.last_responseText[:2] != "20":
@@ -2399,7 +2427,7 @@ class App(customtkinter.CTk):
                     requests.exceptions.RequestException,
                 ) as e:
                     self.last_responseText = str(e)
-                except ValueError as e:
+                except (ValueError, RuntimeError) as e:
                     self.last_responseText = str(e)
 
                 if self.last_responseText[:2] != "20":
@@ -2620,7 +2648,7 @@ class App(customtkinter.CTk):
                     requests.exceptions.RequestException,
                 ) as e:
                     self.last_responseText = str(e)
-                except ValueError as e:
+                except (ValueError, RuntimeError) as e:
                     self.last_responseText = str(e)
 
                 if self.last_responseText[:2] != "20":
@@ -2984,7 +3012,7 @@ class App(customtkinter.CTk):
                     requests.exceptions.RequestException,
                 ) as e:
                     self.last_responseText = str(e)
-                except ValueError as e:
+                except (ValueError, RuntimeError) as e:
                     self.last_responseText = str(e)
 
                 if self.last_responseText[:2] != "20":
@@ -3221,7 +3249,7 @@ class App(customtkinter.CTk):
                     requests.exceptions.RequestException,
                 ) as e:
                     self.last_responseText = str(e)
-                except ValueError as e:
+                except (ValueError, RuntimeError) as e:
                     self.last_responseText = str(e)
 
                 if self.last_responseText[:2] != "20":
@@ -3258,7 +3286,7 @@ class App(customtkinter.CTk):
                     requests.exceptions.RequestException,
                 ) as e:
                     self.last_responseText = str(e)
-                except ValueError as e:
+                except (ValueError, RuntimeError) as e:
                     self.last_responseText = str(e)
 
                 if self.last_responseText[:2] != "20":
@@ -3320,7 +3348,7 @@ class App(customtkinter.CTk):
                     requests.exceptions.RequestException,
                 ) as e:
                     self.last_responseText = str(e)
-                except ValueError as e:
+                except (ValueError, RuntimeError) as e:
                     self.last_responseText = str(e)
 
                 if self.last_responseText[:2] != "20":
@@ -3358,7 +3386,7 @@ class App(customtkinter.CTk):
                     requests.exceptions.RequestException,
                 ) as e:
                     self.last_responseText = str(e)
-                except ValueError as e:
+                except (ValueError, RuntimeError) as e:
                     self.last_responseText = str(e)
 
                 if self.last_responseText[:2] != "20":
@@ -3396,7 +3424,7 @@ class App(customtkinter.CTk):
                     requests.exceptions.RequestException,
                 ) as e:
                     self.last_responseText = str(e)
-                except ValueError as e:
+                except (ValueError, RuntimeError) as e:
                     self.last_responseText = str(e)
 
                 if self.last_responseText[:2] != "20":
@@ -4244,7 +4272,7 @@ class App(customtkinter.CTk):
                 requests.exceptions.RequestException,
             ) as e:
                 self.last_responseText = str(e)
-            except ValueError as e:
+            except (ValueError, RuntimeError) as e:
                 self.last_responseText = str(e)
 
             if self.last_responseText[:2] != "20":
@@ -4422,7 +4450,7 @@ class App(customtkinter.CTk):
                     requests.exceptions.RequestException,
                 ) as e:
                     self.last_responseText = str(e)
-                except ValueError as e:
+                except (ValueError, RuntimeError) as e:
                     self.last_responseText = str(e)
 
                 if self.last_responseText[:2] != "20":
@@ -4449,7 +4477,7 @@ class App(customtkinter.CTk):
                             requests.exceptions.RequestException,
                         ) as e:
                             self.last_responseText = str(e)
-                        except ValueError as e:
+                        except (ValueError, RuntimeError) as e:
                             self.last_responseText = str(e)
 
                         if self.last_responseText[:2] != "20":
@@ -4515,7 +4543,7 @@ class App(customtkinter.CTk):
                                     requests.exceptions.RequestException,
                                 ) as e:
                                     self.last_responseText = str(e)
-                                except ValueError as e:
+                                except (ValueError, RuntimeError) as e:
                                     self.last_responseText = str(e)
 
                                 if self.last_responseText[:2] != "20":
@@ -4574,13 +4602,20 @@ class App(customtkinter.CTk):
                     requests.exceptions.ConnectionError,
                     requests.exceptions.Timeout,
                     requests.exceptions.RequestException,
+                    ValueError,
+                    RuntimeError,
                 ) as e:
                     self.module_parents = []
                     self.last_responseText = str(e)
-                except ValueError as e:
-                    self.module_parents = []
-                    self.last_responseText = str(e)
 
+                if not self._report_api_status(expected_prefix="200"):
+                    self._show_error(
+                        "Module relations could not be loaded from ProdDB API."
+                    )
+                    self.this_MODULE_relations_DU = []
+                    self.this_MODULE_relations_SLOT = []
+                    return
+                """
                 if self.last_responseText[:3] != "200":
                     self.api_status = 0
                     self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -4594,17 +4629,18 @@ class App(customtkinter.CTk):
                 else:
                     self.api_status = 1
                     self.progressbar.configure(progress_color=data.progress_color_OK)
-                    for r in self.module_parents:
-                        if debug:
-                            print(r)
-                        if str(
-                            r["part_parent"]["kind_of_part"]["kind_of_part_id"]
-                        ) == str(data.KoPID_from_partKoPName["Detector Unit"]):
-                            self.this_MODULE_relations_DU.append(r)
-                        if str(
-                            r["part_parent"]["kind_of_part"]["kind_of_part_id"]
-                        ) == str(data.KoPID_from_partKoPName["Slot"]):
-                            self.this_MODULE_relations_SLOT.append(r)
+                """
+                for r in self.module_parents:
+                    if debug:
+                        print(r)
+                    if str(r["part_parent"]["kind_of_part"]["kind_of_part_id"]) == str(
+                        data.KoPID_from_partKoPName["Detector Unit"]
+                    ):
+                        self.this_MODULE_relations_DU.append(r)
+                    if str(r["part_parent"]["kind_of_part"]["kind_of_part_id"]) == str(
+                        data.KoPID_from_partKoPName["Slot"]
+                    ):
+                        self.this_MODULE_relations_SLOT.append(r)
         elif self.operation_mode == "Detector Assembly (CERN): DU":
             DU_SN = childSNIn
             parentDU_partID = self.possible_children_partIDs[
@@ -4690,15 +4726,19 @@ class App(customtkinter.CTk):
                     requests.exceptions.ConnectionError,
                     requests.exceptions.Timeout,
                     requests.exceptions.RequestException,
+                    ValueError,
+                    RuntimeError,
                 ) as e:
                     self.partstree = []
                     detector = []
                     self.last_responseText = str(e)
-                except ValueError as e:
-                    self.partstree = []
-                    detector = []
-                    self.last_responseText = str(e)
-
+                if not self._report_api_status(expected_prefix="200"):
+                    self._show_error(
+                        "DU relations could not be loaded from ProdDB API."
+                    )
+                    self.this_DU_relations_MODULE = []
+                    return
+                """
                 if self.last_responseText[:3] != "200":
                     self.api_status = 0
                     self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -4712,56 +4752,57 @@ class App(customtkinter.CTk):
                 else:
                     self.api_status = 1
                     self.progressbar.configure(progress_color=data.progress_color_OK)
-                    self.this_DU_fully_loaded = False
-                    for r in self.partstree:
-                        if str(r["part_parent"]["part_id"]) == str(parentDU_partID):
-                            if str(r["part"]["kind_of_part"]["kind_of_part_id"]) == str(
-                                data.KoPID_from_partKoPName["Module"]
-                            ):
-                                self.this_DU_relations_MODULE.append(r)
-                                # make the corresponding slot blue if already in use, white if not used
-                                for mod in data.allDUs[self.displayedDUtype]:
-                                    if str(mod["slot"]) == str(r["position"]):
-                                        if str(mod["slot"]) in self.interlockSlots:
-                                            self.canvas_place_rounded_rectangle(
-                                                mod["x"],
-                                                mod["y"],
-                                                mod["w"],
-                                                mod["h"],
-                                                fill=data.fillColor_AlreadyLoadedSlot,
-                                                outline=data.fillColor_InterlockSlot,
-                                                width=10,
-                                            )
-                                        else:
-                                            self.canvas_place_rounded_rectangle(
-                                                mod["x"],
-                                                mod["y"],
-                                                mod["w"],
-                                                mod["h"],
-                                                fill=data.fillColor_AlreadyLoadedSlot,
-                                            )
-                                        self.clicked_module = r["part"]
-                    if len(self.this_DU_relations_MODULE) == len(
-                        data.allDUs[self.displayedDUtype]
-                    ):
-                        self.canvas.create_text(
+                """
+                # self.this_DU_fully_loaded = False
+                for r in self.partstree:
+                    if str(r["part_parent"]["part_id"]) == str(parentDU_partID):
+                        if str(r["part"]["kind_of_part"]["kind_of_part_id"]) == str(
+                            data.KoPID_from_partKoPName["Module"]
+                        ):
+                            self.this_DU_relations_MODULE.append(r)
+                            # make the corresponding slot blue if already in use, white if not used
+                            for mod in data.allDUs[self.displayedDUtype]:
+                                if str(mod["slot"]) == str(r["position"]):
+                                    if str(mod["slot"]) in self.interlockSlots:
+                                        self.canvas_place_rounded_rectangle(
+                                            mod["x"],
+                                            mod["y"],
+                                            mod["w"],
+                                            mod["h"],
+                                            fill=data.fillColor_AlreadyLoadedSlot,
+                                            outline=data.fillColor_InterlockSlot,
+                                            width=10,
+                                        )
+                                    else:
+                                        self.canvas_place_rounded_rectangle(
+                                            mod["x"],
+                                            mod["y"],
+                                            mod["w"],
+                                            mod["h"],
+                                            fill=data.fillColor_AlreadyLoadedSlot,
+                                        )
+                                    self.clicked_module = r["part"]
+                if len(self.this_DU_relations_MODULE) == len(
+                    data.allDUs[self.displayedDUtype]
+                ):
+                    self.canvas.create_text(
+                        380,
+                        475,
+                        text="Fully loaded DU",
+                        anchor="nw",
+                        fill=data.fillColor_SU_Text,
+                    )
+                if detector != []:
+                    # this DU was already placed somewhere in the detector!!
+                    for r in detector:
+                        self.duAlreadyPlacedText = self.canvas.create_text(
                             380,
-                            475,
-                            text="Fully loaded DU",
+                            525,
+                            text=f"Already placed at:\n{r['position']}",
                             anchor="nw",
                             fill=data.fillColor_SU_Text,
                         )
-                    if detector != []:
-                        # this DU was already placed somewhere in the detector!!
-                        for r in detector:
-                            self.duAlreadyPlacedText = self.canvas.create_text(
-                                380,
-                                525,
-                                text=f"Already placed at:\n{r['position']}",
-                                anchor="nw",
-                                fill=data.fillColor_SU_Text,
-                            )
-                    break
+                break
         else:
             info_text = "Warning: Detector Unit type could not be retrieved from DU SN."
             print(f">>> {info_text}")
@@ -4782,14 +4823,16 @@ class App(customtkinter.CTk):
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
             requests.exceptions.RequestException,
+            ValueError,
+            RuntimeError,
         ) as e:
-            ft_par = []
-            self.last_responseText = str(e)
-        except ValueError as e:
-            ft_par = []
+            ft_par, self.last_responseText = [], str(e)
 
-            self.last_responseText = str(e)
-
+        if not self._report_api_status(expected_prefix="200"):
+            self._show_error("FT relations could not be loaded from ProdDB API.")
+            self.this_FT_relations_SLOT = []
+            return
+        """
         if self.last_responseText[:3] != "200":
             self.api_status = 0
             self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -4802,17 +4845,17 @@ class App(customtkinter.CTk):
         else:
             self.api_status = 1
             self.progressbar.configure(progress_color=data.progress_color_OK)
-
-            if ft_par != []:
-                # this FT is already connected to some slot!!
-                for r in ft_par:
-                    if debug:
-                        print(r)
-                    info_text = f"Info: This FT is already connected to a slot: {r['part_parent']['serial_number']}."
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                    self.this_FT_relations_SLOT.append(r)
-                    self.button_delete_connected_ft.configure(state="normal")
+        """
+        if ft_par != []:
+            # this FT is already connected to some slot!!
+            for r in ft_par:
+                if debug:
+                    print(r)
+                info_text = f"Info: This FT is already connected to a slot: {r['part_parent']['serial_number']}."
+                print(f">>> {info_text}")
+                self.label_info.configure(text=info_text)
+                self.this_FT_relations_SLOT.append(r)
+                self.button_delete_connected_ft.configure(state="normal")
 
     def fetch_loaded_PEB(self, childSNIn, parentSNIn, debug=False):
         PEB_SN = childSNIn
@@ -4840,13 +4883,18 @@ class App(customtkinter.CTk):
                     requests.exceptions.ConnectionError,
                     requests.exceptions.Timeout,
                     requests.exceptions.RequestException,
+                    ValueError,
+                    RuntimeError,
                 ) as e:
                     detector = []
                     self.last_responseText = str(e)
-                except ValueError as e:
-                    detector = []
-                    self.last_responseText = str(e)
 
+                if not self._report_api_status(expected_prefix="200"):
+                    self._show_error(
+                        "PEB relations could not be loaded from ProdDB API."
+                    )
+                    break
+                """
                 if self.last_responseText[:3] != "200":
                     self.api_status = 0
                     self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -4859,14 +4907,14 @@ class App(customtkinter.CTk):
                 else:
                     self.api_status = 1
                     self.progressbar.configure(progress_color=data.progress_color_OK)
-
-                    if detector != []:
-                        # this PEB was already placed somewhere in the detector!!
-                        for r in detector:
-                            info_text = f"Info: This PEB is already mounted to the parent detector, at {r['position']}."
-                            print(f">>> {info_text}")
-                            self.label_info.configure(text=info_text)
-                    break
+                """
+                if detector != []:
+                    # this PEB was already placed somewhere in the detector!!
+                    for r in detector:
+                        info_text = f"Info: This PEB is already mounted to the parent detector, at {r['position']}."
+                        print(f">>> {info_text}")
+                        self.label_info.configure(text=info_text)
+                break
         else:
             info_text = "Warning: PEB type could not be retrieved from PEB SN."
             print(f">>> {info_text}")
@@ -4883,13 +4931,16 @@ class App(customtkinter.CTk):
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
             requests.exceptions.RequestException,
+            ValueError,
+            RuntimeError,
         ) as e:
             self.possible_ft = []
             self.last_responseText = str(e)
-        except ValueError as e:
-            self.possible_ft = []
-            self.last_responseText = str(e)
 
+        if not self._report_api_status(expected_prefix="200"):
+            self._show_error("Slots / FT could not be loaded from ProdDB API.")
+            return
+        """
         if self.last_responseText[:3] != "200":
             self.api_status = 0
             self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -4901,59 +4952,55 @@ class App(customtkinter.CTk):
         else:
             self.api_status = 1
             self.progressbar.configure(progress_color=data.progress_color_OK)
+        """
+        if self.ft_filter != "":
+            gen = self.ft_filter.split("+")[0].split("/")  # multiple generations
+            cat = self.ft_filter[-2:]  # the last two chars make the category
 
-            if self.ft_filter != "":
-                gen = self.ft_filter.split("+")[0].split("/")  # multiple generations
-                cat = self.ft_filter[-2:]  # the last two chars make the category
+            self.possible_ft = [
+                pft
+                for pft in self.possible_ft
+                if any(gen_ in pft["serial_number"] for gen_ in gen)
+                and int(pft["serial_number"][9:11]) == int(cat)
+            ]
 
-                self.possible_ft = [
-                    pft
-                    for pft in self.possible_ft
-                    if any(gen_ in pft["serial_number"] for gen_ in gen)
-                    and int(pft["serial_number"][9:11]) == int(cat)
-                ]
-
-            # HY_LV child SN filter input
-            self.childFT_SN_filter = self.entry_childFT_SN_filter.get()
-            if self.childFT_SN_filter != "":
-                self.possible_ft = [
-                    pft
-                    for pft in self.possible_ft
-                    if self.childFT_SN_filter in str(pft["serial_number"])
-                ]
-            # do the most expensive part last (when easy filters on existing data have already been applied)
-            # expensive meaning need to make calls to the API for each part in the list that survived the previous cuts
-            if self.ft_conn != None and self.ft_conn != "All FTs":
-                self.possible_ft = [
-                    pp
-                    for pp in self.possible_ft
-                    if (len(util.get_parents(pp["part_id"], ofKind="Slot")[0])) == 0
-                ]
-            self.possible_ft_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-                self.possible_ft
-            )
-            self.possible_ft_SNs = [
-                entry[0] for entry in self.possible_ft_SNs_and_partIDs
+        # HY_LV child SN filter input
+        self.childFT_SN_filter = self.entry_childFT_SN_filter.get()
+        if self.childFT_SN_filter != "":
+            self.possible_ft = [
+                pft
+                for pft in self.possible_ft
+                if self.childFT_SN_filter in str(pft["serial_number"])
             ]
-            self.possible_ft_SNs_chunked = [
-                self.possible_ft_SNs[i : i + self.n_items_to_show_in_cbx]
-                for i in range(
-                    0, len(self.possible_ft_SNs), self.n_items_to_show_in_cbx
-                )
+        # do the most expensive part last (when easy filters on existing data have already been applied)
+        # expensive meaning need to make calls to the API for each part in the list that survived the previous cuts
+        if self.ft_conn != None and self.ft_conn != "All FTs":
+            self.possible_ft = [
+                pp
+                for pp in self.possible_ft
+                if (len(util.get_parents(pp["part_id"], ofKind="Slot")[0])) == 0
             ]
-            self.possible_ft_partIDs = [
-                entry[1] for entry in self.possible_ft_SNs_and_partIDs
-            ]
-            self.cbx_ft_n_pages = len(self.possible_ft_SNs_chunked)
-            self.cbx_ft_shown_page = min(1, self.cbx_ft_n_pages)
-            self.label_combobox_ft_paginationFrame.configure(
-                text=f"page {self.cbx_ft_shown_page}/{self.cbx_ft_n_pages}"
-            )
-            if len(self.possible_ft) > 0:
-                self.combobox_ft.configure(values=self.possible_ft_SNs_chunked[0])
-            else:
-                self.combobox_ft.configure(values=[])
-                self.combobox_ft.set("- Select -")
+        self.possible_ft_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
+            self.possible_ft
+        )
+        self.possible_ft_SNs = [entry[0] for entry in self.possible_ft_SNs_and_partIDs]
+        self.possible_ft_SNs_chunked = [
+            self.possible_ft_SNs[i : i + self.n_items_to_show_in_cbx]
+            for i in range(0, len(self.possible_ft_SNs), self.n_items_to_show_in_cbx)
+        ]
+        self.possible_ft_partIDs = [
+            entry[1] for entry in self.possible_ft_SNs_and_partIDs
+        ]
+        self.cbx_ft_n_pages = len(self.possible_ft_SNs_chunked)
+        self.cbx_ft_shown_page = min(1, self.cbx_ft_n_pages)
+        self.label_combobox_ft_paginationFrame.configure(
+            text=f"page {self.cbx_ft_shown_page}/{self.cbx_ft_n_pages}"
+        )
+        if len(self.possible_ft) > 0:
+            self.combobox_ft.configure(values=self.possible_ft_SNs_chunked[0])
+        else:
+            self.combobox_ft.configure(values=[])
+            self.combobox_ft.set("- Select -")
 
     def fetch_MA_p_c(self, update="all", withMessage=" "):
         # this happens when any filter is changed and at the beginning
@@ -4993,6 +5040,8 @@ class App(customtkinter.CTk):
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
             requests.exceptions.RequestException,
+            RuntimeError,
+            ValueError,
         ) as e:
             if update == "all" or update == "Module":
                 self.possible_MA_mod_par = []
@@ -5006,12 +5055,17 @@ class App(customtkinter.CTk):
                 self.possible_MF = []
                 self.combobox_MA_MF_chi.set("- Select -")
                 self.this_MF_relations_MOD = []
-            if update == "all" or update == "HY_HV" or update == "HY_LV":
+            if update == "all" or update == "HY_HV":
                 self.possible_HY_HV = []
+                self.combobox_MA_HY_HV_chi.set("- Select -")
+                self.this_HY_HV_relations_MOD = []
             if update == "all" or update == "HY_LV":
                 self.possible_HY_LV = []
+                self.combobox_MA_HY_LV_chi.set("- Select -")
+                self.this_HY_LV_relations_MOD = []
             self.last_responseText = str(e)
-        except ValueError as e:
+        """
+        except (ValueError, RuntimeError) as e:
             if update == "all" or update == "Module":
                 self.possible_MA_mod_par = []
                 self.combobox_MA_mod_par.set("- Select -")
@@ -5033,7 +5087,11 @@ class App(customtkinter.CTk):
                 self.combobox_MA_HY_LV_chi.set("- Select -")
                 self.this_HY_LV_relations_MOD = []
             self.last_responseText = str(e)
-
+        """
+        if not self._report_api_status(expected_prefix="200"):
+            self._show_error("Parents / Children could not be loaded from ProdDB API.")
+            return
+        """
         if self.last_responseText[:3] != "200":
             self.api_status = 0
             self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -5045,320 +5103,288 @@ class App(customtkinter.CTk):
         else:
             self.api_status = 1
             self.progressbar.configure(progress_color=data.progress_color_OK)
+        """
+        if update == "all" or update == "Module":
+            no_filters_except_conn = True
+            if (
+                self.MA_mod_par_manu != None
+                and self.MA_mod_par_manu != "All manufacturers"
+            ):
+                no_filters_except_conn = False
+                self.possible_MA_mod_par = [
+                    pp
+                    for pp in self.possible_MA_mod_par
+                    if self.MA_mod_par_manu
+                    == str(pp["manufacturer"]["manufacturer_name"])
+                ]
 
-            if update == "all" or update == "Module":
-                no_filters_except_conn = True
-                if (
-                    self.MA_mod_par_manu != None
-                    and self.MA_mod_par_manu != "All manufacturers"
-                ):
-                    no_filters_except_conn = False
-                    self.possible_MA_mod_par = [
-                        pp
-                        for pp in self.possible_MA_mod_par
-                        if self.MA_mod_par_manu
-                        == str(pp["manufacturer"]["manufacturer_name"])
-                    ]
+            if self.MA_mod_par_loc != None and self.MA_mod_par_loc != "All locations":
+                no_filters_except_conn = False
+                self.possible_MA_mod_par = [
+                    pp
+                    for pp in self.possible_MA_mod_par
+                    if self.MA_mod_par_loc == str(pp["location"]["location_name"])
+                ]
 
-                if (
-                    self.MA_mod_par_loc != None
-                    and self.MA_mod_par_loc != "All locations"
-                ):
-                    no_filters_except_conn = False
-                    self.possible_MA_mod_par = [
-                        pp
-                        for pp in self.possible_MA_mod_par
-                        if self.MA_mod_par_loc == str(pp["location"]["location_name"])
-                    ]
+            self.par_mod_SN_filter = self.entry_module_parent_SN_filter.get()
+            if self.par_mod_SN_filter != "":
+                no_filters_except_conn = False
+                self.possible_MA_mod_par = [
+                    pp
+                    for pp in self.possible_MA_mod_par
+                    if self.par_mod_SN_filter in str(pp["serial_number"])
+                ]
 
-                self.par_mod_SN_filter = self.entry_module_parent_SN_filter.get()
-                if self.par_mod_SN_filter != "":
-                    no_filters_except_conn = False
-                    self.possible_MA_mod_par = [
-                        pp
-                        for pp in self.possible_MA_mod_par
-                        if self.par_mod_SN_filter in str(pp["serial_number"])
-                    ]
-
-                if self.MA_mod_par_conn != None and self.MA_mod_par_conn != "No filter":
-                    if no_filters_except_conn == True:
-                        info_text = wrapped_text.fill(
-                            f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
-                        )
-                        print(f">>> {info_text}")
-                        self.label_info.configure(text=info_text)
-                    self.possible_MA_mod_par = [
-                        pp
-                        for pp in self.possible_MA_mod_par
-                        if (
-                            (
-                                len(
-                                    util.get_children(
-                                        pp["part_id"], ofKind="Module Flex"
-                                    )[0]
-                                )
-                            )
-                            == 0
-                        )
-                        or (
-                            (len(util.get_children(pp["part_id"], ofKind="Hybrid")[0]))
-                            < 2
-                        )
-                    ]
-
-            if update == "all" or update == "Module Flex":
-                no_filters_except_conn = True
-                if (
-                    self.module_flex_child_loc != None
-                    and self.module_flex_child_loc != "All locations"
-                ):
-                    no_filters_except_conn = False
-                    self.possible_MF = [
-                        pp
-                        for pp in self.possible_MF
-                        if self.module_flex_child_loc
-                        == str(pp["location"]["location_name"])
-                    ]
-
-                # MF child SN filter input
-                self.child0_SN_filter = self.entry_child0_SN_filter.get()
-                if self.child0_SN_filter != "":
-                    no_filters_except_conn = False
-                    self.possible_MF = [
-                        pc
-                        for pc in self.possible_MF
-                        if self.child0_SN_filter in str(pc["serial_number"])
-                    ]
-
-                if self.MF_child_conn != None and self.MF_child_conn != "All children":
-                    if no_filters_except_conn == True:
-                        info_text = wrapped_text.fill(
-                            f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
-                        )
-                        print(f">>> {info_text}")
-                        self.label_info.configure(text=info_text)
-                    self.possible_MF = [
-                        pp
-                        for pp in self.possible_MF
-                        if (len(util.get_parents(pp["part_id"], ofKind="Module")[0]))
+            if self.MA_mod_par_conn != None and self.MA_mod_par_conn != "No filter":
+                if no_filters_except_conn == True:
+                    info_text = wrapped_text.fill(
+                        f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
+                    )
+                    print(f">>> {info_text}")
+                    self.label_info.configure(text=info_text)
+                self.possible_MA_mod_par = [
+                    pp
+                    for pp in self.possible_MA_mod_par
+                    if (
+                        (len(util.get_children(pp["part_id"], ofKind="Module Flex")[0]))
                         == 0
-                    ]
+                    )
+                    or ((len(util.get_children(pp["part_id"], ofKind="Hybrid")[0])) < 2)
+                ]
 
-            if update == "all" or update == "HY_HV":
-                no_filters_except_conn = True
-                if (
-                    self.HY_HV_child_loc != None
-                    and self.HY_HV_child_loc != "All locations"
-                ):
-                    no_filters_except_conn = False
-                    self.possible_HY_HV = [
-                        pp
-                        for pp in self.possible_HY_HV
-                        if self.HY_HV_child_loc == str(pp["location"]["location_name"])
-                    ]
+        if update == "all" or update == "Module Flex":
+            no_filters_except_conn = True
+            if (
+                self.module_flex_child_loc != None
+                and self.module_flex_child_loc != "All locations"
+            ):
+                no_filters_except_conn = False
+                self.possible_MF = [
+                    pp
+                    for pp in self.possible_MF
+                    if self.module_flex_child_loc
+                    == str(pp["location"]["location_name"])
+                ]
 
-                # HY_HV child SN filter input
-                self.child1_SN_filter = self.entry_child1_SN_filter.get()
-                if self.child1_SN_filter != "":
-                    no_filters_except_conn = False
-                    self.possible_HY_HV = [
-                        pc
-                        for pc in self.possible_HY_HV
-                        if self.child1_SN_filter in str(pc["serial_number"])
-                    ]
+            # MF child SN filter input
+            self.child0_SN_filter = self.entry_child0_SN_filter.get()
+            if self.child0_SN_filter != "":
+                no_filters_except_conn = False
+                self.possible_MF = [
+                    pc
+                    for pc in self.possible_MF
+                    if self.child0_SN_filter in str(pc["serial_number"])
+                ]
 
-                if (
-                    self.HY_HV_child_cluster != None
-                    and self.HY_HV_child_cluster != "All clusters"
-                ):
-                    no_filters_except_conn = False
-                    # ToDo: call the function that groups Hybrids by their child sensor VBD score into different clusters
-                    self.possible_HY_HV = [pp for pp in self.possible_HY_HV if True]
+            if self.MF_child_conn != None and self.MF_child_conn != "All children":
+                if no_filters_except_conn == True:
+                    info_text = wrapped_text.fill(
+                        f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
+                    )
+                    print(f">>> {info_text}")
+                    self.label_info.configure(text=info_text)
+                self.possible_MF = [
+                    pp
+                    for pp in self.possible_MF
+                    if (len(util.get_parents(pp["part_id"], ofKind="Module")[0])) == 0
+                ]
 
-                if (
-                    self.HY_HV_child_conn != None
-                    and self.HY_HV_child_conn != "All children"
-                ):
-                    if no_filters_except_conn == True:
-                        info_text = wrapped_text.fill(
-                            f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
-                        )
-                        print(f">>> {info_text}")
-                        self.label_info.configure(text=info_text)
-                    self.possible_HY_HV = [
-                        pp
-                        for pp in self.possible_HY_HV
-                        if (len(util.get_parents(pp["part_id"], ofKind="Module")[0]))
-                        == 0
-                    ]
+        if update == "all" or update == "HY_HV":
+            no_filters_except_conn = True
+            if self.HY_HV_child_loc != None and self.HY_HV_child_loc != "All locations":
+                no_filters_except_conn = False
+                self.possible_HY_HV = [
+                    pp
+                    for pp in self.possible_HY_HV
+                    if self.HY_HV_child_loc == str(pp["location"]["location_name"])
+                ]
 
-            if update == "all" or update == "HY_LV":
-                no_filters_except_conn = True
-                if (
-                    self.HY_LV_child_loc != None
-                    and self.HY_LV_child_loc != "All locations"
-                ):
-                    no_filters_except_conn = False
-                    self.possible_HY_LV = [
-                        pp
-                        for pp in self.possible_HY_LV
-                        if self.HY_LV_child_loc == str(pp["location"]["location_name"])
-                    ]
+            # HY_HV child SN filter input
+            self.child1_SN_filter = self.entry_child1_SN_filter.get()
+            if self.child1_SN_filter != "":
+                no_filters_except_conn = False
+                self.possible_HY_HV = [
+                    pc
+                    for pc in self.possible_HY_HV
+                    if self.child1_SN_filter in str(pc["serial_number"])
+                ]
 
-                # HY_LV child SN filter input
-                self.child2_SN_filter = self.entry_child2_SN_filter.get()
-                if self.child2_SN_filter != "":
-                    no_filters_except_conn = False
-                    self.possible_HY_LV = [
-                        pc
-                        for pc in self.possible_HY_LV
-                        if self.child2_SN_filter in str(pc["serial_number"])
-                    ]
+            if (
+                self.HY_HV_child_cluster != None
+                and self.HY_HV_child_cluster != "All clusters"
+            ):
+                no_filters_except_conn = False
+                # ToDo: call the function that groups Hybrids by their child sensor VBD score into different clusters
+                self.possible_HY_HV = [pp for pp in self.possible_HY_HV if True]
 
-                if (
-                    self.HY_LV_child_cluster != None
-                    and self.HY_LV_child_cluster != "All clusters"
-                ):
-                    no_filters_except_conn = False
-                    # ToDo: call the function that groups Hybrids by their child sensor VBD score into different clusters
-                    self.possible_HY_LV = [pp for pp in self.possible_HY_LV if True]
+            if (
+                self.HY_HV_child_conn != None
+                and self.HY_HV_child_conn != "All children"
+            ):
+                if no_filters_except_conn == True:
+                    info_text = wrapped_text.fill(
+                        f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
+                    )
+                    print(f">>> {info_text}")
+                    self.label_info.configure(text=info_text)
+                self.possible_HY_HV = [
+                    pp
+                    for pp in self.possible_HY_HV
+                    if (len(util.get_parents(pp["part_id"], ofKind="Module")[0])) == 0
+                ]
 
-                if (
-                    self.HY_LV_child_conn != None
-                    and self.HY_LV_child_conn != "All children"
-                ):
-                    if no_filters_except_conn == True:
-                        info_text = wrapped_text.fill(
-                            f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
-                        )
-                        print(f">>> {info_text}")
-                        self.label_info.configure(text=info_text)
-                    self.possible_HY_LV = [
-                        pp
-                        for pp in self.possible_HY_LV
-                        if (len(util.get_parents(pp["part_id"], ofKind="Module")[0]))
-                        == 0
-                    ]
+        if update == "all" or update == "HY_LV":
+            no_filters_except_conn = True
+            if self.HY_LV_child_loc != None and self.HY_LV_child_loc != "All locations":
+                no_filters_except_conn = False
+                self.possible_HY_LV = [
+                    pp
+                    for pp in self.possible_HY_LV
+                    if self.HY_LV_child_loc == str(pp["location"]["location_name"])
+                ]
 
-            # begin updating the paginated SN comboboxes shown to user
-            # Module
-            self.possible_MA_mod_par_SNs_and_partIDs = (
-                util.get_relevant_SNs_and_partIDs(self.possible_MA_mod_par)
+            # HY_LV child SN filter input
+            self.child2_SN_filter = self.entry_child2_SN_filter.get()
+            if self.child2_SN_filter != "":
+                no_filters_except_conn = False
+                self.possible_HY_LV = [
+                    pc
+                    for pc in self.possible_HY_LV
+                    if self.child2_SN_filter in str(pc["serial_number"])
+                ]
+
+            if (
+                self.HY_LV_child_cluster != None
+                and self.HY_LV_child_cluster != "All clusters"
+            ):
+                no_filters_except_conn = False
+                # ToDo: call the function that groups Hybrids by their child sensor VBD score into different clusters
+                self.possible_HY_LV = [pp for pp in self.possible_HY_LV if True]
+
+            if (
+                self.HY_LV_child_conn != None
+                and self.HY_LV_child_conn != "All children"
+            ):
+                if no_filters_except_conn == True:
+                    info_text = wrapped_text.fill(
+                        f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
+                    )
+                    print(f">>> {info_text}")
+                    self.label_info.configure(text=info_text)
+                self.possible_HY_LV = [
+                    pp
+                    for pp in self.possible_HY_LV
+                    if (len(util.get_parents(pp["part_id"], ofKind="Module")[0])) == 0
+                ]
+
+        # begin updating the paginated SN comboboxes shown to user
+        # Module
+        self.possible_MA_mod_par_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
+            self.possible_MA_mod_par
+        )
+        self.possible_MA_mod_par_SNs = [
+            entry[0] for entry in self.possible_MA_mod_par_SNs_and_partIDs
+        ]
+        self.possible_MA_mod_par_SNs_chunked = [
+            self.possible_MA_mod_par_SNs[i : i + self.n_items_to_show_in_cbx]
+            for i in range(
+                0, len(self.possible_MA_mod_par_SNs), self.n_items_to_show_in_cbx
             )
-            self.possible_MA_mod_par_SNs = [
-                entry[0] for entry in self.possible_MA_mod_par_SNs_and_partIDs
-            ]
-            self.possible_MA_mod_par_SNs_chunked = [
-                self.possible_MA_mod_par_SNs[i : i + self.n_items_to_show_in_cbx]
-                for i in range(
-                    0, len(self.possible_MA_mod_par_SNs), self.n_items_to_show_in_cbx
-                )
-            ]
-            self.possible_MA_mod_par_partIDs = [
-                entry[1] for entry in self.possible_MA_mod_par_SNs_and_partIDs
-            ]
-            self.cbx_MA_mod_par_n_pages = len(self.possible_MA_mod_par_SNs_chunked)
-            self.cbx_MA_mod_par_shown_page = min(1, self.cbx_MA_mod_par_n_pages)
-            self.label_combobox_MA_mod_par_paginationFrame.configure(
-                text=f"page {self.cbx_MA_mod_par_shown_page}/{self.cbx_MA_mod_par_n_pages}"
+        ]
+        self.possible_MA_mod_par_partIDs = [
+            entry[1] for entry in self.possible_MA_mod_par_SNs_and_partIDs
+        ]
+        self.cbx_MA_mod_par_n_pages = len(self.possible_MA_mod_par_SNs_chunked)
+        self.cbx_MA_mod_par_shown_page = min(1, self.cbx_MA_mod_par_n_pages)
+        self.label_combobox_MA_mod_par_paginationFrame.configure(
+            text=f"page {self.cbx_MA_mod_par_shown_page}/{self.cbx_MA_mod_par_n_pages}"
+        )
+        if self.cbx_MA_mod_par_n_pages > 0:
+            self.combobox_MA_mod_par.configure(
+                values=self.possible_MA_mod_par_SNs_chunked[0]
             )
-            if self.cbx_MA_mod_par_n_pages > 0:
-                self.combobox_MA_mod_par.configure(
-                    values=self.possible_MA_mod_par_SNs_chunked[0]
-                )
-            else:
-                self.combobox_MA_mod_par.configure(values=[])
-                self.combobox_MA_mod_par.set("- Select -")
+        else:
+            self.combobox_MA_mod_par.configure(values=[])
+            self.combobox_MA_mod_par.set("- Select -")
 
-            # Module Flex
-            self.possible_MF_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-                self.possible_MF
-            )
-            self.possible_MF_SNs = [
-                entry[0] for entry in self.possible_MF_SNs_and_partIDs
-            ]
-            self.possible_MF_SNs_chunked = [
-                self.possible_MF_SNs[i : i + self.n_items_to_show_in_cbx]
-                for i in range(
-                    0, len(self.possible_MF_SNs), self.n_items_to_show_in_cbx
-                )
-            ]
-            self.possible_MF_partIDs = [
-                entry[1] for entry in self.possible_MF_SNs_and_partIDs
-            ]
-            self.cbx_MF_n_pages = len(self.possible_MF_SNs_chunked)
-            self.cbx_MF_shown_page = min(1, self.cbx_MF_n_pages)
-            self.label_combobox_MA_MF_chi_paginationFrame.configure(
-                text=f"page {self.cbx_MF_shown_page}/{self.cbx_MF_n_pages}"
-            )
-            if self.cbx_MF_n_pages > 0:
-                self.combobox_MA_MF_chi.configure(
-                    values=self.possible_MF_SNs_chunked[0]
-                )
-            else:
-                self.combobox_MA_MF_chi.configure(values=[])
-                self.combobox_MA_MF_chi.set("- Select -")
+        # Module Flex
+        self.possible_MF_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
+            self.possible_MF
+        )
+        self.possible_MF_SNs = [entry[0] for entry in self.possible_MF_SNs_and_partIDs]
+        self.possible_MF_SNs_chunked = [
+            self.possible_MF_SNs[i : i + self.n_items_to_show_in_cbx]
+            for i in range(0, len(self.possible_MF_SNs), self.n_items_to_show_in_cbx)
+        ]
+        self.possible_MF_partIDs = [
+            entry[1] for entry in self.possible_MF_SNs_and_partIDs
+        ]
+        self.cbx_MF_n_pages = len(self.possible_MF_SNs_chunked)
+        self.cbx_MF_shown_page = min(1, self.cbx_MF_n_pages)
+        self.label_combobox_MA_MF_chi_paginationFrame.configure(
+            text=f"page {self.cbx_MF_shown_page}/{self.cbx_MF_n_pages}"
+        )
+        if self.cbx_MF_n_pages > 0:
+            self.combobox_MA_MF_chi.configure(values=self.possible_MF_SNs_chunked[0])
+        else:
+            self.combobox_MA_MF_chi.configure(values=[])
+            self.combobox_MA_MF_chi.set("- Select -")
 
-            # Hybrid HV-side
-            self.possible_HY_HV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-                self.possible_HY_HV
+        # Hybrid HV-side
+        self.possible_HY_HV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
+            self.possible_HY_HV
+        )
+        self.possible_HY_HV_SNs = [
+            entry[0] for entry in self.possible_HY_HV_SNs_and_partIDs
+        ]
+        self.possible_HY_HV_SNs_chunked = [
+            self.possible_HY_HV_SNs[i : i + self.n_items_to_show_in_cbx]
+            for i in range(0, len(self.possible_HY_HV_SNs), self.n_items_to_show_in_cbx)
+        ]
+        self.possible_HY_HV_partIDs = [
+            entry[1] for entry in self.possible_HY_HV_SNs_and_partIDs
+        ]
+        self.cbx_HY_HV_n_pages = len(self.possible_HY_HV_SNs_chunked)
+        self.cbx_HY_HV_shown_page = min(1, self.cbx_HY_HV_n_pages)
+        self.label_combobox_HY_HV_paginationFrame.configure(
+            text=f"page {self.cbx_HY_HV_shown_page}/{self.cbx_HY_HV_n_pages}"
+        )
+        if self.cbx_HY_HV_n_pages > 0:
+            self.combobox_MA_HY_HV_chi.configure(
+                values=self.possible_HY_HV_SNs_chunked[0]
             )
-            self.possible_HY_HV_SNs = [
-                entry[0] for entry in self.possible_HY_HV_SNs_and_partIDs
-            ]
-            self.possible_HY_HV_SNs_chunked = [
-                self.possible_HY_HV_SNs[i : i + self.n_items_to_show_in_cbx]
-                for i in range(
-                    0, len(self.possible_HY_HV_SNs), self.n_items_to_show_in_cbx
-                )
-            ]
-            self.possible_HY_HV_partIDs = [
-                entry[1] for entry in self.possible_HY_HV_SNs_and_partIDs
-            ]
-            self.cbx_HY_HV_n_pages = len(self.possible_HY_HV_SNs_chunked)
-            self.cbx_HY_HV_shown_page = min(1, self.cbx_HY_HV_n_pages)
-            self.label_combobox_HY_HV_paginationFrame.configure(
-                text=f"page {self.cbx_HY_HV_shown_page}/{self.cbx_HY_HV_n_pages}"
-            )
-            if self.cbx_HY_HV_n_pages > 0:
-                self.combobox_MA_HY_HV_chi.configure(
-                    values=self.possible_HY_HV_SNs_chunked[0]
-                )
-            else:
-                self.combobox_MA_HY_HV_chi.configure(values=[])
-                self.combobox_MA_HY_HV_chi.set("- Select -")
+        else:
+            self.combobox_MA_HY_HV_chi.configure(values=[])
+            self.combobox_MA_HY_HV_chi.set("- Select -")
 
-            # Hybrid LV-side
-            self.possible_HY_LV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-                self.possible_HY_LV
+        # Hybrid LV-side
+        self.possible_HY_LV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
+            self.possible_HY_LV
+        )
+        self.possible_HY_LV_SNs = [
+            entry[0] for entry in self.possible_HY_LV_SNs_and_partIDs
+        ]
+        self.possible_HY_LV_SNs_chunked = [
+            self.possible_HY_LV_SNs[i : i + self.n_items_to_show_in_cbx]
+            for i in range(0, len(self.possible_HY_LV_SNs), self.n_items_to_show_in_cbx)
+        ]
+        self.possible_HY_LV_partIDs = [
+            entry[1] for entry in self.possible_HY_LV_SNs_and_partIDs
+        ]
+        self.cbx_HY_LV_n_pages = len(self.possible_HY_LV_SNs_chunked)
+        self.cbx_HY_LV_shown_page = min(1, self.cbx_HY_LV_n_pages)
+        self.label_combobox_HY_LV_paginationFrame.configure(
+            text=f"page {self.cbx_HY_LV_shown_page}/{self.cbx_HY_LV_n_pages}"
+        )
+        if self.cbx_HY_LV_n_pages > 0:
+            self.combobox_MA_HY_LV_chi.configure(
+                values=self.possible_HY_LV_SNs_chunked[0]
             )
-            self.possible_HY_LV_SNs = [
-                entry[0] for entry in self.possible_HY_LV_SNs_and_partIDs
-            ]
-            self.possible_HY_LV_SNs_chunked = [
-                self.possible_HY_LV_SNs[i : i + self.n_items_to_show_in_cbx]
-                for i in range(
-                    0, len(self.possible_HY_LV_SNs), self.n_items_to_show_in_cbx
-                )
-            ]
-            self.possible_HY_LV_partIDs = [
-                entry[1] for entry in self.possible_HY_LV_SNs_and_partIDs
-            ]
-            self.cbx_HY_LV_n_pages = len(self.possible_HY_LV_SNs_chunked)
-            self.cbx_HY_LV_shown_page = min(1, self.cbx_HY_LV_n_pages)
-            self.label_combobox_HY_LV_paginationFrame.configure(
-                text=f"page {self.cbx_HY_LV_shown_page}/{self.cbx_HY_LV_n_pages}"
-            )
-            if self.cbx_HY_LV_n_pages > 0:
-                self.combobox_MA_HY_LV_chi.configure(
-                    values=self.possible_HY_LV_SNs_chunked[0]
-                )
-            else:
-                self.combobox_MA_HY_LV_chi.configure(values=[])
-                self.combobox_MA_HY_LV_chi.set("- Select -")
+        else:
+            self.combobox_MA_HY_LV_chi.configure(values=[])
+            self.combobox_MA_HY_LV_chi.set("- Select -")
 
     def fetch_MA_mod(self, SN, debug=False):
-        # this happens when a parent SN is selected
         partID = self.possible_MA_mod_par_partIDs[
             self.possible_MA_mod_par_SNs.index(SN)
         ]
@@ -5376,14 +5402,20 @@ class App(customtkinter.CTk):
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
             requests.exceptions.RequestException,
+            ValueError,
+            RuntimeError,
         ) as e:
-            par = []
-            self.last_responseText = str(e)
-        except ValueError as e:
-            par = []
+            par, self.last_responseText = [], str(e)
 
-            self.last_responseText = str(e)
-
+        if not self._report_api_status(expected_prefix="200"):
+            self._show_error("Module relations could not be loaded from ProdDB API.")
+            self.this_MOD_relations_MF = []
+            self.this_MOD_relations_HY_HV = []
+            self.this_MOD_relations_HY_LV = []
+            self.this_MOD_relations_HY_unknownPosition = []
+            self.this_MOD_relations_HY_invalidPosition = []
+            return
+        """
         if self.last_responseText[:3] != "200":
             self.api_status = 0
             self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -5400,64 +5432,62 @@ class App(customtkinter.CTk):
         else:
             self.api_status = 1
             self.progressbar.configure(progress_color=data.progress_color_OK)
-
-            if par != []:
-                # this Module is already connected to some children!!
-                info_text = f"Info: This Module is already connected to some children."
-                print(f">>> {info_text}")
+        """
+        if par != []:
+            info_text = f"Info: This Module is already connected to some children."
+            print(f">>> {info_text}")
+            self.label_info.configure(text=info_text)
+            for r in par:
+                if debug:
+                    print(r)
+                if str(data.KoPID_from_partKoPName["Module Flex"]) == str(
+                    r["part"]["kind_of_part"]["kind_of_part_id"]
+                ):
+                    self.this_MOD_relations_MF.append(r)
+                    add_info_text = (
+                        f"\n\nExisting MF relation: {r['part']['serial_number']}."
+                    )
+                    print(f"{add_info_text}")
+                    info_text += add_info_text
+                elif (
+                    str(data.KoPID_from_partKoPName["Hybrid"])
+                    == str(r["part"]["kind_of_part"]["kind_of_part_id"])
+                ) and (str(r["position"]) == "HV"):
+                    self.this_MOD_relations_HY_HV.append(r)
+                    add_info_text = f"\n\nExisting HY HV-side relation: {r['part']['serial_number']}."
+                    print(f"{add_info_text}")
+                    info_text += add_info_text
+                elif (
+                    str(data.KoPID_from_partKoPName["Hybrid"])
+                    == str(r["part"]["kind_of_part"]["kind_of_part_id"])
+                ) and (str(r["position"]) == "LV"):
+                    self.this_MOD_relations_HY_LV.append(r)
+                    add_info_text = f"\n\nExisting HY LV-side relation: {r['part']['serial_number']}."
+                    print(f"{add_info_text}")
+                    info_text += add_info_text
+                elif (
+                    str(data.KoPID_from_partKoPName["Hybrid"])
+                    == str(r["part"]["kind_of_part"]["kind_of_part_id"])
+                ) and (str(r["position"]) == ""):
+                    self.this_MOD_relations_HY_unknownPosition.append(r)
+                    add_info_text = f"\n\nExisting HY relation, at unknown position within module: {r['part']['serial_number']}.\nPlease consider adding the child again with this tool to record a valid position."
+                    print(f"{add_info_text}")
+                    info_text += add_info_text
+                elif (
+                    str(data.KoPID_from_partKoPName["Hybrid"])
+                    == str(r["part"]["kind_of_part"]["kind_of_part_id"])
+                ) and (str(r["position"]) not in ["HV", "LV"]):
+                    self.this_MOD_relations_HY_invalidPosition.append(r)
+                    add_info_text = f"\n\nExisting HY relation, at invalid position {str(r["position"])} within module: {r['part']['serial_number']}.\nPlease consider adding the child again with this tool to record a valid position (DB convention: HV or LV)."
+                    print(f"{add_info_text}")
+                    info_text += add_info_text
+                else:
+                    add_info_text = f"\n\nExisting unexpected relation to child: {r['part']['serial_number']}.\nPlease inspect the part and investigate why this is neither a module flex nor hybrid!"
+                    print(f"{add_info_text}")
+                    info_text += add_info_text
                 self.label_info.configure(text=info_text)
-                for r in par:
-                    if debug:
-                        print(r)
-                    if str(data.KoPID_from_partKoPName["Module Flex"]) == str(
-                        r["part"]["kind_of_part"]["kind_of_part_id"]
-                    ):
-                        self.this_MOD_relations_MF.append(r)
-                        add_info_text = (
-                            f"\n\nExisting MF relation: {r['part']['serial_number']}."
-                        )
-                        print(f"{add_info_text}")
-                        info_text += add_info_text
-                    elif (
-                        str(data.KoPID_from_partKoPName["Hybrid"])
-                        == str(r["part"]["kind_of_part"]["kind_of_part_id"])
-                    ) and (str(r["position"]) == "HV"):
-                        self.this_MOD_relations_HY_HV.append(r)
-                        add_info_text = f"\n\nExisting HY HV-side relation: {r['part']['serial_number']}."
-                        print(f"{add_info_text}")
-                        info_text += add_info_text
-                    elif (
-                        str(data.KoPID_from_partKoPName["Hybrid"])
-                        == str(r["part"]["kind_of_part"]["kind_of_part_id"])
-                    ) and (str(r["position"]) == "LV"):
-                        self.this_MOD_relations_HY_LV.append(r)
-                        add_info_text = f"\n\nExisting HY LV-side relation: {r['part']['serial_number']}."
-                        print(f"{add_info_text}")
-                        info_text += add_info_text
-                    elif (
-                        str(data.KoPID_from_partKoPName["Hybrid"])
-                        == str(r["part"]["kind_of_part"]["kind_of_part_id"])
-                    ) and (str(r["position"]) == ""):
-                        self.this_MOD_relations_HY_unknownPosition.append(r)
-                        add_info_text = f"\n\nExisting HY relation, at unknown position within module: {r['part']['serial_number']}.\nPlease consider adding the child again with this tool to record a valid position."
-                        print(f"{add_info_text}")
-                        info_text += add_info_text
-                    elif (
-                        str(data.KoPID_from_partKoPName["Hybrid"])
-                        == str(r["part"]["kind_of_part"]["kind_of_part_id"])
-                    ) and (str(r["position"]) not in ["HV", "LV"]):
-                        self.this_MOD_relations_HY_invalidPosition.append(r)
-                        add_info_text = f"\n\nExisting HY relation, at invalid position {str(r["position"])} within module: {r['part']['serial_number']}.\nPlease consider adding the child again with this tool to record a valid position (DB convention: HV or LV)."
-                        print(f"{add_info_text}")
-                        info_text += add_info_text
-                    else:
-                        add_info_text = f"\n\nExisting unexpected relation to child: {r['part']['serial_number']}.\nPlease inspect the part and investigate why this is neither a module flex nor hybrid!"
-                        print(f"{add_info_text}")
-                        info_text += add_info_text
-                    self.label_info.configure(text=info_text)
 
     def fetch_MA_MF(self, SN, debug=False):
-        # this happens when a child SN is selected
         partID = self.possible_MF_partIDs[self.possible_MF_SNs.index(SN)]
         if debug:
             print(SN)
@@ -5472,40 +5502,27 @@ class App(customtkinter.CTk):
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
             requests.exceptions.RequestException,
+            ValueError,
+            RuntimeError,
         ) as e:
-            par = []
-            self.last_responseText = str(e)
-        except ValueError as e:
-            par = []
+            par, self.last_responseText = [], str(e)
 
-            self.last_responseText = str(e)
-
-        if self.last_responseText[:3] != "200":
-            self.api_status = 0
-            self.progressbar.configure(progress_color=data.progress_color_ERROR)
-            info_text = wrapped_text.fill(
-                f"Error: MF relations could not be loaded from ProdDB API.\n{self.last_responseText}"
-            )
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
+        if not self._report_api_status(expected_prefix="200"):
+            self._show_error("MF relations could not be loaded from ProdDB API.")
             self.this_MF_relations_MOD = []
-        else:
-            self.api_status = 1
-            self.progressbar.configure(progress_color=data.progress_color_OK)
+            return
 
-            if par != []:
-                # this MF is already connected to some module!!
-                for r in par:
-                    if debug:
-                        print(r)
-                    info_text = f"Info: This MF is already connected to a module: {r['part_parent']['serial_number']}."
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                    self.this_MF_relations_MOD.append(r)
-                    self.button_delete_child_MF.configure(state="normal")
+        if par != []:
+            for r in par:
+                if debug:
+                    print(r)
+                info_text = f"Info: This MF is already connected to a module: {r['part_parent']['serial_number']}."
+                print(f">>> {info_text}")
+                self.label_info.configure(text=info_text)
+                self.this_MF_relations_MOD.append(r)
+                self.button_delete_child_MF.configure(state="normal")
 
     def fetch_MA_HY_HV(self, SN, debug=False):
-        # this happens when a child SN is selected
         partID = self.possible_HY_HV_partIDs[self.possible_HY_HV_SNs.index(SN)]
         if debug:
             print(SN)
@@ -5520,40 +5537,29 @@ class App(customtkinter.CTk):
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
             requests.exceptions.RequestException,
+            ValueError,
+            RuntimeError,
         ) as e:
-            par = []
-            self.last_responseText = str(e)
-        except ValueError as e:
-            par = []
+            par, self.last_responseText = [], str(e)
 
-            self.last_responseText = str(e)
-
-        if self.last_responseText[:3] != "200":
-            self.api_status = 0
-            self.progressbar.configure(progress_color=data.progress_color_ERROR)
-            info_text = wrapped_text.fill(
-                f"Error: HY HV-side relations could not be loaded from ProdDB API.\n{self.last_responseText}"
+        if not self._report_api_status(expected_prefix="200"):
+            self._show_error(
+                "HY HV-side relations could not be loaded from ProdDB API."
             )
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
             self.this_HY_HV_relations_MOD = []
-        else:
-            self.api_status = 1
-            self.progressbar.configure(progress_color=data.progress_color_OK)
+            return
 
-            if par != []:
-                # this HY HV-side is already connected to some module!!
-                for r in par:
-                    if debug:
-                        print(r)
-                    info_text = f"Info: This HY HV-side is already connected to a module: {r['part_parent']['serial_number']}."
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                    self.this_HY_HV_relations_MOD.append(r)
-                    self.button_delete_child_HY_HV.configure(state="normal")
+        if par != []:
+            for r in par:
+                if debug:
+                    print(r)
+                info_text = f"Info: This HY HV-side is already connected to a module: {r['part_parent']['serial_number']}."
+                print(f">>> {info_text}")
+                self.label_info.configure(text=info_text)
+                self.this_HY_HV_relations_MOD.append(r)
+                self.button_delete_child_HY_HV.configure(state="normal")
 
     def fetch_MA_HY_LV(self, SN, debug=False):
-        # this happens when a child SN is selected
         partID = self.possible_HY_LV_partIDs[self.possible_HY_LV_SNs.index(SN)]
         if debug:
             print(SN)
@@ -5568,37 +5574,27 @@ class App(customtkinter.CTk):
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
             requests.exceptions.RequestException,
+            ValueError,
+            RuntimeError,
         ) as e:
-            par = []
-            self.last_responseText = str(e)
-        except ValueError as e:
-            par = []
+            par, self.last_responseText = [], str(e)
 
-            self.last_responseText = str(e)
-
-        if self.last_responseText[:3] != "200":
-            self.api_status = 0
-            self.progressbar.configure(progress_color=data.progress_color_ERROR)
-            info_text = wrapped_text.fill(
-                f"Error: HY LV-side relations could not be loaded from ProdDB API.\n{self.last_responseText}"
+        if not self._report_api_status(expected_prefix="200"):
+            self._show_error(
+                "HY LV-side relations could not be loaded from ProdDB API."
             )
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
             self.this_HY_LV_relations_MOD = []
-        else:
-            self.api_status = 1
-            self.progressbar.configure(progress_color=data.progress_color_OK)
+            return
 
-            if par != []:
-                # this HY LV-side is already connected to some module!!
-                for r in par:
-                    if debug:
-                        print(r)
-                    info_text = f"Info: This HY LV-side is already connected to a module: {r['part_parent']['serial_number']}."
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                    self.this_HY_LV_relations_MOD.append(r)
-                    self.button_delete_child_HY_LV.configure(state="normal")
+        if par != []:
+            for r in par:
+                if debug:
+                    print(r)
+                info_text = f"Info: This HY LV-side is already connected to a module: {r['part_parent']['serial_number']}."
+                print(f">>> {info_text}")
+                self.label_info.configure(text=info_text)
+                self.this_HY_LV_relations_MOD.append(r)
+                self.button_delete_child_HY_LV.configure(state="normal")
 
     def fetch_p_c(self, p, c):
         try:
@@ -5609,131 +5605,116 @@ class App(customtkinter.CTk):
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
             requests.exceptions.RequestException,
+            ValueError,
+            RuntimeError,
         ) as e:
             self.possible_parents = []
             self.possible_children = []
             self.last_responseText = str(e)
-        except ValueError as e:
-            self.possible_parents = []
-            self.possible_children = []
-            self.last_responseText = str(e)
 
-        if self.last_responseText[:3] != "200":
-            self.api_status = 0
-            self.progressbar.configure(progress_color=data.progress_color_ERROR)
-            info_text = wrapped_text.fill(
-                f"Error: Parents / Children could not be loaded from ProdDB API.\n{self.last_responseText}"
-            )
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
-        else:
-            self.api_status = 1
-            self.progressbar.configure(progress_color=data.progress_color_OK)
+        if not self._report_api_status(expected_prefix="200"):
+            self._show_error("Parents / Children could not be loaded from ProdDB API.")
+            return
 
-            if p == "Detector Unit" and c == "Module":
-                if self.par_type != None and self.par_type != "All DU types":
-                    self.possible_parents = [
-                        pp
-                        for pp in self.possible_parents
-                        if self.par_type in pp["serial_number"]
-                    ]
-                if self.child_manu != None and self.child_manu != "All manufacturers":
-                    self.possible_children = [
-                        pp
-                        for pp in self.possible_children
-                        if self.child_manu
-                        == str(pp["manufacturer"]["manufacturer_name"])
-                    ]
-
-            elif p == "Detector" and c == "Detector Unit":
-                if self.chi_type != None and self.chi_type != "All DU types":
-                    self.possible_children = [
-                        pc
-                        for pc in self.possible_children
-                        if self.chi_type in pc["serial_number"]
-                    ]
-
-            elif p == "Detector" and c == "PEB":
-                if self.chi_type != None and self.chi_type != "All PEB types":
-                    self.possible_children = [
-                        pc
-                        for pc in self.possible_children
-                        if self.chi_type in pc["serial_number"]
-                    ]
-
-            # child SN filter input
-            self.child_SN_filter = self.entry_child_SN_filter.get()
-            if self.child_SN_filter != "":
-                self.possible_children = [
-                    pc
-                    for pc in self.possible_children
-                    if self.child_SN_filter in str(pc["serial_number"])
+        if p == "Detector Unit" and c == "Module":
+            if self.par_type != None and self.par_type != "All DU types":
+                self.possible_parents = [
+                    pp
+                    for pp in self.possible_parents
+                    if self.par_type in pp["serial_number"]
                 ]
-
-            # do the most expensive part last (when easy filters on existing data have already been applied)
-            # expensive meaning need to make calls to the API for each part in the list that survived the previous cuts
-            # multiple KoP possible
-            if self.child_conn != None and self.child_conn != "All children":
+            if self.child_manu != None and self.child_manu != "All manufacturers":
                 self.possible_children = [
                     pp
                     for pp in self.possible_children
-                    if (len(util.get_parents(pp["part_id"])[0])) == 0
+                    if self.child_manu == str(pp["manufacturer"]["manufacturer_name"])
                 ]
 
-            self.possible_parents_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-                self.possible_parents
+        elif p == "Detector" and c == "Detector Unit":
+            if self.chi_type != None and self.chi_type != "All DU types":
+                self.possible_children = [
+                    pc
+                    for pc in self.possible_children
+                    if self.chi_type in pc["serial_number"]
+                ]
+
+        elif p == "Detector" and c == "PEB":
+            if self.chi_type != None and self.chi_type != "All PEB types":
+                self.possible_children = [
+                    pc
+                    for pc in self.possible_children
+                    if self.chi_type in pc["serial_number"]
+                ]
+
+        # child SN filter input
+        self.child_SN_filter = self.entry_child_SN_filter.get()
+        if self.child_SN_filter != "":
+            self.possible_children = [
+                pc
+                for pc in self.possible_children
+                if self.child_SN_filter in str(pc["serial_number"])
+            ]
+
+        # do the most expensive part last (when easy filters on existing data have already been applied)
+        # expensive meaning need to make calls to the API for each part in the list that survived the previous cuts
+        # multiple KoP possible
+        if self.child_conn != None and self.child_conn != "All children":
+            self.possible_children = [
+                pp
+                for pp in self.possible_children
+                if (len(util.get_parents(pp["part_id"])[0])) == 0
+            ]
+
+        self.possible_parents_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
+            self.possible_parents
+        )
+        self.possible_children_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
+            self.possible_children
+        )
+        self.possible_parents_SNs = [
+            entry[0] for entry in self.possible_parents_SNs_and_partIDs
+        ]
+        self.possible_parents_SNs_chunked = [
+            self.possible_parents_SNs[i : i + self.n_items_to_show_in_cbx]
+            for i in range(
+                0, len(self.possible_parents_SNs), self.n_items_to_show_in_cbx
             )
-            self.possible_children_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-                self.possible_children
+        ]
+        self.possible_children_SNs = [
+            entry[0] for entry in self.possible_children_SNs_and_partIDs
+        ]
+        self.possible_children_SNs_chunked = [
+            self.possible_children_SNs[i : i + self.n_items_to_show_in_cbx]
+            for i in range(
+                0, len(self.possible_children_SNs), self.n_items_to_show_in_cbx
             )
-            self.possible_parents_SNs = [
-                entry[0] for entry in self.possible_parents_SNs_and_partIDs
-            ]
-            self.possible_parents_SNs_chunked = [
-                self.possible_parents_SNs[i : i + self.n_items_to_show_in_cbx]
-                for i in range(
-                    0, len(self.possible_parents_SNs), self.n_items_to_show_in_cbx
-                )
-            ]
-            self.possible_children_SNs = [
-                entry[0] for entry in self.possible_children_SNs_and_partIDs
-            ]
-            self.possible_children_SNs_chunked = [
-                self.possible_children_SNs[i : i + self.n_items_to_show_in_cbx]
-                for i in range(
-                    0, len(self.possible_children_SNs), self.n_items_to_show_in_cbx
-                )
-            ]
-            self.possible_parents_partIDs = [
-                entry[1] for entry in self.possible_parents_SNs_and_partIDs
-            ]
-            self.possible_children_partIDs = [
-                entry[1] for entry in self.possible_children_SNs_and_partIDs
-            ]
-            self.cbx_par_n_pages = len(self.possible_parents_SNs_chunked)
-            self.cbx_chi_n_pages = len(self.possible_children_SNs_chunked)
-            self.cbx_par_shown_page = min(1, self.cbx_par_n_pages)
-            self.cbx_chi_shown_page = min(1, self.cbx_chi_n_pages)
-            self.label_combobox_parent_paginationFrame.configure(
-                text=f"page {self.cbx_par_shown_page}/{self.cbx_par_n_pages}"
-            )
-            self.label_combobox_child_paginationFrame.configure(
-                text=f"page {self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}"
-            )
-            if self.cbx_par_n_pages > 0:
-                self.combobox_parent.configure(
-                    values=self.possible_parents_SNs_chunked[0]
-                )
-            else:
-                self.combobox_parent.configure(values=[])
-                self.combobox_parent.set("- Select -")
-            if self.cbx_chi_n_pages > 0:
-                self.combobox_child.configure(
-                    values=self.possible_children_SNs_chunked[0]
-                )
-            else:
-                self.combobox_child.configure(values=[])
-                self.combobox_child.set("- Select -")
+        ]
+        self.possible_parents_partIDs = [
+            entry[1] for entry in self.possible_parents_SNs_and_partIDs
+        ]
+        self.possible_children_partIDs = [
+            entry[1] for entry in self.possible_children_SNs_and_partIDs
+        ]
+        self.cbx_par_n_pages = len(self.possible_parents_SNs_chunked)
+        self.cbx_chi_n_pages = len(self.possible_children_SNs_chunked)
+        self.cbx_par_shown_page = min(1, self.cbx_par_n_pages)
+        self.cbx_chi_shown_page = min(1, self.cbx_chi_n_pages)
+        self.label_combobox_parent_paginationFrame.configure(
+            text=f"page {self.cbx_par_shown_page}/{self.cbx_par_n_pages}"
+        )
+        self.label_combobox_child_paginationFrame.configure(
+            text=f"page {self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}"
+        )
+        if self.cbx_par_n_pages > 0:
+            self.combobox_parent.configure(values=self.possible_parents_SNs_chunked[0])
+        else:
+            self.combobox_parent.configure(values=[])
+            self.combobox_parent.set("- Select -")
+        if self.cbx_chi_n_pages > 0:
+            self.combobox_child.configure(values=self.possible_children_SNs_chunked[0])
+        else:
+            self.combobox_child.configure(values=[])
+            self.combobox_child.set("- Select -")
 
     def fetch_slots(self):
         try:
@@ -5745,24 +5726,14 @@ class App(customtkinter.CTk):
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
             requests.exceptions.RequestException,
+            ValueError,
+            RuntimeError,
         ) as e:
             self.slots = None
             self.last_responseText = str(e)
-        except ValueError as e:
-            self.slots = None
-            self.last_responseText = str(e)
 
-        if self.last_responseText[:3] != "200":
-            self.api_status = 0
-            self.progressbar.configure(progress_color=data.progress_color_ERROR)
-            info_text = wrapped_text.fill(
-                f"Error: Slots could not be loaded from ProdDB API.\n{self.last_responseText}"
-            )
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
-        else:
-            self.api_status = 1
-            self.progressbar.configure(progress_color=data.progress_color_OK)
+        if not self._report_api_status(expected_prefix="200"):
+            self._show_error("Slots could not be loaded from ProdDB API.")
 
     def help(self):
         if self.help_window is None or not self.help_window.winfo_exists():

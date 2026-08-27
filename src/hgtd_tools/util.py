@@ -139,7 +139,7 @@ def delete_children(par_partID, onlyNonDeleted=True, ofKind="all", dryrun=False)
         requests.exceptions.RequestException,
     ) as e:
         raise e
-    except ValueError as e:
+    except (ValueError, RuntimeError) as e:
         raise e
 
 
@@ -169,7 +169,7 @@ def delete_parents(chi_partID, onlyNonDeleted=True, ofKind="all", dryrun=False):
         requests.exceptions.RequestException,
     ) as e:
         raise e
-    except ValueError as e:
+    except (ValueError, RuntimeError) as e:
         raise e
 
 
@@ -184,7 +184,7 @@ def get_info_of_part_id(part_id):
         requests.exceptions.RequestException,
     ) as e:
         raise e
-    except ValueError as e:
+    except (ValueError, RuntimeError) as e:
         raise e
 
 
@@ -199,7 +199,7 @@ def get_attributes_of_part_id(part_id):
         requests.exceptions.RequestException,
     ) as e:
         raise e
-    except ValueError as e:
+    except (ValueError, RuntimeError) as e:
         raise e
 
 
@@ -216,7 +216,7 @@ def get_measurement_types_of_module_SN(part_SN):
         requests.exceptions.RequestException,
     ) as e:
         raise e
-    except ValueError as e:
+    except (ValueError, RuntimeError) as e:
         raise e
 
 
@@ -398,7 +398,7 @@ def get_relevant_parts(
         raise e
     except NotImplementedError as e:
         raise e
-    except ValueError as e:
+    except (ValueError, RuntimeError) as e:
         raise e
 
 
@@ -423,7 +423,7 @@ def get_parents(chi_partID, onlyNonDeleted=True, ofKind="all"):
         requests.exceptions.RequestException,
     ) as e:
         raise e
-    except ValueError as e:
+    except (ValueError, RuntimeError) as e:
         raise e
 
 
@@ -449,7 +449,7 @@ def get_children(par_partID, onlyNonDeleted=True, ofKind="all"):
         requests.exceptions.RequestException,
     ) as e:
         raise e
-    except ValueError as e:
+    except (ValueError, RuntimeError) as e:
         raise e
 
 
@@ -471,7 +471,7 @@ def get_locations(onlyNonDeleted=True):
         requests.exceptions.RequestException,
     ) as e:
         raise e
-    except ValueError as e:
+    except (ValueError, RuntimeError) as e:
         raise e
 
 
@@ -493,7 +493,7 @@ def get_manufacturers(onlyNonDeleted=True):
         requests.exceptions.RequestException,
     ) as e:
         raise e
-    except ValueError as e:
+    except (ValueError, RuntimeError) as e:
         raise e
 
 
@@ -517,7 +517,7 @@ def load_partstree(onlyNonDeleted=True):
         requests.exceptions.RequestException,
     ) as e:
         raise e
-    except ValueError as e:
+    except (ValueError, RuntimeError) as e:
         raise e
 
 

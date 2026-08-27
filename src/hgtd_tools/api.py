@@ -253,6 +253,10 @@ def get_access_token(grant_type="client_credentials", debug=False):
         if debug:
             print("OOps: Something Else", err)
         raise requests.exceptions.RequestException("OOps: Something Else", err)
+    except RuntimeError as err:
+        if debug:
+            print("RuntimeError", err)
+        raise RuntimeError(err)
 
 
 def get_user(us, pw, to, debug=False):
@@ -392,6 +396,10 @@ def fetch_information(endpoint, authorized=True, debug=False, existing_token=Non
         if debug:
             print("OOps: Something Else", err)
         raise requests.exceptions.RequestException("OOps: Something Else", err)
+    except RuntimeError as err:
+        if debug:
+            print("RuntimeError", err)
+        raise RuntimeError(err)
 
 
 def post_information(
@@ -464,6 +472,10 @@ def post_information(
             if debug:
                 print("OOps: Something Else", err)
             raise requests.exceptions.RequestException("OOps: Something Else", err)
+        except RuntimeError as err:
+            if debug:
+                print("RuntimeError", err)
+            raise RuntimeError(err)
     else:
         print(">>> Dryrun post operation with endpoint", endpoint)
         print(">>> and payload", payload)
@@ -508,5 +520,9 @@ def delete_information(
             if debug:
                 print("OOps: Something Else", err)
             raise requests.exceptions.RequestException("OOps: Something Else", err)
+        except RuntimeError as err:
+            if debug:
+                print("RuntimeError", err)
+            raise RuntimeError(err)
     else:
         print(">>> Dryrun delete operation with endpoint", endpoint)
