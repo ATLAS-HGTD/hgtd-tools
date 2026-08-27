@@ -158,9 +158,9 @@ def main():
                             validation_subset[
                                 "relations_template_bad"
                             ] += f"""\t??? failure "Relation validation failed for {this_part_SN}:"\n
-    \t\tInspect this [part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}) in DB.\n
-    \t\tDetailed failure reason:\n
-    """
+\t\tInspect this [part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}) in DB.\n
+\t\tDetailed failure reason:\n
+"""
                             validation_subset["relations_template_bad"] += (
                                 "\t\t"
                                 + individual_part_results["validation_reason_S_par_W"]
@@ -171,9 +171,9 @@ def main():
                         validation_subset[
                             "relations_template_bad"
                         ] += f"""\t??? failure "Relation validation failed for {this_part_SN}:"\n
-    \t\tInspect this [part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}) in DB.\n
-    \t\tDetailed failure reason:\n
-    """
+\t\tInspect this [part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}) in DB.\n
+\t\tDetailed failure reason:\n
+"""
                         validation_subset["relations_template_bad"] += (
                             "\t\t"
                             + individual_part_results["validation_reason_S_par_HY"]
@@ -197,9 +197,9 @@ def main():
                             validation_subset[
                                 "relations_template_bad"
                             ] += f"""\t??? failure "Relation validation failed for {this_part_SN}:"\n
-    \t\tInspect this [part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}) in DB.\n
-    \t\tDetailed failure reason:\n
-    """
+\t\tInspect this [part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}) in DB.\n
+\t\tDetailed failure reason:\n
+"""
                             validation_subset["relations_template_bad"] += (
                                 "\t\t"
                                 + individual_part_results["validation_reason_S_par_W"]
@@ -210,9 +210,9 @@ def main():
                     validation_subset[
                         "relations_template_bad"
                     ] += f"""\t??? failure "Relation validation failed for {this_part_SN}:"\n
-    \t\tInspect this [part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}) in DB.\n
-    \t\tDetailed failure reason:\n
-    """
+\t\tInspect this [part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}) in DB.\n
+\t\tDetailed failure reason:\n
+"""
                     # note down the reason(s) individually
                     if mode_alias == "Module Assembly":
                         if (
@@ -384,17 +384,17 @@ def main():
                 for m in manufacturers:
                     MA_m = f"""??? note "{m}"
 
-        Valid Modules (using latest SN spec, excludes Digital Modules marked with _Digital in Name Label): {validation_all[m]["n_valid_parts"]}, of which correctly connected with children (MF, HY): {validation_all[m]["n_valid_connected_parts"]}
+    Valid Modules (using latest SN spec, excludes Digital Modules marked with _Digital in Name Label): {validation_all[m]["n_valid_parts"]}, of which correctly connected with children (MF, HY): {validation_all[m]["n_valid_connected_parts"]}
 
-        Invalid Modules (not using latest SN spec, and including Digital Modules marked with _Digital in Name Label): {validation_all[m]["n_invalid_parts"]}
+    Invalid Modules (not using latest SN spec, and including Digital Modules marked with _Digital in Name Label): {validation_all[m]["n_invalid_parts"]}
 
-        Fake Modules: {validation_all[m]["n_fake_parts"]}
+    Fake Modules: {validation_all[m]["n_fake_parts"]}
 
-        Details:
+    Details:
 
-    {validation_all[m]["relations_template_good"]}
-    {validation_all[m]["relations_template_bad"]}
-    """
+{validation_all[m]["relations_template_good"]}
+{validation_all[m]["relations_template_bad"]}
+"""
                     validation_template += MA_m
                     if len(mode_aliases) == 1:
                         validation_MA += MA_m
@@ -419,17 +419,17 @@ def main():
                 for m in manufacturers:
                     HY_m = f"""??? note "{m}"
 
-        Valid Hybrids (using latest SN spec): {validation_all[m]["n_valid_parts"]}, of which correctly connected with children (currently checking only S): {validation_all[m]["n_valid_connected_parts"]}
+    Valid Hybrids (using latest SN spec): {validation_all[m]["n_valid_parts"]}, of which correctly connected with children (currently checking only S): {validation_all[m]["n_valid_connected_parts"]}
 
-        Invalid Hybrids (not using latest SN spec): {validation_all[m]["n_invalid_parts"]}
+    Invalid Hybrids (not using latest SN spec): {validation_all[m]["n_invalid_parts"]}
 
-        Fake Hybrids: {validation_all[m]["n_fake_parts"]}
+    Fake Hybrids: {validation_all[m]["n_fake_parts"]}
 
-        Details:
+    Details:
 
-    {validation_all[m]["relations_template_good"]}
-    {validation_all[m]["relations_template_bad"]}
-    """
+{validation_all[m]["relations_template_good"]}
+{validation_all[m]["relations_template_bad"]}
+"""
                     validation_template += HY_m
                     if len(mode_aliases) == 1:
                         validation_HY += HY_m
@@ -455,18 +455,18 @@ def main():
                 for m in manufacturers:
                     SP_m = f"""??? note "{m}"
 
-        Valid Sensors (using latest SN spec): {validation_all[m]["n_valid_parts"]}, of which correctly connected with parent HY + W: {validation_all[m]["n_valid_connected_parts"]}; or of which correctly connected with parent W, but not yet to HY: {validation_all[m]["n_valid_new_parts"]}
+    Valid Sensors (using latest SN spec): {validation_all[m]["n_valid_parts"]}, of which correctly connected with parent HY + W: {validation_all[m]["n_valid_connected_parts"]}; or of which correctly connected with parent W, but not yet to HY: {validation_all[m]["n_valid_new_parts"]}
 
-        Invalid Sensors (not using latest SN spec): {validation_all[m]["n_invalid_parts"]}
+    Invalid Sensors (not using latest SN spec): {validation_all[m]["n_invalid_parts"]}
 
-        Fake Sensors: {validation_all[m]["n_fake_parts"]}
+    Fake Sensors: {validation_all[m]["n_fake_parts"]}
 
-        Details:
+    Details:
 
-    {validation_all[m]["relations_template_good"]}
-    {validation_all[m]["relations_template_new"]}
-    {validation_all[m]["relations_template_bad"]}
-    """
+{validation_all[m]["relations_template_good"]}
+{validation_all[m]["relations_template_new"]}
+{validation_all[m]["relations_template_bad"]}
+"""
                     validation_template += SP_m
                     if len(mode_aliases) == 1:
                         validation_SP += SP_m
