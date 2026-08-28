@@ -120,9 +120,9 @@ class LoginDialog(customtkinter.CTkToplevel):
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
             requests.exceptions.RequestException,
+            ValueError,
+            RuntimeError,
         ) as e:
-            self.last_responseText = str(e)
-        except (ValueError, RuntimeError) as e:
             self.last_responseText = str(e)
 
         self.callback(self.auth_user, self.last_responseText)
@@ -1789,14 +1789,13 @@ class App(customtkinter.CTk):
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
             requests.exceptions.RequestException,
+            ValueError,
+            RuntimeError,
         ) as e:
             upstream_version_last_responseText = str(e)
-        except (ValueError, RuntimeError) as e:
-            upstream_version_last_responseText = str(e)
-
         if upstream_version_last_responseText[:3] != "200":
-            print(
-                f"Version of hgtd-tools could not be compared to upstream, check your web connection!"
+            self._show_error(
+                "Version of hgtd-tools could not be compared to upstream, check your web connection!"
             )
         else:
             if self.my_version != upstream_version and "rc" not in self.my_version:
@@ -1835,6 +1834,8 @@ class App(customtkinter.CTk):
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
             requests.exceptions.RequestException,
+            ValueError,
+            RuntimeError,
         ) as e:
             self.manufacturers = []
             self.locations = []
@@ -1843,15 +1844,10 @@ class App(customtkinter.CTk):
             self.possible_HY_HV = []
             self.possible_HY_LV = []
             self.last_responseText = str(e)
-        except (ValueError, RuntimeError) as e:
-            self.manufacturers = []
-            self.locations = []
-            self.possible_MA_mod_par = []
-            self.possible_MF = []
-            self.possible_HY_HV = []
-            self.possible_HY_LV = []
-            self.last_responseText = str(e)
-
+        if not self._report_api_status(expected_prefix="200"):
+            self._show_error("Parents / Children could not be loaded from ProdDB API.")
+            return
+        """
         if self.last_responseText[:3] != "200":
             self.api_status = 0
             self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -1863,127 +1859,121 @@ class App(customtkinter.CTk):
         else:
             self.api_status = 1
             self.progressbar.configure(progress_color=data.progress_color_OK)
+        """
+        self.combobox_child_manu.configure(
+            values=["All manufacturers"]
+            + [m["manufacturer_name"] for m in self.manufacturers]
+        )
+        self.combobox_MA_mod_par_manu.configure(
+            values=["All manufacturers"]
+            + [m["manufacturer_name"] for m in self.manufacturers]
+        )
+        self.combobox_MA_mod_par_loc.configure(
+            values=["All locations"] + [m["location_name"] for m in self.locations]
+        )
+        self.combobox_MA_MF_child_loc.configure(
+            values=["All locations"] + [m["location_name"] for m in self.locations]
+        )
+        self.combobox_MA_HY_HV_child_loc.configure(
+            values=["All locations"] + [m["location_name"] for m in self.locations]
+        )
+        self.combobox_MA_HY_LV_child_loc.configure(
+            values=["All locations"] + [m["location_name"] for m in self.locations]
+        )
 
-            self.combobox_child_manu.configure(
-                values=["All manufacturers"]
-                + [m["manufacturer_name"] for m in self.manufacturers]
+        # Module
+        self.possible_MA_mod_par_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
+            self.possible_MA_mod_par
+        )
+        self.possible_MA_mod_par_SNs = [
+            entry[0] for entry in self.possible_MA_mod_par_SNs_and_partIDs
+        ]
+        self.possible_MA_mod_par_SNs_chunked = [
+            self.possible_MA_mod_par_SNs[i : i + self.n_items_to_show_in_cbx]
+            for i in range(
+                0, len(self.possible_MA_mod_par_SNs), self.n_items_to_show_in_cbx
             )
-            self.combobox_MA_mod_par_manu.configure(
-                values=["All manufacturers"]
-                + [m["manufacturer_name"] for m in self.manufacturers]
-            )
-            self.combobox_MA_mod_par_loc.configure(
-                values=["All locations"] + [m["location_name"] for m in self.locations]
-            )
-            self.combobox_MA_MF_child_loc.configure(
-                values=["All locations"] + [m["location_name"] for m in self.locations]
-            )
-            self.combobox_MA_HY_HV_child_loc.configure(
-                values=["All locations"] + [m["location_name"] for m in self.locations]
-            )
-            self.combobox_MA_HY_LV_child_loc.configure(
-                values=["All locations"] + [m["location_name"] for m in self.locations]
-            )
+        ]
+        self.possible_MA_mod_par_partIDs = [
+            entry[1] for entry in self.possible_MA_mod_par_SNs_and_partIDs
+        ]
+        self.cbx_MA_mod_par_n_pages = len(self.possible_MA_mod_par_SNs_chunked)
+        self.cbx_MA_mod_par_shown_page = 1
+        self.label_combobox_MA_mod_par_paginationFrame.configure(
+            text=f"page {self.cbx_MA_mod_par_shown_page}/{self.cbx_MA_mod_par_n_pages}"
+        )
+        self.combobox_MA_mod_par.configure(
+            values=self.possible_MA_mod_par_SNs_chunked[0]
+        )
 
-            # Module
-            self.possible_MA_mod_par_SNs_and_partIDs = (
-                util.get_relevant_SNs_and_partIDs(self.possible_MA_mod_par)
-            )
-            self.possible_MA_mod_par_SNs = [
-                entry[0] for entry in self.possible_MA_mod_par_SNs_and_partIDs
-            ]
-            self.possible_MA_mod_par_SNs_chunked = [
-                self.possible_MA_mod_par_SNs[i : i + self.n_items_to_show_in_cbx]
-                for i in range(
-                    0, len(self.possible_MA_mod_par_SNs), self.n_items_to_show_in_cbx
-                )
-            ]
-            self.possible_MA_mod_par_partIDs = [
-                entry[1] for entry in self.possible_MA_mod_par_SNs_and_partIDs
-            ]
-            self.cbx_MA_mod_par_n_pages = len(self.possible_MA_mod_par_SNs_chunked)
-            self.cbx_MA_mod_par_shown_page = 1
-            self.label_combobox_MA_mod_par_paginationFrame.configure(
-                text=f"page {self.cbx_MA_mod_par_shown_page}/{self.cbx_MA_mod_par_n_pages}"
-            )
-            self.combobox_MA_mod_par.configure(
-                values=self.possible_MA_mod_par_SNs_chunked[0]
-            )
+        # Module Flex
+        self.possible_MF_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
+            self.possible_MF
+        )
+        self.possible_MF_SNs = [entry[0] for entry in self.possible_MF_SNs_and_partIDs]
+        self.possible_MF_SNs_chunked = [
+            self.possible_MF_SNs[i : i + self.n_items_to_show_in_cbx]
+            for i in range(0, len(self.possible_MF_SNs), self.n_items_to_show_in_cbx)
+        ]
+        self.possible_MF_partIDs = [
+            entry[1] for entry in self.possible_MF_SNs_and_partIDs
+        ]
+        self.cbx_MF_n_pages = len(self.possible_MF_SNs_chunked)
+        self.cbx_MF_shown_page = 1
+        self.label_combobox_MA_MF_chi_paginationFrame.configure(
+            text=f"page {self.cbx_MF_shown_page}/{self.cbx_MF_n_pages}"
+        )
+        self.combobox_MA_MF_chi.configure(values=self.possible_MF_SNs_chunked[0])
 
-            # Module Flex
-            self.possible_MF_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-                self.possible_MF
-            )
-            self.possible_MF_SNs = [
-                entry[0] for entry in self.possible_MF_SNs_and_partIDs
-            ]
-            self.possible_MF_SNs_chunked = [
-                self.possible_MF_SNs[i : i + self.n_items_to_show_in_cbx]
-                for i in range(
-                    0, len(self.possible_MF_SNs), self.n_items_to_show_in_cbx
-                )
-            ]
-            self.possible_MF_partIDs = [
-                entry[1] for entry in self.possible_MF_SNs_and_partIDs
-            ]
-            self.cbx_MF_n_pages = len(self.possible_MF_SNs_chunked)
-            self.cbx_MF_shown_page = 1
-            self.label_combobox_MA_MF_chi_paginationFrame.configure(
-                text=f"page {self.cbx_MF_shown_page}/{self.cbx_MF_n_pages}"
-            )
-            self.combobox_MA_MF_chi.configure(values=self.possible_MF_SNs_chunked[0])
+        # Hybrid HV-side
+        self.possible_HY_HV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
+            self.possible_HY_HV
+        )
+        self.possible_HY_HV_SNs = [
+            entry[0] for entry in self.possible_HY_HV_SNs_and_partIDs
+        ]
+        self.possible_HY_HV_SNs_chunked = [
+            self.possible_HY_HV_SNs[i : i + self.n_items_to_show_in_cbx]
+            for i in range(0, len(self.possible_HY_HV_SNs), self.n_items_to_show_in_cbx)
+        ]
+        self.possible_HY_HV_partIDs = [
+            entry[1] for entry in self.possible_HY_HV_SNs_and_partIDs
+        ]
+        self.cbx_HY_HV_n_pages = len(self.possible_HY_HV_SNs_chunked)
+        self.cbx_HY_HV_shown_page = 1
+        self.label_combobox_HY_HV_paginationFrame.configure(
+            text=f"page {self.cbx_HY_HV_shown_page}/{self.cbx_HY_HV_n_pages}"
+        )
+        self.combobox_MA_HY_HV_chi.configure(values=self.possible_HY_HV_SNs_chunked[0])
 
-            # Hybrid HV-side
-            self.possible_HY_HV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-                self.possible_HY_HV
-            )
-            self.possible_HY_HV_SNs = [
-                entry[0] for entry in self.possible_HY_HV_SNs_and_partIDs
-            ]
-            self.possible_HY_HV_SNs_chunked = [
-                self.possible_HY_HV_SNs[i : i + self.n_items_to_show_in_cbx]
-                for i in range(
-                    0, len(self.possible_HY_HV_SNs), self.n_items_to_show_in_cbx
-                )
-            ]
-            self.possible_HY_HV_partIDs = [
-                entry[1] for entry in self.possible_HY_HV_SNs_and_partIDs
-            ]
-            self.cbx_HY_HV_n_pages = len(self.possible_HY_HV_SNs_chunked)
-            self.cbx_HY_HV_shown_page = 1
-            self.label_combobox_HY_HV_paginationFrame.configure(
-                text=f"page {self.cbx_HY_HV_shown_page}/{self.cbx_HY_HV_n_pages}"
-            )
-            self.combobox_MA_HY_HV_chi.configure(
-                values=self.possible_HY_HV_SNs_chunked[0]
-            )
-
-            # Hybrid LV-side
-            self.possible_HY_LV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-                self.possible_HY_LV
-            )
-            self.possible_HY_LV_SNs = [
-                entry[0] for entry in self.possible_HY_LV_SNs_and_partIDs
-            ]
-            self.possible_HY_LV_SNs_chunked = [
-                self.possible_HY_LV_SNs[i : i + self.n_items_to_show_in_cbx]
-                for i in range(
-                    0, len(self.possible_HY_LV_SNs), self.n_items_to_show_in_cbx
-                )
-            ]
-            self.possible_HY_LV_partIDs = [
-                entry[1] for entry in self.possible_HY_LV_SNs_and_partIDs
-            ]
-            self.cbx_HY_LV_n_pages = len(self.possible_HY_LV_SNs_chunked)
-            self.cbx_HY_LV_shown_page = 1
-            self.label_combobox_HY_LV_paginationFrame.configure(
-                text=f"page {self.cbx_HY_LV_shown_page}/{self.cbx_HY_LV_n_pages}"
-            )
-            self.combobox_MA_HY_LV_chi.configure(
-                values=self.possible_HY_LV_SNs_chunked[0]
-            )
+        # Hybrid LV-side
+        self.possible_HY_LV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
+            self.possible_HY_LV
+        )
+        self.possible_HY_LV_SNs = [
+            entry[0] for entry in self.possible_HY_LV_SNs_and_partIDs
+        ]
+        self.possible_HY_LV_SNs_chunked = [
+            self.possible_HY_LV_SNs[i : i + self.n_items_to_show_in_cbx]
+            for i in range(0, len(self.possible_HY_LV_SNs), self.n_items_to_show_in_cbx)
+        ]
+        self.possible_HY_LV_partIDs = [
+            entry[1] for entry in self.possible_HY_LV_SNs_and_partIDs
+        ]
+        self.cbx_HY_LV_n_pages = len(self.possible_HY_LV_SNs_chunked)
+        self.cbx_HY_LV_shown_page = 1
+        self.label_combobox_HY_LV_paginationFrame.configure(
+            text=f"page {self.cbx_HY_LV_shown_page}/{self.cbx_HY_LV_n_pages}"
+        )
+        self.combobox_MA_HY_LV_chi.configure(values=self.possible_HY_LV_SNs_chunked[0])
 
     def authenticate_return_function(self, result, response):
+        self.last_responseText = response
+        if not self._report_api_status(expected_prefix="20"):
+            self._show_error("New user could not be authenticated.")
+            self.optionmenu_user.set("None")
+            return
+        """
         if response[:2] != "20":
             self.api_status = 0
             self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -1993,23 +1983,19 @@ class App(customtkinter.CTk):
             )
             print(f">>> {info_text}")
             self.label_info.configure(text=info_text)
-
-            self.optionmenu_user.set("None")
+            self._show_error("New user could not be authenticated.")
         else:
             self.api_status = 1
             self.progressbar.configure(progress_color=data.progress_color_OK)
-
-            self.label_info.configure(text=" ")
-
-            self.user = result
-            self.last_responseText = response
-
-            old_users = self.users[:-1]  # all old ones without 'new...'
-            if result not in old_users:
-                new_users = old_users + [result, "new..."]
-                self.users = new_users
-                self.optionmenu_user.configure(values=new_users)
-            self.optionmenu_user.set(result)
+        """
+        self.label_info.configure(text=" ")
+        self.user = result
+        old_users = self.users[:-1]  # all old ones without 'new...'
+        if result not in old_users:
+            new_users = old_users + [result, "new..."]
+            self.users = new_users
+            self.optionmenu_user.configure(values=new_users)
+        self.optionmenu_user.set(result)
 
     def authenticate_user(self):
         # open a tiny window with extra inputs, return new_authenticated_user
@@ -2121,22 +2107,6 @@ class App(customtkinter.CTk):
                         "Parent / Child relations could not be fetched, deleted or posted to ProdDB API."
                     )
                     return
-                """
-                if self.last_responseText[:2] != "20":
-                    self.api_status = 0
-                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
-                    info_text = wrapped_text.fill(
-                        f"Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                else:
-                    self.api_status = 1
-                    self.progressbar.configure(progress_color=data.progress_color_OK)
-                    info_text = wrapped_text.fill(
-                        f"Info: Child Module Flex added successfully to ProdDB API."
-                    )
-                """
                 if len(parents_of_target_MF) == 0 and (
                     (occupied == False)
                     or (occupied == True and confirmed == "OVERWRITE")
@@ -2278,31 +2248,15 @@ class App(customtkinter.CTk):
                     requests.exceptions.ConnectionError,
                     requests.exceptions.Timeout,
                     requests.exceptions.RequestException,
+                    ValueError,
+                    RuntimeError,
                 ) as e:
-                    self.last_responseText = str(e)
-                except (ValueError, RuntimeError) as e:
                     self.last_responseText = str(e)
                 if not self._report_api_status(expected_prefix="20"):
                     self._show_error(
                         "Parent / Child relations could not be fetched, deleted or posted to ProdDB API."
                     )
                     return
-                """
-                if self.last_responseText[:2] != "20":
-                    self.api_status = 0
-                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
-                    info_text = wrapped_text.fill(
-                        f"Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                else:
-                    self.api_status = 1
-                    self.progressbar.configure(progress_color=data.progress_color_OK)
-                    info_text = wrapped_text.fill(
-                        f"Info: Child HV Hybrid added successfully to ProdDB API."
-                    )
-                """
                 if posted_new_rel:
                     info_text = (
                         "Info: Child HV Hybrid added successfully to ProdDB API."
@@ -2447,7 +2401,23 @@ class App(customtkinter.CTk):
                     RuntimeError,
                 ) as e:
                     self.last_responseText = str(e)
-
+                if not self._report_api_status(expected_prefix="20"):
+                    self._show_error(
+                        "Parent / Child relations could not be fetched, deleted or posted to ProdDB API."
+                    )
+                    return
+                if posted_new_rel:
+                    info_text = (
+                        "Info: Child LV Hybrid added successfully to ProdDB API."
+                    )
+                    self._show_info(info_text)
+                    self.loading_wheel = threading.Thread(
+                        target=self.fetch_MA_p_c,
+                        args=("HY_LV", wrapped_text.fill(info_text)),
+                    )
+                    self.loading_wheel.start()
+                    self.update_progressbar(self.loading_wheel)
+                """
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
                     self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -2462,13 +2432,13 @@ class App(customtkinter.CTk):
                     info_text = wrapped_text.fill(
                         f"Info: Child LV Hybrid added successfully to ProdDB API."
                     )
-
                     if posted_new_rel:
                         self.loading_wheel = threading.Thread(
                             target=self.fetch_MA_p_c, args=("HY_LV", info_text)
                         )
                         self.loading_wheel.start()
                         self.update_progressbar(self.loading_wheel)
+                """
 
     def button_add_ft_event_click(self, debug=False):
         chi = self.combobox_ft.get()
@@ -2664,11 +2634,16 @@ class App(customtkinter.CTk):
                     requests.exceptions.ConnectionError,
                     requests.exceptions.Timeout,
                     requests.exceptions.RequestException,
+                    ValueError,
+                    RuntimeError,
                 ) as e:
                     self.last_responseText = str(e)
-                except (ValueError, RuntimeError) as e:
-                    self.last_responseText = str(e)
-
+                if not self._report_api_status(expected_prefix="20"):
+                    self._show_error(
+                        "Parent / Child relations could not be fetched, deleted or posted to ProdDB API."
+                    )
+                    return
+                """
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
                     self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -2680,12 +2655,12 @@ class App(customtkinter.CTk):
                 else:
                     self.api_status = 1
                     self.progressbar.configure(progress_color=data.progress_color_OK)
-
-                    self.combobox_ft.set("- Select -")
-                    self.this_FT_relations_SLOT = []
-                    self.loading_wheel = threading.Thread(target=self.fetch_ft)
-                    self.loading_wheel.start()
-                    self.update_progressbar(self.loading_wheel)
+                """
+                self.combobox_ft.set("- Select -")
+                self.this_FT_relations_SLOT = []
+                self.loading_wheel = threading.Thread(target=self.fetch_ft)
+                self.loading_wheel.start()
+                self.update_progressbar(self.loading_wheel)
 
     def button_add_event_click(self, debug=False):
         chi = self.combobox_child.get()
@@ -3032,7 +3007,12 @@ class App(customtkinter.CTk):
                     RuntimeError,
                 ) as e:
                     self.last_responseText = str(e)
-
+                if not self._report_api_status(expected_prefix="20"):
+                    self._show_error(
+                        "Parent / Child relations could not be fetched, deleted or posted to ProdDB API."
+                    )
+                    return
+                """
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
                     self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -3044,23 +3024,23 @@ class App(customtkinter.CTk):
                 else:
                     self.api_status = 1
                     self.progressbar.configure(progress_color=data.progress_color_OK)
-
-                    if (
-                        self.operation_mode == "Detector Assembly (CERN): DU"
-                        and allowed_VLQ
-                        and ((occupied_VLQ and confirmed == pos) or not occupied_VLQ)
-                    ):
-                        # find all existing relations between this DU and its Modules, those are propagated to create new Slot -> Module relations
-                        self.loading_wheel_A = threading.Thread(
-                            target=self.fetch_and_write_module_slots,
-                            args=(
-                                attribute_Vessel,
-                                attribute_Layer,
-                                attribute_Quadrant,
-                            ),
-                        )
-                        self.loading_wheel_A.start()
-                        self.update_progressbar(self.loading_wheel_A)
+                """
+                if (
+                    self.operation_mode == "Detector Assembly (CERN): DU"
+                    and allowed_VLQ
+                    and ((occupied_VLQ and confirmed == pos) or not occupied_VLQ)
+                ):
+                    # find all existing relations between this DU and its Modules, those are propagated to create new Slot -> Module relations
+                    self.loading_wheel_A = threading.Thread(
+                        target=self.fetch_and_write_module_slots,
+                        args=(
+                            attribute_Vessel,
+                            attribute_Layer,
+                            attribute_Quadrant,
+                        ),
+                    )
+                    self.loading_wheel_A.start()
+                    self.update_progressbar(self.loading_wheel_A)
 
     # Combobox page selection by pressing a button to go left or right (previous page / next page)
     def button_combobox_paginationButton_click(self, affects, page_dir):
@@ -3265,11 +3245,16 @@ class App(customtkinter.CTk):
                     requests.exceptions.ConnectionError,
                     requests.exceptions.Timeout,
                     requests.exceptions.RequestException,
+                    ValueError,
+                    RuntimeError,
                 ) as e:
                     self.last_responseText = str(e)
-                except (ValueError, RuntimeError) as e:
-                    self.last_responseText = str(e)
-
+                if not self._report_api_status(expected_prefix="20"):
+                    self._show_error(
+                        "Existing FT relation could not be deleted (disconnected from slot) with ProdDB API."
+                    )
+                    return
+                """
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
                     self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -3281,9 +3266,10 @@ class App(customtkinter.CTk):
                 else:
                     self.api_status = 1
                     self.progressbar.configure(progress_color=data.progress_color_OK)
-                    self.label_info.configure(text=" ")
-                    self.this_FT_relations_SLOT = []
-                    self.button_delete_connected_ft.configure(state="disabled")
+                """
+                self.label_info.configure(text=" ")
+                self.this_FT_relations_SLOT = []
+                self.button_delete_connected_ft.configure(state="disabled")
 
     def button_delete_clicked_event_click(self):
         if len(self.clicked_module) > 0:
@@ -3302,11 +3288,16 @@ class App(customtkinter.CTk):
                     requests.exceptions.ConnectionError,
                     requests.exceptions.Timeout,
                     requests.exceptions.RequestException,
+                    ValueError,
+                    RuntimeError,
                 ) as e:
                     self.last_responseText = str(e)
-                except (ValueError, RuntimeError) as e:
-                    self.last_responseText = str(e)
-
+                if not self._report_api_status(expected_prefix="20"):
+                    self._show_error(
+                        "Existing module relation could not be deleted (unloaded) with ProdDB API."
+                    )
+                    return
+                """
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
                     self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -3318,33 +3309,31 @@ class App(customtkinter.CTk):
                 else:
                     self.api_status = 1
                     self.progressbar.configure(progress_color=data.progress_color_OK)
+                """
+                # reload DU etc.
+                self.displayedDUtype = "None"
+                self.interlockSlots = []
+                self.this_DU_relations_MODULE = []
+                self.this_MODULE_relations_DU = []
+                self.this_MODULE_relations_SLOT = []
+                self.possible_parents = []
+                self.possible_children = []
+                self.slots = None
+                self.partstree = None
+                self.clicked_module = []
+                self.button_inspect_clicked.configure(text=f"INSPECT CLICKED MODULE")
+                self.button_inspect_clicked.configure(state="disabled")
+                self.button_delete_clicked.configure(text=f"UNLOAD CLICKED MODULE")
+                self.button_delete_clicked.configure(state="disabled")
 
-                    # reload DU etc.
-                    self.displayedDUtype = "None"
-                    self.interlockSlots = []
-                    self.this_DU_relations_MODULE = []
-                    self.this_MODULE_relations_DU = []
-                    self.this_MODULE_relations_SLOT = []
-                    self.possible_parents = []
-                    self.possible_children = []
-                    self.slots = None
-                    self.partstree = None
-                    self.clicked_module = []
-                    self.button_inspect_clicked.configure(
-                        text=f"INSPECT CLICKED MODULE"
-                    )
-                    self.button_inspect_clicked.configure(state="disabled")
-                    self.button_delete_clicked.configure(text=f"UNLOAD CLICKED MODULE")
-                    self.button_delete_clicked.configure(state="disabled")
-
-                    parentSNIn = self.combobox_parent.get()
-                    childSNIn = self.combobox_child.get()
-                    self.loading_wheel = threading.Thread(
-                        target=self.fetch_loaded_DU_and_display,
-                        args=(childSNIn, parentSNIn),
-                    )
-                    self.loading_wheel.start()
-                    self.update_progressbar(self.loading_wheel)
+                parentSNIn = self.combobox_parent.get()
+                childSNIn = self.combobox_child.get()
+                self.loading_wheel = threading.Thread(
+                    target=self.fetch_loaded_DU_and_display,
+                    args=(childSNIn, parentSNIn),
+                )
+                self.loading_wheel.start()
+                self.update_progressbar(self.loading_wheel)
 
     def button_delete_child_module_flex_event_click(self):
         if len(self.this_MF_relations_MOD) > 0:
@@ -3364,11 +3353,16 @@ class App(customtkinter.CTk):
                     requests.exceptions.ConnectionError,
                     requests.exceptions.Timeout,
                     requests.exceptions.RequestException,
+                    ValueError,
+                    RuntimeError,
                 ) as e:
                     self.last_responseText = str(e)
-                except (ValueError, RuntimeError) as e:
-                    self.last_responseText = str(e)
-
+                if not self._report_api_status(expected_prefix="20"):
+                    self._show_error(
+                        "Existing MF relation could not be deleted (disconnected from module) with ProdDB API."
+                    )
+                    return
+                """
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
                     self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -3380,9 +3374,10 @@ class App(customtkinter.CTk):
                 else:
                     self.api_status = 1
                     self.progressbar.configure(progress_color=data.progress_color_OK)
-                    self.label_info.configure(text=" ")
-                    self.this_MF_relations_MOD = []
-                    self.button_delete_child_MF.configure(state="disabled")
+                """
+                self.label_info.configure(text=" ")
+                self.this_MF_relations_MOD = []
+                self.button_delete_child_MF.configure(state="disabled")
 
     def button_delete_child_HY_HV_event_click(self):
         if len(self.this_HY_HV_relations_MOD) > 0:
@@ -3402,11 +3397,16 @@ class App(customtkinter.CTk):
                     requests.exceptions.ConnectionError,
                     requests.exceptions.Timeout,
                     requests.exceptions.RequestException,
+                    ValueError,
+                    RuntimeError,
                 ) as e:
                     self.last_responseText = str(e)
-                except (ValueError, RuntimeError) as e:
-                    self.last_responseText = str(e)
-
+                if not self._report_api_status(expected_prefix="20"):
+                    self._show_error(
+                        "Existing HY HV-side relation could not be deleted (disconnected from module) with ProdDB API."
+                    )
+                    return
+                """
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
                     self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -3418,9 +3418,10 @@ class App(customtkinter.CTk):
                 else:
                     self.api_status = 1
                     self.progressbar.configure(progress_color=data.progress_color_OK)
-                    self.label_info.configure(text=" ")
-                    self.this_HY_HV_relations_MOD = []
-                    self.button_delete_child_HY_HV.configure(state="disabled")
+                """
+                self.label_info.configure(text=" ")
+                self.this_HY_HV_relations_MOD = []
+                self.button_delete_child_HY_HV.configure(state="disabled")
 
     def button_delete_child_HY_LV_event_click(self):
         if len(self.this_HY_LV_relations_MOD) > 0:
@@ -3440,11 +3441,16 @@ class App(customtkinter.CTk):
                     requests.exceptions.ConnectionError,
                     requests.exceptions.Timeout,
                     requests.exceptions.RequestException,
+                    ValueError,
+                    RuntimeError,
                 ) as e:
                     self.last_responseText = str(e)
-                except (ValueError, RuntimeError) as e:
-                    self.last_responseText = str(e)
-
+                if not self._report_api_status(expected_prefix="20"):
+                    self._show_error(
+                        "Existing HY LV-side relation could not be deleted (disconnected from module) with ProdDB API."
+                    )
+                    return
+                """
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
                     self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -3456,9 +3462,10 @@ class App(customtkinter.CTk):
                 else:
                     self.api_status = 1
                     self.progressbar.configure(progress_color=data.progress_color_OK)
-                    self.label_info.configure(text=" ")
-                    self.this_HY_LV_relations_MOD = []
-                    self.button_delete_child_HY_LV.configure(state="disabled")
+                """
+                self.label_info.configure(text=" ")
+                self.this_HY_LV_relations_MOD = []
+                self.button_delete_child_HY_LV.configure(state="disabled")
 
     def button_onclick_event_filter_child_SN(self, childIdentifier="Module Flex"):
         if self.operation_mode == "Module Assembly":
@@ -4295,19 +4302,6 @@ class App(customtkinter.CTk):
             if not self._report_api_status(expected_prefix="200"):
                 self._show_error("New user could not be authenticated.")
                 return
-            """
-            if self.last_responseText[:2] != "20":
-                self.api_status = 0
-                self.progressbar.configure(progress_color=data.progress_color_ERROR)
-                info_text = wrapped_text.fill(
-                    f"Error: New user could not be authenticated.\n{self.last_responseText}"
-                )
-                print(f">>> {info_text}")
-                self.label_info.configure(text=info_text)
-            else:
-                self.api_status = 1
-                self.progressbar.configure(progress_color=data.progress_color_OK)
-            """
         else:
             self.user = selected_user
 
@@ -4477,19 +4471,6 @@ class App(customtkinter.CTk):
             if not self._report_api_status(expected_prefix="200"):
                 self._show_error("Parents could not be loaded from ProdDB API.")
                 return
-            """
-            if self.last_responseText[:2] != "20":
-                self.api_status = 0
-                self.progressbar.configure(progress_color=data.progress_color_ERROR)
-                info_text = wrapped_text.fill(
-                    f"Error: Parents could not be loaded from ProdDB API.\n{self.last_responseText}"
-                )
-                print(f">>> {info_text}")
-                self.label_info.configure(text=info_text)
-            else:
-                self.api_status = 1
-                self.progressbar.configure(progress_color=data.progress_color_OK)
-            """
             for r in parents_of_child_module:
                 try:
                     self.last_responseText = api.delete_information(
@@ -4507,23 +4488,6 @@ class App(customtkinter.CTk):
                 if not self._report_api_status(expected_prefix="20"):
                     self._show_error("Record could not be deleted from ProdDB API.")
                     return
-                """
-                if self.last_responseText[:2] != "20":
-                    self.api_status = 0
-                    self.progressbar.configure(
-                        progress_color=data.progress_color_ERROR
-                    )
-                    info_text = wrapped_text.fill(
-                        f"Error: Record could not be deleted from ProdDB API.\n{self.last_responseText}"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                else:
-                    self.api_status = 1
-                    self.progressbar.configure(
-                        progress_color=data.progress_color_OK
-                    )
-                """
             if self.api_status == 1:
                 attribute_SU_r = entry["position"].split("R").pop().split("M")[0]
                 attribute_SU_m = entry["position"].split("M").pop()
@@ -4561,23 +4525,6 @@ class App(customtkinter.CTk):
                                 "Parent / Child relation could not be patched to ProdDB API."
                             )
                             return
-                        """
-                        if self.last_responseText[:2] != "20":
-                            self.api_status = 0
-                            self.progressbar.configure(
-                                progress_color=data.progress_color_ERROR
-                            )
-                            info_text = wrapped_text.fill(
-                                f"Error: Parent / Child relation could not be patched to ProdDB API.\n{self.last_responseText}"
-                            )
-                            print(f">>> {info_text}")
-                            self.label_info.configure(text=info_text)
-                        else:
-                            self.api_status = 1
-                            self.progressbar.configure(
-                                progress_color=data.progress_color_OK
-                            )
-                        """
 
     def exit(self):
         self.destroy()
@@ -5398,7 +5345,6 @@ class App(customtkinter.CTk):
             RuntimeError,
         ) as e:
             par, self.last_responseText = [], str(e)
-
         if not self._report_api_status(expected_prefix="200"):
             self._show_error("MF relations could not be loaded from ProdDB API.")
             self.this_MF_relations_MOD = []
@@ -5433,7 +5379,6 @@ class App(customtkinter.CTk):
             RuntimeError,
         ) as e:
             par, self.last_responseText = [], str(e)
-
         if not self._report_api_status(expected_prefix="200"):
             self._show_error(
                 "HY HV-side relations could not be loaded from ProdDB API."
@@ -5470,7 +5415,6 @@ class App(customtkinter.CTk):
             RuntimeError,
         ) as e:
             par, self.last_responseText = [], str(e)
-
         if not self._report_api_status(expected_prefix="200"):
             self._show_error(
                 "HY LV-side relations could not be loaded from ProdDB API."
@@ -5503,7 +5447,6 @@ class App(customtkinter.CTk):
             self.possible_parents = []
             self.possible_children = []
             self.last_responseText = str(e)
-
         if not self._report_api_status(expected_prefix="200"):
             self._show_error("Parents / Children could not be loaded from ProdDB API.")
             return
@@ -5623,7 +5566,6 @@ class App(customtkinter.CTk):
         ) as e:
             self.slots = None
             self.last_responseText = str(e)
-
         if not self._report_api_status(expected_prefix="200"):
             self._show_error("Slots could not be loaded from ProdDB API.")
 
