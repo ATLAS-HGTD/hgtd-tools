@@ -167,8 +167,21 @@ class App(customtkinter.CTk):
         """
         thread = threading.Thread(target=target, args=args)
         thread.start()
-        self.update_progressbar(thread)
+        self._update_progressbar(thread)
         return thread
+
+    def _update_progressbar(self, thread):
+        if thread.is_alive():
+            # update progressbar
+            self.progressbar.step()
+            self.after(250, self._update_progressbar, thread)
+            self.progressbar.configure(progress_color=data.progress_color_wait)
+        else:
+            self.progressbar.set(1)
+            if self.api_status == 0:
+                self.progressbar.configure(progress_color=data.progress_color_ERROR)
+            else:
+                self.progressbar.configure(progress_color=data.progress_color_OK)
 
     def _build_sidebar_logo(self):
         """Top-of-sidebar app logo + version / author line."""
@@ -269,7 +282,7 @@ class App(customtkinter.CTk):
                 row=i,
                 column=0,
                 padx=5,
-                pady=(3, 0),
+                pady=(2, 0),
                 sticky="nsew",
                 columnspan=2,
             )
@@ -310,6 +323,7 @@ class App(customtkinter.CTk):
             ("ProdDB Meetings", "https://indico.cern.ch/category/9458/"),
             ("hgtd-tools gitlab", "https://gitlab.cern.ch/anstein/hgtd-tools"),
             ("hgtd-tools Documentation", "https://hgtd-tools.docs.cern.ch/"),
+            ("Nightly Reports", "https://hgtd-tools-internal.web.cern.ch/"),
         ]
         for i, (text, url) in enumerate(links, start=1):
             btn = customtkinter.CTkButton(
@@ -325,7 +339,7 @@ class App(customtkinter.CTk):
                 row=i,
                 column=0,
                 padx=5,
-                pady=(3, 0),
+                pady=(2, 0),
                 sticky="nsew",
                 columnspan=2,
             )
@@ -2102,14 +2116,6 @@ class App(customtkinter.CTk):
                     self._run_with_progress(
                         self.fetch_MA_p_c, "Module Flex", wrapped_text.fill(info_text)
                     )
-                    """
-                    self.loading_wheel = threading.Thread(
-                        target=self.fetch_MA_p_c,
-                        args=("Module Flex", wrapped_text.fill(info_text)),
-                    )
-                    self.loading_wheel.start()
-                    self.update_progressbar(self.loading_wheel)
-                    """
 
     def button_add_child_HY_HV_event_click(self, debug=False):
         chi = self.combobox_MA_HY_HV_chi.get()
@@ -2256,14 +2262,6 @@ class App(customtkinter.CTk):
                     self._run_with_progress(
                         self.fetch_MA_p_c, "HY_HV", wrapped_text.fill(info_text)
                     )
-                    """
-                    self.loading_wheel = threading.Thread(
-                        target=self.fetch_MA_p_c,
-                        args=("HY_HV", wrapped_text.fill(info_text)),
-                    )
-                    self.loading_wheel.start()
-                    self.update_progressbar(self.loading_wheel)
-                    """
 
     def button_add_child_HY_LV_event_click(self, debug=False):
         chi = self.combobox_MA_HY_LV_chi.get()
@@ -2410,14 +2408,6 @@ class App(customtkinter.CTk):
                     self._run_with_progress(
                         self.fetch_MA_p_c, "HY_LV", wrapped_text.fill(info_text)
                     )
-                    """
-                    self.loading_wheel = threading.Thread(
-                        target=self.fetch_MA_p_c,
-                        args=("HY_LV", wrapped_text.fill(info_text)),
-                    )
-                    self.loading_wheel.start()
-                    self.update_progressbar(self.loading_wheel)
-                    """
 
     def button_add_ft_event_click(self, debug=False):
         chi = self.combobox_ft.get()
@@ -2626,11 +2616,6 @@ class App(customtkinter.CTk):
                 self.combobox_ft.set("- Select -")
                 self.this_FT_relations_SLOT = []
                 self._run_with_progress(self.fetch_ft)
-                """
-                self.loading_wheel = threading.Thread(target=self.fetch_ft)
-                self.loading_wheel.start()
-                self.update_progressbar(self.loading_wheel)
-                """
 
     def button_add_event_click(self, debug=False):
         chi = self.combobox_child.get()
@@ -2687,13 +2672,6 @@ class App(customtkinter.CTk):
                         self._run_with_progress(
                             self.fetch_loaded_DU_and_display, chi, par
                         )
-                        """
-                        self.loading_wheel = threading.Thread(
-                            target=self.fetch_loaded_DU_and_display, args=(chi, par)
-                        )
-                        self.loading_wheel.start()
-                        self.update_progressbar(self.loading_wheel)
-                        """
                     elif self.operation_mode == "Detector Assembly (CERN): DU":
                         attribute_Vessel = pos.split("V").pop().split("L")[0]
                         if attribute_Vessel not in ["1", "2", "M", "D"]:
@@ -3000,18 +2978,6 @@ class App(customtkinter.CTk):
                         attribute_Layer,
                         attribute_Quadrant,
                     )
-                    """
-                    self.loading_wheel_A = threading.Thread(
-                        target=self.fetch_and_write_module_slots,
-                        args=(
-                            attribute_Vessel,
-                            attribute_Layer,
-                            attribute_Quadrant,
-                        ),
-                    )
-                    self.loading_wheel_A.start()
-                    self.update_progressbar(self.loading_wheel_A)
-                    """
 
     # Combobox page selection by pressing a button to go left or right (previous page / next page)
     def button_combobox_paginationButton_click(self, affects, page_dir):
@@ -3278,14 +3244,6 @@ class App(customtkinter.CTk):
                 self._run_with_progress(
                     self.fetch_loaded_DU_and_display, childSNIn, parentSNIn
                 )
-                """
-                self.loading_wheel = threading.Thread(
-                    target=self.fetch_loaded_DU_and_display,
-                    args=(childSNIn, parentSNIn),
-                )
-                self.loading_wheel.start()
-                self.update_progressbar(self.loading_wheel)
-                """
 
     def button_delete_child_module_flex_event_click(self):
         if len(self.this_MF_relations_MOD) > 0:
@@ -3392,58 +3350,22 @@ class App(customtkinter.CTk):
             elif childIdentifier == "HY_LV":
                 self.combobox_MA_HY_LV_chi.set("- Select -")
             self._run_with_progress(self.fetch_MA_p_c, childIdentifier)
-            """
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_MA_p_c, args=(childIdentifier,)
-            )
-            """
         elif self.operation_mode == "Detector Assembly (CERN): FT":
             self.combobox_ft.set("- Select -")
             self._run_with_progress(self.fetch_ft)
-            # self.loading_wheel = threading.Thread(target=self.fetch_ft)
         else:
             self.combobox_child.set("- Select -")
             if self.operation_mode == "Module Loading":
                 self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module")
-                """
-                self.loading_wheel = threading.Thread(
-                    target=self.fetch_p_c, args=("Detector Unit", "Module")
-                )
-                """
             elif self.operation_mode == "Detector Assembly (CERN): DU":
                 self._run_with_progress(self.fetch_p_c, "Detector", "Detector Unit")
-                """
-                self.loading_wheel = threading.Thread(
-                    target=self.fetch_p_c, args=("Detector", "Detector Unit")
-                )
-                """
             elif self.operation_mode == "Detector Assembly (CERN): PEB":
                 self._run_with_progress(self.fetch_p_c, "Detector", "PEB")
-                """
-                self.loading_wheel = threading.Thread(
-                    target=self.fetch_p_c, args=("Detector", "PEB")
-                )
-                """
-
-        """
-        self.loading_wheel.start()
-        self.update_progressbar(self.loading_wheel)
-        """
 
     def button_onclick_event_filter_parent_SN(self, parentIdentifier="Module"):
         if self.operation_mode == "Module Assembly":
             self.combobox_MA_mod_par.set("- Select -")
             self._run_with_progress(self.fetch_MA_p_c, parentIdentifier)
-            """
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_MA_p_c, args=(parentIdentifier,)
-            )
-            """
-        else:
-            pass  # not implemented for other operation modes
-
-        self.loading_wheel.start()
-        self.update_progressbar(self.loading_wheel)
 
     def button_find_slot_event_click(self):
         self.label_info.configure(text=" ")
@@ -3502,11 +3424,6 @@ class App(customtkinter.CTk):
 
                 # find all FTs that match this generation/category
                 self._run_with_progress(self.fetch_ft)
-                """
-                self.loading_wheel = threading.Thread(target=self.fetch_ft)
-                self.loading_wheel.start()
-                self.update_progressbar(self.loading_wheel)
-                """
                 break
         else:
             info_text = wrapped_text.fill(
@@ -3706,11 +3623,6 @@ class App(customtkinter.CTk):
             self.combobox_MA_HY_LV_chi.set("- Select -")
 
             self._run_with_progress(self.fetch_MA_p_c)
-            """
-            self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c)
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            """
 
         elif self.operation_mode == "Module Loading":
             self.frame_ma.grid_remove()
@@ -3742,13 +3654,6 @@ class App(customtkinter.CTk):
             self.position_variable.set("- automatic -")
             self.position_entry.configure(state="disabled")
             self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module")
-            """
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_p_c, args=("Detector Unit", "Module")
-            )
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            """
         elif self.operation_mode == "Detector Assembly (CERN): DU":
             self.frame_ma.grid_remove()
             self.frame_combobox.grid()
@@ -3789,13 +3694,6 @@ class App(customtkinter.CTk):
             self.position_variable.set("VxLyQz")
             self.position_entry.configure(state="normal")
             self._run_with_progress(self.fetch_p_c, "Detector", "Detector Unit")
-            """
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_p_c, args=("Detector", "Detector Unit")
-            )
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            """
         elif self.operation_mode == "Detector Assembly (CERN): PEB":
             self.frame_ma.grid_remove()
             self.frame_combobox.grid()
@@ -3836,13 +3734,6 @@ class App(customtkinter.CTk):
             self.position_variable.set("VxLyQz")
             self.position_entry.configure(state="normal")
             self._run_with_progress(self.fetch_p_c, "Detector", "PEB")
-            """
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_p_c, args=("Detector", "PEB")
-            )
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            """
         elif self.operation_mode == "Detector Assembly (CERN): FT":
             self.frame_ma.grid_remove()
             self.frame_combobox.grid_remove()
@@ -3859,13 +3750,7 @@ class App(customtkinter.CTk):
             self.slot_loc_mod_variable.set("- automatic -")
             self.slot_glob_row_variable.set("")
             self.slot_glob_mod_variable.set("")
-
             self._run_with_progress(self.fetch_ft)
-            """
-            self.loading_wheel = threading.Thread(target=self.fetch_ft)
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            """
 
     def canvas_event_click(self, event, debug=False):
         self.clicked_module = []
@@ -4162,11 +4047,6 @@ class App(customtkinter.CTk):
         self.combobox_ft.set("- Select -")
 
         self._run_with_progress(self.fetch_ft)
-        """
-        self.loading_wheel = threading.Thread(target=self.fetch_ft)
-        self.loading_wheel.start()
-        self.update_progressbar(self.loading_wheel)
-        """
 
     def change_MA_parent_Mod_filter_event(self, foo):
         self.MA_mod_par_loc = self.combobox_MA_mod_par_loc.get()
@@ -4175,13 +4055,6 @@ class App(customtkinter.CTk):
         self.combobox_MA_mod_par.set("- Select -")
 
         self._run_with_progress(self.fetch_MA_p_c, "Module")
-        """
-        self.loading_wheel = threading.Thread(
-            target=self.fetch_MA_p_c, args=("Module",)
-        )
-        self.loading_wheel.start()
-        self.update_progressbar(self.loading_wheel)
-        """
 
     def change_MA_child_MF_filter_event(self, foo):
         self.module_flex_child_loc = self.combobox_MA_MF_child_loc.get()
@@ -4189,13 +4062,6 @@ class App(customtkinter.CTk):
         self.combobox_MA_MF_chi.set("- Select -")
 
         self._run_with_progress(self.fetch_MA_p_c, "Module Flex")
-        """
-        self.loading_wheel = threading.Thread(
-            target=self.fetch_MA_p_c, args=("Module Flex",)
-        )
-        self.loading_wheel.start()
-        self.update_progressbar(self.loading_wheel)
-        """
 
     def change_MA_child_HY_HV_filter_event(self, foo):
         self.HY_HV_child_loc = self.combobox_MA_HY_HV_child_loc.get()
@@ -4206,11 +4072,6 @@ class App(customtkinter.CTk):
         self.combobox_MA_HY_HV_chi.set("- Select -")
 
         self._run_with_progress(self.fetch_MA_p_c, "HY_HV")
-        """
-        self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c, args=("HY_HV",))
-        self.loading_wheel.start()
-        self.update_progressbar(self.loading_wheel)
-        """
 
     def change_MA_child_HY_LV_filter_event(self, foo):
         self.HY_LV_child_loc = self.combobox_MA_HY_LV_child_loc.get()
@@ -4221,11 +4082,6 @@ class App(customtkinter.CTk):
         self.combobox_MA_HY_LV_chi.set("- Select -")
 
         self._run_with_progress(self.fetch_MA_p_c, "HY_LV")
-        """
-        self.loading_wheel = threading.Thread(target=self.fetch_MA_p_c, args=("HY_LV",))
-        self.loading_wheel.start()
-        self.update_progressbar(self.loading_wheel)
-        """
 
     def change_child_conn_event(self, child_conn):
         self.child_conn = self.optionmenu_child_conn.get()
@@ -4233,31 +4089,10 @@ class App(customtkinter.CTk):
 
         if self.operation_mode == "Module Loading":
             self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module")
-            """
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_p_c, args=("Detector Unit", "Module")
-            )
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            """
         elif self.operation_mode == "Detector Assembly (CERN): DU":
             self._run_with_progress(self.fetch_p_c, "Detector", "Detector Unit")
-            """
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_p_c, args=("Detector", "Detector Unit")
-            )
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            """
         elif self.operation_mode == "Detector Assembly (CERN): PEB":
             self._run_with_progress(self.fetch_p_c, "Detector", "PEB")
-            """
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_p_c, args=("Detector", "PEB")
-            )
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            """
 
     def change_user_event(self, selected_user: str):
         if selected_user == "None":
@@ -4286,29 +4121,15 @@ class App(customtkinter.CTk):
         self.combobox_child.set("- Select -")
 
         self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module")
-        """
-        self.loading_wheel = threading.Thread(
-            target=self.fetch_p_c, args=("Detector Unit", "Module")
-        )
-        self.loading_wheel.start()
-        self.update_progressbar(self.loading_wheel)
-        """
 
     def combobox_par_type_event_select(self, par_type):
         self.par_type = self.combobox_par_type.get()
         self.combobox_parent.set("- Select -")
 
         self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module")
-        """
-        self.loading_wheel = threading.Thread(
-            target=self.fetch_p_c, args=("Detector Unit", "Module")
-        )
-        self.loading_wheel.start()
-        self.update_progressbar(self.loading_wheel)
-        """
 
     def combobox_chi_type_event_select(self, chi_type):
-        # this is relevant for child = DU, and you want to specify
+        # this is relevant for child = DU or PEB, and you want to specify
         # which DU type shall be shown
         # from the children, select those that have the type in their SN
         self.chi_type = self.combobox_chi_type.get()
@@ -4316,35 +4137,14 @@ class App(customtkinter.CTk):
 
         if self.operation_mode == "Detector Assembly (CERN): DU":
             self._run_with_progress(self.fetch_p_c, "Detector", "Detector Unit")
-            """
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_p_c, args=("Detector", "Detector Unit")
-            )
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            """
         elif self.operation_mode == "Detector Assembly (CERN): PEB":
             self._run_with_progress(self.fetch_p_c, "Detector", "PEB")
-            """
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_p_c, args=("Detector", "PEB")
-            )
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            """
 
     def combobox_ft_event_select(self, unused_var_to_please_python):
         self.this_FT_relations_SLOT = []
         ftSNIn = self.combobox_ft.get()
         if ftSNIn != "- Select -":
             self._run_with_progress(self.fetch_loaded_FT, ftSNIn)
-            """
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_loaded_FT, args=(ftSNIn,)
-            )
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            """
 
     def combobox_MA_mod_event_select(self, unused_var_to_please_python):
         self.this_MOD_relations_MF = []
@@ -4355,50 +4155,24 @@ class App(customtkinter.CTk):
         SNIn = self.combobox_MA_mod_par.get()
         if SNIn != "- Select -":
             self._run_with_progress(self.fetch_MA_mod, SNIn)
-            """
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_MA_mod, args=(SNIn,)
-            )
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            """
 
     def combobox_MA_MF_event_select(self, unused_var_to_please_python):
         self.this_MF_relations_MOD = []
         SNIn = self.combobox_MA_MF_chi.get()
         if SNIn != "- Select -":
             self._run_with_progress(self.fetch_MA_MF, SNIn)
-            """
-            self.loading_wheel = threading.Thread(target=self.fetch_MA_MF, args=(SNIn,))
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            """
 
     def combobox_MA_HY_HV_event_select(self, unused_var_to_please_python):
         self.this_HY_HV_relations_MOD = []
         SNIn = self.combobox_MA_HY_HV_chi.get()
         if SNIn != "- Select -":
             self._run_with_progress(self.fetch_MA_HY_HV, SNIn)
-            """
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_MA_HY_HV, args=(SNIn,)
-            )
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            """
 
     def combobox_MA_HY_LV_event_select(self, unused_var_to_please_python):
         self.this_HY_LV_relations_MOD = []
         SNIn = self.combobox_MA_HY_LV_chi.get()
         if SNIn != "- Select -":
             self._run_with_progress(self.fetch_MA_HY_LV, SNIn)
-            """
-            self.loading_wheel = threading.Thread(
-                target=self.fetch_MA_HY_LV, args=(SNIn,)
-            )
-            self.loading_wheel.start()
-            self.update_progressbar(self.loading_wheel)
-            """
 
     def combobox_p_c_event_select(self, unused_var_to_please_python):
         self.displayedDUtype = "None"
@@ -4425,14 +4199,6 @@ class App(customtkinter.CTk):
                 self._run_with_progress(
                     self.fetch_loaded_DU_and_display, childSNIn, parentSNIn
                 )
-                """
-                self.loading_wheel = threading.Thread(
-                    target=self.fetch_loaded_DU_and_display,
-                    args=(childSNIn, parentSNIn),
-                )
-                self.loading_wheel.start()
-                self.update_progressbar(self.loading_wheel)
-                """
         elif self.operation_mode == "Detector Assembly (CERN): DU":
             parentNameIn = "Detector"
             childNameIn = "Detector Unit"
@@ -4441,27 +4207,12 @@ class App(customtkinter.CTk):
                 self._run_with_progress(
                     self.fetch_loaded_DU_and_display, childSNIn, parentSNIn
                 )
-                """
-                self.loading_wheel = threading.Thread(
-                    target=self.fetch_loaded_DU_and_display,
-                    args=(childSNIn, parentSNIn),
-                )
-                self.loading_wheel.start()
-                self.update_progressbar(self.loading_wheel)
-                """
         elif self.operation_mode == "Detector Assembly (CERN): PEB":
             parentNameIn = "Detector"
             childNameIn = "PEB"
             self.canvas.delete("all")
             if childSNIn != "- Select -":
                 self._run_with_progress(self.fetch_loaded_PEB, childSNIn, parentSNIn)
-                """
-                self.loading_wheel = threading.Thread(
-                    target=self.fetch_loaded_PEB, args=(childSNIn, parentSNIn)
-                )
-                self.loading_wheel.start()
-                self.update_progressbar(self.loading_wheel)
-                """
 
     def delete_old_and_post_new_slots_for_loaded_modules(self, V, L, Q):
         if self.user == "None" or self.user == "new...":
@@ -5592,19 +5343,6 @@ class App(customtkinter.CTk):
             )  # create window if its None or destroyed
         else:
             self.help_window.focus()  # if window exists focus it
-
-    def update_progressbar(self, thread):
-        if thread.is_alive():
-            # update progressbar
-            self.progressbar.step()
-            self.after(250, self.update_progressbar, thread)
-            self.progressbar.configure(progress_color=data.progress_color_wait)
-        else:
-            self.progressbar.set(1)
-            if self.api_status == 0:
-                self.progressbar.configure(progress_color=data.progress_color_ERROR)
-            else:
-                self.progressbar.configure(progress_color=data.progress_color_OK)
 
 
 def run_gui():
