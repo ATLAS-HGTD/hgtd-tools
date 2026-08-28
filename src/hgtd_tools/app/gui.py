@@ -2112,11 +2112,16 @@ class App(customtkinter.CTk):
                     requests.exceptions.ConnectionError,
                     requests.exceptions.Timeout,
                     requests.exceptions.RequestException,
+                    ValueError,
+                    RuntimeError,
                 ) as e:
                     self.last_responseText = str(e)
-                except (ValueError, RuntimeError) as e:
-                    self.last_responseText = str(e)
-
+                if not self._report_api_status(expected_prefix="20"):
+                    self._show_error(
+                        "Parent / Child relations could not be fetched, deleted or posted to ProdDB API."
+                    )
+                    return
+                """
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
                     self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -2131,16 +2136,19 @@ class App(customtkinter.CTk):
                     info_text = wrapped_text.fill(
                         f"Info: Child Module Flex added successfully to ProdDB API."
                     )
-
-                    if len(parents_of_target_MF) == 0 and (
-                        (occupied == False)
-                        or (occupied == True and confirmed == "OVERWRITE")
-                    ):
-                        self.loading_wheel = threading.Thread(
-                            target=self.fetch_MA_p_c, args=("Module Flex", info_text)
-                        )
-                        self.loading_wheel.start()
-                        self.update_progressbar(self.loading_wheel)
+                """
+                if len(parents_of_target_MF) == 0 and (
+                    (occupied == False)
+                    or (occupied == True and confirmed == "OVERWRITE")
+                ):
+                    info_text = "Child Module Flex added successfully to ProdDB API."
+                    self._show_info(info_text)
+                    self.loading_wheel = threading.Thread(
+                        target=self.fetch_MA_p_c,
+                        args=("Module Flex", wrapped_text.fill(info_text)),
+                    )
+                    self.loading_wheel.start()
+                    self.update_progressbar(self.loading_wheel)
 
     def button_add_child_HY_HV_event_click(self, debug=False):
         chi = self.combobox_MA_HY_HV_chi.get()
@@ -2274,7 +2282,12 @@ class App(customtkinter.CTk):
                     self.last_responseText = str(e)
                 except (ValueError, RuntimeError) as e:
                     self.last_responseText = str(e)
-
+                if not self._report_api_status(expected_prefix="20"):
+                    self._show_error(
+                        "Parent / Child relations could not be fetched, deleted or posted to ProdDB API."
+                    )
+                    return
+                """
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
                     self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -2289,13 +2302,18 @@ class App(customtkinter.CTk):
                     info_text = wrapped_text.fill(
                         f"Info: Child HV Hybrid added successfully to ProdDB API."
                     )
-
-                    if posted_new_rel:
-                        self.loading_wheel = threading.Thread(
-                            target=self.fetch_MA_p_c, args=("HY_HV", info_text)
-                        )
-                        self.loading_wheel.start()
-                        self.update_progressbar(self.loading_wheel)
+                """
+                if posted_new_rel:
+                    info_text = (
+                        "Info: Child HV Hybrid added successfully to ProdDB API."
+                    )
+                    self._show_info(info_text)
+                    self.loading_wheel = threading.Thread(
+                        target=self.fetch_MA_p_c,
+                        args=("HY_HV", wrapped_text.fill(info_text)),
+                    )
+                    self.loading_wheel.start()
+                    self.update_progressbar(self.loading_wheel)
 
     def button_add_child_HY_LV_event_click(self, debug=False):
         chi = self.combobox_MA_HY_LV_chi.get()
@@ -2425,9 +2443,9 @@ class App(customtkinter.CTk):
                     requests.exceptions.ConnectionError,
                     requests.exceptions.Timeout,
                     requests.exceptions.RequestException,
+                    ValueError,
+                    RuntimeError,
                 ) as e:
-                    self.last_responseText = str(e)
-                except (ValueError, RuntimeError) as e:
                     self.last_responseText = str(e)
 
                 if self.last_responseText[:2] != "20":
@@ -3010,9 +3028,9 @@ class App(customtkinter.CTk):
                     requests.exceptions.ConnectionError,
                     requests.exceptions.Timeout,
                     requests.exceptions.RequestException,
+                    ValueError,
+                    RuntimeError,
                 ) as e:
-                    self.last_responseText = str(e)
-                except (ValueError, RuntimeError) as e:
                     self.last_responseText = str(e)
 
                 if self.last_responseText[:2] != "20":
@@ -4270,11 +4288,14 @@ class App(customtkinter.CTk):
                 requests.exceptions.ConnectionError,
                 requests.exceptions.Timeout,
                 requests.exceptions.RequestException,
+                ValueError,
+                RuntimeError,
             ) as e:
                 self.last_responseText = str(e)
-            except (ValueError, RuntimeError) as e:
-                self.last_responseText = str(e)
-
+            if not self._report_api_status(expected_prefix="200"):
+                self._show_error("New user could not be authenticated.")
+                return
+            """
             if self.last_responseText[:2] != "20":
                 self.api_status = 0
                 self.progressbar.configure(progress_color=data.progress_color_ERROR)
@@ -4286,6 +4307,7 @@ class App(customtkinter.CTk):
             else:
                 self.api_status = 1
                 self.progressbar.configure(progress_color=data.progress_color_OK)
+            """
         else:
             self.user = selected_user
 
@@ -4436,57 +4458,117 @@ class App(customtkinter.CTk):
             info_text = "Error: Please login with your CERN account, because this operation requires a user name."
             print(f">>> {info_text}")
             self.label_info.configure(text=info_text)
-        else:
-            self.label_info.configure(text=" ")
-            for entry in self.this_DU_relations_MODULE:
+            return
+        self.label_info.configure(text=" ")
+        for entry in self.this_DU_relations_MODULE:
+            try:
+                parents_of_child_module, self.responseText = util.get_parents(
+                    entry["part"]["part_id"], ofKind="Slot"
+                )
+            except (
+                requests.exceptions.HTTPError,
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout,
+                requests.exceptions.RequestException,
+                ValueError,
+                RuntimeError,
+            ) as e:
+                self.last_responseText = str(e)
+            if not self._report_api_status(expected_prefix="200"):
+                self._show_error("Parents could not be loaded from ProdDB API.")
+                return
+            """
+            if self.last_responseText[:2] != "20":
+                self.api_status = 0
+                self.progressbar.configure(progress_color=data.progress_color_ERROR)
+                info_text = wrapped_text.fill(
+                    f"Error: Parents could not be loaded from ProdDB API.\n{self.last_responseText}"
+                )
+                print(f">>> {info_text}")
+                self.label_info.configure(text=info_text)
+            else:
+                self.api_status = 1
+                self.progressbar.configure(progress_color=data.progress_color_OK)
+            """
+            for r in parents_of_child_module:
                 try:
-                    parents_of_child_module, self.responseText = util.get_parents(
-                        entry["part"]["part_id"], ofKind="Slot"
+                    self.last_responseText = api.delete_information(
+                        f"/partstreedelete/{r['record_id']}/"
                     )
                 except (
                     requests.exceptions.HTTPError,
                     requests.exceptions.ConnectionError,
                     requests.exceptions.Timeout,
                     requests.exceptions.RequestException,
+                    ValueError,
+                    RuntimeError,
                 ) as e:
                     self.last_responseText = str(e)
-                except (ValueError, RuntimeError) as e:
-                    self.last_responseText = str(e)
-
+                if not self._report_api_status(expected_prefix="20"):
+                    self._show_error("Record could not be deleted from ProdDB API.")
+                    return
+                """
                 if self.last_responseText[:2] != "20":
                     self.api_status = 0
-                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
+                    self.progressbar.configure(
+                        progress_color=data.progress_color_ERROR
+                    )
                     info_text = wrapped_text.fill(
-                        f"Error: Parents could not be loaded from ProdDB API.\n{self.last_responseText}"
+                        f"Error: Record could not be deleted from ProdDB API.\n{self.last_responseText}"
                     )
                     print(f">>> {info_text}")
                     self.label_info.configure(text=info_text)
                 else:
                     self.api_status = 1
-                    self.progressbar.configure(progress_color=data.progress_color_OK)
-
-                    for r in parents_of_child_module:
+                    self.progressbar.configure(
+                        progress_color=data.progress_color_OK
+                    )
+                """
+            if self.api_status == 1:
+                attribute_SU_r = entry["position"].split("R").pop().split("M")[0]
+                attribute_SU_m = entry["position"].split("M").pop()
+                for sl in self.slots:
+                    if (
+                        sl["Vessel"] == str(V)
+                        and str(sl["Layer"]) == str(L)
+                        and str(sl["Quadrant"]) == str(Q)
+                        and str(sl["SU_type"]) == str(self.displayedDUtype)
+                        and str(sl["SU_Row"]) == str(attribute_SU_r)
+                        and str(sl["SU_Module"]) == str(attribute_SU_m)
+                    ):
+                        part_tree = {
+                            "position": "",
+                            "is_record_deleted": "F",
+                            "part": entry["part"]["part_id"],
+                            "part_parent": sl["part_id"],
+                            "record_insertion_user": self.user,
+                        }
                         try:
-                            self.last_responseText = api.delete_information(
-                                f"/partstreedelete/{r['record_id']}/"
+                            self.last_responseText = api.post_information(
+                                "/partstreelist", part_tree, dryrun=False
                             )
                         except (
                             requests.exceptions.HTTPError,
                             requests.exceptions.ConnectionError,
                             requests.exceptions.Timeout,
                             requests.exceptions.RequestException,
+                            ValueError,
+                            RuntimeError,
                         ) as e:
                             self.last_responseText = str(e)
-                        except (ValueError, RuntimeError) as e:
-                            self.last_responseText = str(e)
-
+                        if not self._report_api_status(expected_prefix="20"):
+                            self._show_error(
+                                "Parent / Child relation could not be patched to ProdDB API."
+                            )
+                            return
+                        """
                         if self.last_responseText[:2] != "20":
                             self.api_status = 0
                             self.progressbar.configure(
                                 progress_color=data.progress_color_ERROR
                             )
                             info_text = wrapped_text.fill(
-                                f"Error: Record could not be deleted from ProdDB API.\n{self.last_responseText}"
+                                f"Error: Parent / Child relation could not be patched to ProdDB API.\n{self.last_responseText}"
                             )
                             print(f">>> {info_text}")
                             self.label_info.configure(text=info_text)
@@ -4495,72 +4577,7 @@ class App(customtkinter.CTk):
                             self.progressbar.configure(
                                 progress_color=data.progress_color_OK
                             )
-                    if self.api_status == 1:
-                        if debug:
-                            print(entry)
-                        attribute_SU_r = (
-                            entry["position"].split("R").pop().split("M")[0]
-                        )
-                        attribute_SU_m = entry["position"].split("M").pop()
-                        if debug:
-                            print("self.displayedDUtype", self.displayedDUtype)
-                            print("self.interlockSlots", self.interlockSlots)
-                            print("V", V)
-                            print("L", L)
-                            print("Q", Q)
-                            print("attribute_SU_r", attribute_SU_r)
-                            print("attribute_SU_m", attribute_SU_m)
-                            print(self.slots[0])
-                        for sl in self.slots:
-                            if (
-                                sl["Vessel"] == str(V)
-                                and str(sl["Layer"]) == str(L)
-                                and str(sl["Quadrant"]) == str(Q)
-                                and str(sl["SU_type"]) == str(self.displayedDUtype)
-                                and str(sl["SU_Row"]) == str(attribute_SU_r)
-                                and str(sl["SU_Module"]) == str(attribute_SU_m)
-                            ):
-                                # found a slot :-)
-                                if debug:
-                                    print("found a slot")
-                                    print("sl:", sl)
-                                part_tree = {
-                                    "position": "",
-                                    "is_record_deleted": "F",
-                                    "part": entry["part"]["part_id"],
-                                    "part_parent": sl["part_id"],
-                                    "record_insertion_user": self.user,
-                                }
-                                try:
-                                    print(part_tree)
-                                    self.last_responseText = api.post_information(
-                                        "/partstreelist", part_tree, dryrun=False
-                                    )
-                                except (
-                                    requests.exceptions.HTTPError,
-                                    requests.exceptions.ConnectionError,
-                                    requests.exceptions.Timeout,
-                                    requests.exceptions.RequestException,
-                                ) as e:
-                                    self.last_responseText = str(e)
-                                except (ValueError, RuntimeError) as e:
-                                    self.last_responseText = str(e)
-
-                                if self.last_responseText[:2] != "20":
-                                    self.api_status = 0
-                                    self.progressbar.configure(
-                                        progress_color=data.progress_color_ERROR
-                                    )
-                                    info_text = wrapped_text.fill(
-                                        f"Error: Parent / Child relation could not be patched to ProdDB API.\n{self.last_responseText}"
-                                    )
-                                    print(f">>> {info_text}")
-                                    self.label_info.configure(text=info_text)
-                                else:
-                                    self.api_status = 1
-                                    self.progressbar.configure(
-                                        progress_color=data.progress_color_OK
-                                    )
+                        """
 
     def exit(self):
         self.destroy()
@@ -4934,7 +4951,7 @@ class App(customtkinter.CTk):
     def fetch_MA_p_c(self, update="all", withMessage=" "):
         # this happens when any filter is changed and at the beginning
         self.progressbar.set(0)
-        self.label_info.configure(text=withMessage)
+        # self.label_info.configure(text=withMessage)
         try:
             if update == "all" or update == "Module":
                 self.possible_MA_mod_par, self.last_responseText = (
