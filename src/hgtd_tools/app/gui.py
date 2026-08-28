@@ -1847,19 +1847,7 @@ class App(customtkinter.CTk):
         if not self._report_api_status(expected_prefix="200"):
             self._show_error("Parents / Children could not be loaded from ProdDB API.")
             return
-        """
-        if self.last_responseText[:3] != "200":
-            self.api_status = 0
-            self.progressbar.configure(progress_color=data.progress_color_ERROR)
-            info_text = wrapped_text.fill(
-                f"Error: Parents / Children could not be loaded from ProdDB API.\n{self.last_responseText}"
-            )
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
-        else:
-            self.api_status = 1
-            self.progressbar.configure(progress_color=data.progress_color_OK)
-        """
+
         self.combobox_child_manu.configure(
             values=["All manufacturers"]
             + [m["manufacturer_name"] for m in self.manufacturers]
@@ -1973,21 +1961,7 @@ class App(customtkinter.CTk):
             self._show_error("New user could not be authenticated.")
             self.optionmenu_user.set("None")
             return
-        """
-        if response[:2] != "20":
-            self.api_status = 0
-            self.progressbar.configure(progress_color=data.progress_color_ERROR)
 
-            info_text = wrapped_text.fill(
-                f"Error: New user could not be authenticated.\n{response}"
-            )
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
-            self._show_error("New user could not be authenticated.")
-        else:
-            self.api_status = 1
-            self.progressbar.configure(progress_color=data.progress_color_OK)
-        """
         self.label_info.configure(text=" ")
         self.user = result
         old_users = self.users[:-1]  # all old ones without 'new...'
@@ -2417,28 +2391,6 @@ class App(customtkinter.CTk):
                     )
                     self.loading_wheel.start()
                     self.update_progressbar(self.loading_wheel)
-                """
-                if self.last_responseText[:2] != "20":
-                    self.api_status = 0
-                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
-                    info_text = wrapped_text.fill(
-                        f"Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                else:
-                    self.api_status = 1
-                    self.progressbar.configure(progress_color=data.progress_color_OK)
-                    info_text = wrapped_text.fill(
-                        f"Info: Child LV Hybrid added successfully to ProdDB API."
-                    )
-                    if posted_new_rel:
-                        self.loading_wheel = threading.Thread(
-                            target=self.fetch_MA_p_c, args=("HY_LV", info_text)
-                        )
-                        self.loading_wheel.start()
-                        self.update_progressbar(self.loading_wheel)
-                """
 
     def button_add_ft_event_click(self, debug=False):
         chi = self.combobox_ft.get()
@@ -2643,19 +2595,7 @@ class App(customtkinter.CTk):
                         "Parent / Child relations could not be fetched, deleted or posted to ProdDB API."
                     )
                     return
-                """
-                if self.last_responseText[:2] != "20":
-                    self.api_status = 0
-                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
-                    info_text = wrapped_text.fill(
-                        f"Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                else:
-                    self.api_status = 1
-                    self.progressbar.configure(progress_color=data.progress_color_OK)
-                """
+
                 self.combobox_ft.set("- Select -")
                 self.this_FT_relations_SLOT = []
                 self.loading_wheel = threading.Thread(target=self.fetch_ft)
@@ -3012,19 +2952,7 @@ class App(customtkinter.CTk):
                         "Parent / Child relations could not be fetched, deleted or posted to ProdDB API."
                     )
                     return
-                """
-                if self.last_responseText[:2] != "20":
-                    self.api_status = 0
-                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
-                    info_text = wrapped_text.fill(
-                        f"Error: Parent / Child relations could not be fetched, deleted or posted to ProdDB API.\n{self.last_responseText}"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                else:
-                    self.api_status = 1
-                    self.progressbar.configure(progress_color=data.progress_color_OK)
-                """
+
                 if (
                     self.operation_mode == "Detector Assembly (CERN): DU"
                     and allowed_VLQ
@@ -3254,19 +3182,7 @@ class App(customtkinter.CTk):
                         "Existing FT relation could not be deleted (disconnected from slot) with ProdDB API."
                     )
                     return
-                """
-                if self.last_responseText[:2] != "20":
-                    self.api_status = 0
-                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
-                    info_text = wrapped_text.fill(
-                        f"Error: Existing FT relation could not be deleted (disconnected from slot) with ProdDB API.\n{self.last_responseText}"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                else:
-                    self.api_status = 1
-                    self.progressbar.configure(progress_color=data.progress_color_OK)
-                """
+
                 self.label_info.configure(text=" ")
                 self.this_FT_relations_SLOT = []
                 self.button_delete_connected_ft.configure(state="disabled")
@@ -3297,19 +3213,7 @@ class App(customtkinter.CTk):
                         "Existing module relation could not be deleted (unloaded) with ProdDB API."
                     )
                     return
-                """
-                if self.last_responseText[:2] != "20":
-                    self.api_status = 0
-                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
-                    info_text = wrapped_text.fill(
-                        f"Error: Existing module relation could not be deleted (unloaded) with ProdDB API.\n{self.last_responseText}"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                else:
-                    self.api_status = 1
-                    self.progressbar.configure(progress_color=data.progress_color_OK)
-                """
+
                 # reload DU etc.
                 self.displayedDUtype = "None"
                 self.interlockSlots = []
@@ -3362,19 +3266,7 @@ class App(customtkinter.CTk):
                         "Existing MF relation could not be deleted (disconnected from module) with ProdDB API."
                     )
                     return
-                """
-                if self.last_responseText[:2] != "20":
-                    self.api_status = 0
-                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
-                    info_text = wrapped_text.fill(
-                        f"Error: Existing MF relation could not be deleted (disconnected from module) with ProdDB API.\n{self.last_responseText}"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                else:
-                    self.api_status = 1
-                    self.progressbar.configure(progress_color=data.progress_color_OK)
-                """
+
                 self.label_info.configure(text=" ")
                 self.this_MF_relations_MOD = []
                 self.button_delete_child_MF.configure(state="disabled")
@@ -3406,19 +3298,7 @@ class App(customtkinter.CTk):
                         "Existing HY HV-side relation could not be deleted (disconnected from module) with ProdDB API."
                     )
                     return
-                """
-                if self.last_responseText[:2] != "20":
-                    self.api_status = 0
-                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
-                    info_text = wrapped_text.fill(
-                        f"Error: Existing HY HV-side relation could not be deleted (disconnected from module) with ProdDB API.\n{self.last_responseText}"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                else:
-                    self.api_status = 1
-                    self.progressbar.configure(progress_color=data.progress_color_OK)
-                """
+
                 self.label_info.configure(text=" ")
                 self.this_HY_HV_relations_MOD = []
                 self.button_delete_child_HY_HV.configure(state="disabled")
@@ -3450,19 +3330,7 @@ class App(customtkinter.CTk):
                         "Existing HY LV-side relation could not be deleted (disconnected from module) with ProdDB API."
                     )
                     return
-                """
-                if self.last_responseText[:2] != "20":
-                    self.api_status = 0
-                    self.progressbar.configure(progress_color=data.progress_color_ERROR)
-                    info_text = wrapped_text.fill(
-                        f"Error: Existing HY LV-side relation could not be deleted (disconnected from module) with ProdDB API.\n{self.last_responseText}"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                else:
-                    self.api_status = 1
-                    self.progressbar.configure(progress_color=data.progress_color_OK)
-                """
+
                 self.label_info.configure(text=" ")
                 self.this_HY_LV_relations_MOD = []
                 self.button_delete_child_HY_LV.configure(state="disabled")
