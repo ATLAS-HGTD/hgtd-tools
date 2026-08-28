@@ -12,8 +12,6 @@ import requests
 frontendUrlPrefix = "https://nginx-hgtddb.app.cern.ch"
 
 # === Interaction with hgtd-proddb REST API
-# This was the "old" backend, now retired, without SSO
-apiUrlPrefix = "https://backend-hgtddb.app.cern.ch/hgtddb"
 # New backend API with protection (e.g. access token, oidc)
 protectedApiUrlPrefix = "https://hgtddb-api.web.cern.ch/hgtddb"
 # CERN endpoint to receive API access tokens (e.g. for new backend),
@@ -308,9 +306,8 @@ def authenticate(u_name, pw, totp, local_folder):
         requests.exceptions.ConnectionError,
         requests.exceptions.Timeout,
         requests.exceptions.RequestException,
+        ValueError,
     ) as e:
-        last_responseText = str(e)
-    except ValueError as e:
         last_responseText = str(e)
 
     if last_responseText[:2] != "20":
@@ -362,20 +359,15 @@ def user_auth_cli(username, local_folder):
 def fetch_information(endpoint, authorized=True, debug=False, existing_token=None):
     # https://stackoverflow.com/a/47007419
     try:
-        if authorized:
-            access_token = (
-                get_access_token() if existing_token == None else existing_token
-            )
-            authorization = "Bearer " + access_token
-            headers = {
-                "Authorization": authorization,
-                "content-type": "application/json",
-            }
-            request = requests.get(
-                protectedApiUrlPrefix + endpoint, timeout=600, headers=headers
-            )
-        else:
-            request = requests.get(apiUrlPrefix + endpoint, timeout=600)
+        access_token = get_access_token() if existing_token == None else existing_token
+        authorization = "Bearer " + access_token
+        headers = {
+            "Authorization": authorization,
+            "content-type": "application/json",
+        }
+        request = requests.get(
+            protectedApiUrlPrefix + endpoint, timeout=600, headers=headers
+        )
         request.raise_for_status()
         if debug:
             print(">> GET response:", request.status_code, request.reason)
@@ -416,42 +408,31 @@ def post_information(
         pprint(payload)
     if not dryrun:
         try:
-            if authorized:
-                access_token = (
-                    get_access_token() if existing_token == None else existing_token
+            access_token = (
+                get_access_token() if existing_token == None else existing_token
+            )
+            authorization = "Bearer " + access_token
+            if content_type == "application/json":
+                headers = {
+                    "Authorization": authorization,
+                    "content-type": "application/json",
+                }
+                response = requests.post(
+                    protectedApiUrlPrefix + endpoint,
+                    data=json.dumps(payload),
+                    headers=headers,
                 )
-                authorization = "Bearer " + access_token
-                if content_type == "application/json":
-                    headers = {
-                        "Authorization": authorization,
-                        "content-type": "application/json",
-                    }
-                    response = requests.post(
-                        protectedApiUrlPrefix + endpoint,
-                        data=json.dumps(payload),
-                        headers=headers,
-                    )
-                elif content_type == "multipart/form-data":
-                    # we don't need to add , 'content-type': 'multipart/form-data' because it is used implicitly
-                    headers = {"Authorization": authorization}
-                    response = requests.post(
-                        protectedApiUrlPrefix + endpoint,
-                        files=files_payload,
-                        data=payload,
-                        headers=headers,
-                    )
-                else:
-                    raise NotImplementedError("This content-type is not implemented.")
+            elif content_type == "multipart/form-data":
+                # we don't need to add , 'content-type': 'multipart/form-data' because it is used implicitly
+                headers = {"Authorization": authorization}
+                response = requests.post(
+                    protectedApiUrlPrefix + endpoint,
+                    files=files_payload,
+                    data=payload,
+                    headers=headers,
+                )
             else:
-                if content_type == "application/json":
-                    headers = {"content-type": "application/json"}
-                    response = requests.post(
-                        apiUrlPrefix + endpoint,
-                        data=json.dumps(payload),
-                        headers=headers,
-                    )
-                else:
-                    raise NotImplementedError("This content-type is not implemented.")
+                raise NotImplementedError("This content-type is not implemented.")
             response.raise_for_status()
             if debug:
                 print(">> PATCH response:", response.status_code, response.reason)
@@ -486,20 +467,17 @@ def delete_information(
 ):
     if not dryrun:
         try:
-            if authorized:
-                access_token = (
-                    get_access_token() if existing_token == None else existing_token
-                )
-                authorization = "Bearer " + access_token
-                headers = {
-                    "Authorization": authorization,
-                    "content-type": "application/json",
-                }
-                response = requests.delete(
-                    protectedApiUrlPrefix + endpoint, headers=headers
-                )
-            else:
-                response = requests.delete(apiUrlPrefix + endpoint)
+            access_token = (
+                get_access_token() if existing_token == None else existing_token
+            )
+            authorization = "Bearer " + access_token
+            headers = {
+                "Authorization": authorization,
+                "content-type": "application/json",
+            }
+            response = requests.delete(
+                protectedApiUrlPrefix + endpoint, headers=headers
+            )
             response.raise_for_status()
             if debug:
                 print(">> DELETE response:", response.status_code, response.reason)
