@@ -4389,29 +4389,6 @@ class App(customtkinter.CTk):
                     self.this_MODULE_relations_DU = []
                     self.this_MODULE_relations_SLOT = []
                     return
-                """
-                try:
-                    self.module_parents, self.last_responseText = util.get_parents(
-                        childModule_partID
-                    )
-                except (
-                    requests.exceptions.HTTPError,
-                    requests.exceptions.ConnectionError,
-                    requests.exceptions.Timeout,
-                    requests.exceptions.RequestException,
-                    ValueError,
-                    RuntimeError,
-                ) as e:
-                    self.module_parents = []
-                    self.last_responseText = str(e)
-                if not self._report_api_status(expected_prefix="200"):
-                    self._show_error(
-                        "Module relations could not be loaded from ProdDB API."
-                    )
-                    self.this_MODULE_relations_DU = []
-                    self.this_MODULE_relations_SLOT = []
-                    return
-                """
 
                 for r in self.module_parents:
                     if debug:
@@ -4513,32 +4490,7 @@ class App(customtkinter.CTk):
                     )
                     self.this_DU_relations_MODULE = []
                     return
-                """
-                try:
-                    self.partstree, self.last_responseText = util.get_children(
-                        parentDU_partID, ofKind="Module"
-                    )
-                    detector, self.last_responseText = util.get_parents(
-                        parentDU_partID, ofKind="Detector"
-                    )
-                except (
-                    requests.exceptions.HTTPError,
-                    requests.exceptions.ConnectionError,
-                    requests.exceptions.Timeout,
-                    requests.exceptions.RequestException,
-                    ValueError,
-                    RuntimeError,
-                ) as e:
-                    self.partstree = []
-                    detector = []
-                    self.last_responseText = str(e)
-                if not self._report_api_status(expected_prefix="200"):
-                    self._show_error(
-                        "DU relations could not be loaded from ProdDB API."
-                    )
-                    self.this_DU_relations_MODULE = []
-                    return
-                """
+
                 for r in self.partstree:
                     if str(r["part_parent"]["part_id"]) == str(parentDU_partID):
                         if str(r["part"]["kind_of_part"]["kind_of_part_id"]) == str(
@@ -4608,23 +4560,6 @@ class App(customtkinter.CTk):
         if not ok:
             self.this_FT_relations_SLOT = []
             return
-        """
-        try:
-            ft_par, self.last_responseText = util.get_parents(FT_partID, ofKind="Slot")
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
-            ft_par, self.last_responseText = [], str(e)
-        if not self._report_api_status(expected_prefix="200"):
-            self._show_error("FT relations could not be loaded from ProdDB API.")
-            self.this_FT_relations_SLOT = []
-            return
-        """
 
         if ft_par != []:
             # this FT is already connected to some slot!!
@@ -4660,27 +4595,7 @@ class App(customtkinter.CTk):
                 )
                 if not ok:
                     break
-                """
-                try:
-                    detector, self.last_responseText = util.get_parents(
-                        PEB_partID, ofKind="Detector"
-                    )
-                except (
-                    requests.exceptions.HTTPError,
-                    requests.exceptions.ConnectionError,
-                    requests.exceptions.Timeout,
-                    requests.exceptions.RequestException,
-                    ValueError,
-                    RuntimeError,
-                ) as e:
-                    detector = []
-                    self.last_responseText = str(e)
-                if not self._report_api_status(expected_prefix="200"):
-                    self._show_error(
-                        "PEB relations could not be loaded from ProdDB API."
-                    )
-                    break
-                """
+
                 if detector != []:
                     # this PEB was already placed somewhere in the detector!!
                     for r in detector:
@@ -4750,77 +4665,6 @@ class App(customtkinter.CTk):
         else:
             self.combobox_ft.configure(values=[])
             self.combobox_ft.set("- Select -")
-
-    """
-    def fetch_ft(self):
-        try:
-            self.fetch_slots()
-            self.possible_ft, self.last_responseText = util.get_relevant_parts(
-                "Flex Tail"
-            )
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
-            self.possible_ft = []
-            self.last_responseText = str(e)
-        if not self._report_api_status(expected_prefix="200"):
-            self._show_error("Slots / FT could not be loaded from ProdDB API.")
-            return
-
-        if self.ft_filter != "":
-            gen = self.ft_filter.split("+")[0].split("/")  # multiple generations
-            cat = self.ft_filter[-2:]  # the last two chars make the category
-
-            self.possible_ft = [
-                pft
-                for pft in self.possible_ft
-                if any(gen_ in pft["serial_number"] for gen_ in gen)
-                and int(pft["serial_number"][9:11]) == int(cat)
-            ]
-
-        # HY_LV child SN filter input
-        self.childFT_SN_filter = self.entry_childFT_SN_filter.get()
-        if self.childFT_SN_filter != "":
-            self.possible_ft = [
-                pft
-                for pft in self.possible_ft
-                if self.childFT_SN_filter in str(pft["serial_number"])
-            ]
-        # do the most expensive part last (when easy filters on existing data have already been applied)
-        # expensive meaning need to make calls to the API for each part in the list that survived the previous cuts
-        if self.ft_conn != None and self.ft_conn != "All FTs":
-            self.possible_ft = [
-                pp
-                for pp in self.possible_ft
-                if (len(util.get_parents(pp["part_id"], ofKind="Slot")[0])) == 0
-            ]
-        self.possible_ft_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-            self.possible_ft
-        )
-        self.possible_ft_SNs = [entry[0] for entry in self.possible_ft_SNs_and_partIDs]
-        self.possible_ft_SNs_chunked = [
-            self.possible_ft_SNs[i : i + self.n_items_to_show_in_cbx]
-            for i in range(0, len(self.possible_ft_SNs), self.n_items_to_show_in_cbx)
-        ]
-        self.possible_ft_partIDs = [
-            entry[1] for entry in self.possible_ft_SNs_and_partIDs
-        ]
-        self.cbx_ft_n_pages = len(self.possible_ft_SNs_chunked)
-        self.cbx_ft_shown_page = min(1, self.cbx_ft_n_pages)
-        self.label_combobox_ft_paginationFrame.configure(
-            text=f"page {self.cbx_ft_shown_page}/{self.cbx_ft_n_pages}"
-        )
-        if len(self.possible_ft) > 0:
-            self.combobox_ft.configure(values=self.possible_ft_SNs_chunked[0])
-        else:
-            self.combobox_ft.configure(values=[])
-            self.combobox_ft.set("- Select -")
-    """
 
     def fetch_MA_p_c(self, update="all", withMessage=" "):
         # this happens when any filter is changed and at the beginning
@@ -5188,29 +5032,6 @@ class App(customtkinter.CTk):
             self.this_MOD_relations_HY_unknownPosition = []
             self.this_MOD_relations_HY_invalidPosition = []
             return
-        """
-        try:
-            par, self.last_responseText = util.get_children(
-                partID
-            )  # fetches all of them, group into KoP afterwards
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
-            par, self.last_responseText = [], str(e)
-        if not self._report_api_status(expected_prefix="200"):
-            self._show_error("Module relations could not be loaded from ProdDB API.")
-            self.this_MOD_relations_MF = []
-            self.this_MOD_relations_HY_HV = []
-            self.this_MOD_relations_HY_LV = []
-            self.this_MOD_relations_HY_unknownPosition = []
-            self.this_MOD_relations_HY_invalidPosition = []
-            return
-        """
 
         if par != []:
             info_text = f"Info: This Module is already connected to some children."
@@ -5347,114 +5168,6 @@ class App(customtkinter.CTk):
                 self.this_HY_LV_relations_MOD.append(r)
                 self.button_delete_child_HY_LV.configure(state="normal")
 
-    """
-    def fetch_MA_MF(self, SN, debug=False):
-        partID = self.possible_MF_partIDs[self.possible_MF_SNs.index(SN)]
-        if debug:
-            print(SN)
-            print(partID)
-            print(self.possible_MF)
-        self.label_info.configure(text=" ")
-        self.button_delete_child_MF.configure(state="disabled")
-        try:
-            par, self.last_responseText = util.get_parents(partID, ofKind="Module")
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
-            par, self.last_responseText = [], str(e)
-        if not self._report_api_status(expected_prefix="200"):
-            self._show_error("MF relations could not be loaded from ProdDB API.")
-            self.this_MF_relations_MOD = []
-            return
-
-        if par != []:
-            for r in par:
-                if debug:
-                    print(r)
-                info_text = f"Info: This MF is already connected to a module: {r['part_parent']['serial_number']}."
-                print(f">>> {info_text}")
-                self.label_info.configure(text=info_text)
-                self.this_MF_relations_MOD.append(r)
-                self.button_delete_child_MF.configure(state="normal")
-
-    def fetch_MA_HY_HV(self, SN, debug=False):
-        partID = self.possible_HY_HV_partIDs[self.possible_HY_HV_SNs.index(SN)]
-        if debug:
-            print(SN)
-            print(partID)
-            print(self.possible_HY_HV)
-        self.label_info.configure(text=" ")
-        self.button_delete_child_HY_HV.configure(state="disabled")
-        try:
-            par, self.last_responseText = util.get_parents(partID, ofKind="Module")
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
-            par, self.last_responseText = [], str(e)
-        if not self._report_api_status(expected_prefix="200"):
-            self._show_error(
-                "HY HV-side relations could not be loaded from ProdDB API."
-            )
-            self.this_HY_HV_relations_MOD = []
-            return
-
-        if par != []:
-            for r in par:
-                if debug:
-                    print(r)
-                info_text = f"Info: This HY HV-side is already connected to a module: {r['part_parent']['serial_number']}."
-                print(f">>> {info_text}")
-                self.label_info.configure(text=info_text)
-                self.this_HY_HV_relations_MOD.append(r)
-                self.button_delete_child_HY_HV.configure(state="normal")
-
-    def fetch_MA_HY_LV(self, SN, debug=False):
-        partID = self.possible_HY_LV_partIDs[self.possible_HY_LV_SNs.index(SN)]
-        if debug:
-            print(SN)
-            print(partID)
-            print(self.possible_HY_LV)
-        self.label_info.configure(text=" ")
-        self.button_delete_child_HY_LV.configure(state="disabled")
-        try:
-            par, self.last_responseText = util.get_parents(partID, ofKind="Module")
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
-            par, self.last_responseText = [], str(e)
-        if not self._report_api_status(expected_prefix="200"):
-            self._show_error(
-                "HY LV-side relations could not be loaded from ProdDB API."
-            )
-            self.this_HY_LV_relations_MOD = []
-            return
-
-        if par != []:
-            for r in par:
-                if debug:
-                    print(r)
-                info_text = f"Info: This HY LV-side is already connected to a module: {r['part_parent']['serial_number']}."
-                print(f">>> {info_text}")
-                self.label_info.configure(text=info_text)
-                self.this_HY_LV_relations_MOD.append(r)
-                self.button_delete_child_HY_LV.configure(state="normal")
-    """
-
     def fetch_p_c(self, p, c):
         self.possible_parents, ok_p = self._fetch_relevant_parts(
             p,
@@ -5468,26 +5181,7 @@ class App(customtkinter.CTk):
             self.possible_parents = []
             self.possible_children = []
             return
-        """
-        def fetch_p_c(self, p, c):
-            try:
-                self.possible_parents, self.last_responseText = util.get_relevant_parts(p)
-                self.possible_children, self.last_responseText = util.get_relevant_parts(c)
-            except (
-                requests.exceptions.HTTPError,
-                requests.exceptions.ConnectionError,
-                requests.exceptions.Timeout,
-                requests.exceptions.RequestException,
-                ValueError,
-                RuntimeError,
-            ) as e:
-                self.possible_parents = []
-                self.possible_children = []
-                self.last_responseText = str(e)
-            if not self._report_api_status(expected_prefix="200"):
-                self._show_error("Parents / Children could not be loaded from ProdDB API.")
-                return
-        """
+
         if p == "Detector Unit" and c == "Module":
             if self.par_type != None and self.par_type != "All DU types":
                 self.possible_parents = [
@@ -5597,26 +5291,6 @@ class App(customtkinter.CTk):
         )
         if not ok:
             self.slots = None
-
-    """
-    def fetch_slots(self):
-        try:
-            self.slots, self.last_responseText = util.get_relevant_parts(
-                "Slot", getFullAttributes=True, useLocal=True
-            )
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
-            self.slots = None
-            self.last_responseText = str(e)
-        if not self._report_api_status(expected_prefix="200"):
-            self._show_error("Slots could not be loaded from ProdDB API.")
-    """
 
     def help(self):
         if self.help_window is None or not self.help_window.winfo_exists():
