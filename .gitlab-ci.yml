@@ -29,7 +29,6 @@ api_report:
     branch: master
     strategy: mirror
   variables:
-    IS_REFACTORED: "yes"
     TRIGGER_TARGET: "api_report_generate_files"
   rules:
     # Run on schedules
@@ -44,7 +43,6 @@ api_test:
     branch: master
     strategy: depend
   variables:
-    IS_REFACTORED: "yes"
     TRIGGER_TARGET: "api_test_generate_files"
     UPSTREAM_SOURCE_PROJECT_PATH: $CI_MERGE_REQUEST_SOURCE_PROJECT_PATH
     UPSTREAM_FALLBACK_PROJECT_PATH: $CI_PROJECT_PATH
