@@ -8,7 +8,7 @@ Endpoints storing IV curves are available for Sensors (per pad, or combining the
 
 You can combine an arbitrary number of serial numbers with customizable plotting style / labels.
 
-Execute the following from the hgtd-tools directory (using either Anaconda Prompt or your preferred shell with which you installed miniconda or any environment with the required packages). You do not need to provide all Kinds of Parts for plotting, just one out of Sensor/Hybrid/Module is enough, but indeed you can combine them arbitrarily:
+Execute the following (using either Anaconda Prompt or your preferred shell with which you installed miniconda or any environment with the required packages). You do not need to provide all Kinds of Parts for plotting, just one out of Sensor/Hybrid/Module is enough, but indeed you can combine them arbitrarily:
 
 ```shell
 conda activate hgtd # or another method with which you activate your environment, such as: source hgtd/bin/activate

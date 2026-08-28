@@ -26,7 +26,7 @@ For the algorithm in the current implementation, we pair by `VBD` of the Sensor.
 
 When performing module assembly, you can pair Hybrids that are available for your use case.
 
-Execute the following from the hgtd-tools directory (using either Anaconda Prompt or your preferred shell with which you installed miniconda or any environment with the required packages):
+Execute the following (using either Anaconda Prompt or your preferred shell with which you installed miniconda or any environment with the required packages):
 
 ```shell
 conda activate hgtd # or another method with which you activate your environment, such as: source hgtd/bin/activate

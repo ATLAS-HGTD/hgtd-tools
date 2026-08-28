@@ -367,7 +367,7 @@ contains the actual user input and buttons to perform the parts tree operations.
 
 ??? question "Not authorized issue"
 
-    Have you followed the steps from the [install guide](../getting_started/install.md) fully, for example, did you also download the most recent `config_api` file into the main directory of `hgtd-tools`? This is likely missing if you are not authorized to perform operations despite trying with login. This file is only accessible to proddb-users (you need to join the e-group first). For the latter, you can follow the steps [here](https://hgtd-database.docs.cern.ch/content/user/user_tasks/){target="_blank"}.
+    Have you followed the steps from the [install guide](../getting_started/install.md) fully, for example, did you also download the most recent `config_api` file and place it into the directory suggested in the install docs? This is likely missing if you are not authorized to perform operations despite trying with login. This file is only accessible to proddb-users (you need to join the e-group first). For the latter, you can follow the steps [here](https://hgtd-database.docs.cern.ch/content/user/user_tasks/){target="_blank"}.
 
 ??? question "Parts take too long to load after selecting based on connection status"
 
