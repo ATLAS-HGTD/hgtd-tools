@@ -746,29 +746,6 @@ allPEBs = ["1F", "1B", "2F", "2B", "3F", "3B"]
 F_PEBs = ["1F", "1B", "2F", "2B", "3F"]
 B_PEBs = ["1F", "1B", "2F", "2B", "3B"]
 
-## Color scheme for GUI
-
-### slot colors in DU view
-fillColor_SU = "#f4f4bb"
-fillColor_Slot = "#FFFFFF"
-fillColor_SU_Text = "#aaaaaa"
-fillColor_InterlockSlot = "#840032"  # "#420019"#"#ffaaaa"
-fillColor_AlreadyLoadedSlot = "#b4adea"  # "#d9dbff"#"#3066be"#"#00ddff"
-fillColor_ActiveSlot = "#edc273"  # "#E5A93B"#"#D4A373"#"#e396df"#"#33ff33"
-
-### standard buttons
-fg_color_standard_but_active = "#339941"
-hover_color_standard_but_active = "#228831"
-fg_color_standard_but_inactive = "#555555"
-hover_color_standard_but_inactive = "#444444"
-fg_color_standard_but_red = "#cf352e"
-hover_color_standard_but_red = "#B02B25"
-
-### progress bar
-progress_color_OK = "#007711"
-progress_color_wait = "#BBAA00"
-progress_color_ERROR = "#ff0000"
-
 
 ## Electrical properties
 module_flex_ohm_res = 11000

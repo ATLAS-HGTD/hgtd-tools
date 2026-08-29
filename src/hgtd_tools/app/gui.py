@@ -1,6 +1,7 @@
 import threading
 import time
 import tkinter
+from dataclasses import dataclass
 from importlib import metadata
 
 import customtkinter
@@ -20,6 +21,34 @@ customtkinter.set_default_color_theme(
 
 wrapped_text = util.CustomTextWrapper(width=90)
 __version__ = metadata.version("hgtd_tools")
+
+
+@dataclass(frozen=True)
+class GuiConfig:
+    """Immutable UI-level constants."""
+
+    title: str = "HGTD Tools"
+    geometry: str = "1500x1000"
+    n_items_to_show_in_cbx: int = 16
+    default_operation_mode: str = "Module Assembly"
+    fillColor_SU: str = "#f4f4bb"
+    fillColor_Slot: str = "#FFFFFF"
+    fillColor_SU_Text: str = "#aaaaaa"
+    fillColor_InterlockSlot: str = "#840032"  # "#420019"#"#ffaaaa"
+    fillColor_AlreadyLoadedSlot: str = "#b4adea"  # "#d9dbff"#"#3066be"#"#00ddff"
+    fillColor_ActiveSlot: str = "#edc273"  # "#E5A93B"#"#D4A373"#"#e396df"#"#33ff33"
+    fg_active_color: str = "#339941"
+    hover_active_color: str = "#228831"
+    fg_inactive_color: str = "#555555"
+    hover_inactive_color: str = "#444444"
+    fg_color_standard_but_red: str = "#cf352e"
+    hover_color_standard_but_red: str = "#B02B25"
+    progress_color_OK: str = "#007711"
+    progress_color_WAIT: str = "#BBAA00"
+    progress_color_ERROR: str = "#ff0000"
+
+
+GUI_CONFIG = GuiConfig()
 SELECTION_PLACEHOLDERS = {"- Select -", "", "- automatic -", "VxLyQz"}
 
 
@@ -140,7 +169,7 @@ class App(customtkinter.CTk):
         """
         ok = str(self.last_responseText).startswith(expected_prefix)
         self.api_status = 1 if ok else 0
-        color = data.progress_color_OK if ok else data.progress_color_ERROR
+        color = GUI_CONFIG.progress_color_OK if ok else GUI_CONFIG.progress_color_ERROR
         self.progressbar.configure(progress_color=color)
         return ok
 
@@ -202,13 +231,15 @@ class App(customtkinter.CTk):
             # update progressbar
             self.progressbar.step()
             self.after(250, self._update_progressbar, thread)
-            self.progressbar.configure(progress_color=data.progress_color_wait)
+            self.progressbar.configure(progress_color=GUI_CONFIG.progress_color_WAIT)
         else:
             self.progressbar.set(1)
             if self.api_status == 0:
-                self.progressbar.configure(progress_color=data.progress_color_ERROR)
+                self.progressbar.configure(
+                    progress_color=GUI_CONFIG.progress_color_ERROR
+                )
             else:
-                self.progressbar.configure(progress_color=data.progress_color_OK)
+                self.progressbar.configure(progress_color=GUI_CONFIG.progress_color_OK)
 
     def _build_sidebar_logo(self):
         """Top-of-sidebar app logo + version / author line."""
@@ -238,7 +269,7 @@ class App(customtkinter.CTk):
         self.progressbar = customtkinter.CTkProgressBar(
             self.frame_sidebar_left,
             orientation="horizontal",
-            progress_color=data.progress_color_OK,
+            progress_color=GUI_CONFIG.progress_color_OK,
         )
         self.progressbar.grid(row=3, column=0, padx=10, pady=5, columnspan=2)
         self.progressbar.set(1)
@@ -256,8 +287,8 @@ class App(customtkinter.CTk):
         )
         self.frame_operation_mode.grid_columnconfigure((0, 1), weight=1)
 
-        self.operation_mode = "Module Assembly"  # default
-        self.operation_mode_buttons = {}  # NEW: id -> CTkButton
+        self.operation_mode = GUI_CONFIG.default_operation_mode
+        self.operation_mode_buttons = {}
 
         header = customtkinter.CTkLabel(
             self.frame_operation_mode,
@@ -295,14 +326,14 @@ class App(customtkinter.CTk):
                 text=text,
                 command=lambda m=mode_id: self.button_mode_event_click(m),
                 fg_color=(
-                    data.fg_color_standard_but_active
+                    GUI_CONFIG.fg_active_color
                     if is_active
-                    else data.fg_color_standard_but_inactive
+                    else GUI_CONFIG.fg_inactive_color
                 ),
                 hover_color=(
-                    data.hover_color_standard_but_active
+                    GUI_CONFIG.hover_active_color
                     if is_active
-                    else data.hover_color_standard_but_inactive
+                    else GUI_CONFIG.hover_inactive_color
                 ),
             )
             btn.grid(
@@ -313,7 +344,7 @@ class App(customtkinter.CTk):
                 sticky="nsew",
                 columnspan=2,
             )
-            self.operation_mode_buttons[short_id] = btn  # NEW
+            self.operation_mode_buttons[short_id] = btn
 
     def _build_sidebar_useful_links(self):
         """External links panel: DB frontend, docs, gitlab, mattermost, etc."""
@@ -359,8 +390,8 @@ class App(customtkinter.CTk):
                 command=lambda u=url: util.open_webbrowser_with_url(
                     u, noExtraPrefix=True
                 ),
-                fg_color=data.fg_color_standard_but_inactive,
-                hover_color=data.hover_color_standard_but_inactive,
+                fg_color=GUI_CONFIG.fg_inactive_color,
+                hover_color=GUI_CONFIG.hover_inactive_color,
             )
             btn.grid(
                 row=i,
@@ -433,8 +464,8 @@ class App(customtkinter.CTk):
             image=self.help_image,
             text="Help",
             compound="left",
-            fg_color=data.fg_color_standard_but_active,
-            hover_color=data.hover_color_standard_but_active,
+            fg_color=GUI_CONFIG.fg_active_color,
+            hover_color=GUI_CONFIG.hover_active_color,
             command=self.help,
             width=60,
         )
@@ -449,8 +480,8 @@ class App(customtkinter.CTk):
             image=self.exit_image,
             text="Close",
             compound="left",
-            fg_color=data.fg_color_standard_but_red,
-            hover_color=data.hover_color_standard_but_red,
+            fg_color=GUI_CONFIG.fg_color_standard_but_red,
+            hover_color=GUI_CONFIG.hover_color_standard_but_red,
             command=self.exit,
             width=60,
         )
@@ -532,14 +563,14 @@ class App(customtkinter.CTk):
         super().__init__()
 
         # === window-level configuration ===
-        self.title("HGTD Tools")
-        self.geometry(f"{1500}x{1000}")
+        self.title(GUI_CONFIG.title)
+        self.geometry(GUI_CONFIG.geometry)
         icon = tkinter.PhotoImage(data=load_image_from_assets_as_b64("windowIcon.png"))
         self.wm_iconbitmap()
         self.iconphoto(True, icon)
 
         # === global constants used by comboboxes ===
-        self.n_items_to_show_in_cbx = 16
+        self.n_items_to_show_in_cbx = GUI_CONFIG.n_items_to_show_in_cbx
 
         # === root-level grid ===
         self.grid_columnconfigure((0, 1, 2), weight=1)
@@ -548,9 +579,7 @@ class App(customtkinter.CTk):
         # === build the left sidebar in one call ===
         self._build_sidebar()
 
-        # work in main widget (column w.r.t. root >= 1)
-
-        # create main frame with widgets
+        # create main frame with widgets (column w.r.t. root >= 1)
         self.frame_main = customtkinter.CTkFrame(self)
         self.frame_main.grid(
             row=0, column=1, rowspan=1, columnspan=2, padx=10, pady=10, sticky="nsew"
@@ -884,8 +913,8 @@ class App(customtkinter.CTk):
             text="UNLOAD CLICKED MODULE",
             command=self.button_delete_clicked_event_click,
             state="disabled",
-            fg_color=data.fg_color_standard_but_red,
-            hover_color=data.hover_color_standard_but_red,
+            fg_color=GUI_CONFIG.fg_color_standard_but_red,
+            hover_color=GUI_CONFIG.hover_color_standard_but_red,
         )
         self.button_delete_clicked.grid(row=0, column=0, padx=10, pady=(10, 5))
 
@@ -1211,8 +1240,8 @@ class App(customtkinter.CTk):
             self.frame_module_flex_child,
             text="CONNECT MODULE FLEX\nTO MODULE ABOVE",
             command=self.button_add_child_module_flex_event_click,
-            fg_color=data.fg_color_standard_but_active,
-            hover_color=data.hover_color_standard_but_active,
+            fg_color=GUI_CONFIG.fg_active_color,
+            hover_color=GUI_CONFIG.hover_active_color,
         )
         self.button_add_child_module_flex.grid(
             row=9, column=0, padx=5, pady=5, columnspan=2
@@ -1222,8 +1251,8 @@ class App(customtkinter.CTk):
             text="DISCONNECT MODULE FLEX\nFROM ITS PARENT",
             command=self.button_delete_child_module_flex_event_click,
             state="disabled",
-            fg_color=data.fg_color_standard_but_red,
-            hover_color=data.hover_color_standard_but_red,
+            fg_color=GUI_CONFIG.fg_color_standard_but_red,
+            hover_color=GUI_CONFIG.hover_color_standard_but_red,
         )
         self.button_delete_child_MF.grid(row=10, column=0, padx=5, pady=5, columnspan=2)
 
@@ -1361,8 +1390,8 @@ class App(customtkinter.CTk):
             self.frame_HY_HV_child,
             text="CONNECT HY HV-side\nTO MODULE ABOVE",
             command=self.button_add_child_HY_HV_event_click,
-            fg_color=data.fg_color_standard_but_active,
-            hover_color=data.hover_color_standard_but_active,
+            fg_color=GUI_CONFIG.fg_active_color,
+            hover_color=GUI_CONFIG.hover_active_color,
         )
         self.button_add_child_HY_HV.grid(row=11, column=0, padx=5, pady=5, columnspan=2)
         self.button_delete_child_HY_HV = customtkinter.CTkButton(
@@ -1370,8 +1399,8 @@ class App(customtkinter.CTk):
             text="DISCONNECT HY HV-side\nFROM ITS PARENT",
             command=self.button_delete_child_HY_HV_event_click,
             state="disabled",
-            fg_color=data.fg_color_standard_but_red,
-            hover_color=data.hover_color_standard_but_red,
+            fg_color=GUI_CONFIG.fg_color_standard_but_red,
+            hover_color=GUI_CONFIG.hover_color_standard_but_red,
         )
         self.button_delete_child_HY_HV.grid(
             row=12, column=0, padx=5, pady=5, columnspan=2
@@ -1513,8 +1542,8 @@ class App(customtkinter.CTk):
             self.frame_HY_LV_child,
             text="CONNECT HY LV-side\nTO MODULE ABOVE",
             command=self.button_add_child_HY_LV_event_click,
-            fg_color=data.fg_color_standard_but_active,
-            hover_color=data.hover_color_standard_but_active,
+            fg_color=GUI_CONFIG.fg_active_color,
+            hover_color=GUI_CONFIG.hover_active_color,
         )
         self.button_add_child_HY_LV.grid(row=11, column=0, padx=5, pady=5, columnspan=2)
         self.button_delete_child_HY_LV = customtkinter.CTkButton(
@@ -1522,8 +1551,8 @@ class App(customtkinter.CTk):
             text="DISCONNECT HY LV-side\nFROM ITS PARENT",
             command=self.button_delete_child_HY_LV_event_click,
             state="disabled",
-            fg_color=data.fg_color_standard_but_red,
-            hover_color=data.hover_color_standard_but_red,
+            fg_color=GUI_CONFIG.fg_color_standard_but_red,
+            hover_color=GUI_CONFIG.hover_color_standard_but_red,
         )
         self.button_delete_child_HY_LV.grid(
             row=12, column=0, padx=5, pady=5, columnspan=2
@@ -1765,8 +1794,8 @@ class App(customtkinter.CTk):
             text="DISCONNECT SELECTED FT",
             command=self.button_delete_connected_ft_event_click,
             state="disabled",
-            fg_color=data.fg_color_standard_but_red,
-            hover_color=data.hover_color_standard_but_red,
+            fg_color=GUI_CONFIG.fg_color_standard_but_red,
+            hover_color=GUI_CONFIG.hover_color_standard_but_red,
         )
         self.button_delete_connected_ft.grid(row=5, column=1, padx=10, pady=(10, 5))
 
@@ -3514,12 +3543,6 @@ class App(customtkinter.CTk):
         self.possible_HY_HV = []
         self.possible_HY_LV = []
 
-        # === NEW: re-color all five buttons based on the new mode ===
-        active_color = data.fg_color_standard_but_active
-        active_hover = data.hover_color_standard_but_active
-        inactive_color = data.fg_color_standard_but_inactive
-        inactive_hover = data.hover_color_standard_but_inactive
-
         # Map mode_id -> short_id so we can flip exactly one button "on"
         mode_to_short = {
             "Module Assembly": "MA",
@@ -3532,8 +3555,16 @@ class App(customtkinter.CTk):
         for short_id, btn in self.operation_mode_buttons.items():
             is_active = short_id == active_short
             btn.configure(
-                fg_color=active_color if is_active else inactive_color,
-                hover_color=active_hover if is_active else inactive_hover,
+                fg_color=(
+                    GUI_CONFIG.fg_active_color
+                    if is_active
+                    else GUI_CONFIG.fg_inactive_color
+                ),
+                hover_color=(
+                    GUI_CONFIG.hover_active_color
+                    if is_active
+                    else GUI_CONFIG.hover_inactive_color
+                ),
             )
 
         self.slots = None
@@ -3781,8 +3812,8 @@ class App(customtkinter.CTk):
                                     slot["y"],
                                     slot["w"],
                                     slot["h"],
-                                    fill=data.fillColor_AlreadyLoadedSlot,
-                                    outline=data.fillColor_InterlockSlot,
+                                    fill=GUI_CONFIG.fillColor_AlreadyLoadedSlot,
+                                    outline=GUI_CONFIG.fillColor_InterlockSlot,
                                     width=10,
                                 )
                             else:
@@ -3791,7 +3822,7 @@ class App(customtkinter.CTk):
                                     slot["y"],
                                     slot["w"],
                                     slot["h"],
-                                    fill=data.fillColor_AlreadyLoadedSlot,
+                                    fill=GUI_CONFIG.fillColor_AlreadyLoadedSlot,
                                 )
                         else:
                             if str(slot["slot"]) in self.interlockSlots:
@@ -3800,8 +3831,8 @@ class App(customtkinter.CTk):
                                     slot["y"],
                                     slot["w"],
                                     slot["h"],
-                                    fill=data.fillColor_ActiveSlot,
-                                    outline=data.fillColor_InterlockSlot,
+                                    fill=GUI_CONFIG.fillColor_ActiveSlot,
+                                    outline=GUI_CONFIG.fillColor_InterlockSlot,
                                     width=10,
                                 )
                             else:
@@ -3810,7 +3841,7 @@ class App(customtkinter.CTk):
                                     slot["y"],
                                     slot["w"],
                                     slot["h"],
-                                    fill=data.fillColor_ActiveSlot,
+                                    fill=GUI_CONFIG.fillColor_ActiveSlot,
                                 )
                     else:
                         if slot["slot"] in alreadyUsedSlots:
@@ -3820,8 +3851,8 @@ class App(customtkinter.CTk):
                                     slot["y"],
                                     slot["w"],
                                     slot["h"],
-                                    fill=data.fillColor_AlreadyLoadedSlot,
-                                    outline=data.fillColor_InterlockSlot,
+                                    fill=GUI_CONFIG.fillColor_AlreadyLoadedSlot,
+                                    outline=GUI_CONFIG.fillColor_InterlockSlot,
                                     width=10,
                                 )
                             else:
@@ -3830,7 +3861,7 @@ class App(customtkinter.CTk):
                                     slot["y"],
                                     slot["w"],
                                     slot["h"],
-                                    fill=data.fillColor_AlreadyLoadedSlot,
+                                    fill=GUI_CONFIG.fillColor_AlreadyLoadedSlot,
                                 )
                         else:
                             if str(slot["slot"]) in self.interlockSlots:
@@ -3839,7 +3870,7 @@ class App(customtkinter.CTk):
                                     slot["y"],
                                     slot["w"],
                                     slot["h"],
-                                    fill=data.fillColor_InterlockSlot,
+                                    fill=GUI_CONFIG.fillColor_InterlockSlot,
                                 )
                             else:
                                 self.canvas_place_rounded_rectangle(
@@ -3847,7 +3878,7 @@ class App(customtkinter.CTk):
                                     slot["y"],
                                     slot["w"],
                                     slot["h"],
-                                    fill=data.fillColor_Slot,
+                                    fill=GUI_CONFIG.fillColor_Slot,
                                 )
                 if (
                     len(alreadyConnectedDUsForModule)
@@ -4327,7 +4358,7 @@ class App(customtkinter.CTk):
             ]
 
         self.duAlreadyPlacedText = self.canvas.create_text(
-            380, 525, text=f"", anchor="nw", fill=data.fillColor_SU_Text
+            380, 525, text=f"", anchor="nw", fill=GUI_CONFIG.fillColor_SU_Text
         )
         self.clicked_module = []
         for key in data.allDUs.keys():
@@ -4335,7 +4366,9 @@ class App(customtkinter.CTk):
                 self.displayedDUtype = key
                 self.interlockSlots = data.DU_Interlock_dict[key]
                 self.label_info.configure(text=" ")
-                self.canvas.create_rectangle(40, 40, 360, 540, fill=data.fillColor_SU)
+                self.canvas.create_rectangle(
+                    40, 40, 360, 540, fill=GUI_CONFIG.fillColor_SU
+                )
                 for mod in data.allDUs[self.displayedDUtype]:
                     if str(mod["slot"]) in self.interlockSlots:
                         self.canvas_place_rounded_rectangle(
@@ -4343,7 +4376,7 @@ class App(customtkinter.CTk):
                             mod["y"],
                             mod["w"],
                             mod["h"],
-                            fill=data.fillColor_InterlockSlot,
+                            fill=GUI_CONFIG.fillColor_InterlockSlot,
                         )
                     else:
                         self.canvas_place_rounded_rectangle(
@@ -4351,7 +4384,7 @@ class App(customtkinter.CTk):
                             mod["y"],
                             mod["w"],
                             mod["h"],
-                            fill=data.fillColor_Slot,
+                            fill=GUI_CONFIG.fillColor_Slot,
                         )
                 self.canvas.create_text(
                     140,
@@ -4359,21 +4392,21 @@ class App(customtkinter.CTk):
                     text=self.displayedDUtype,
                     anchor="nw",
                     font=("Arial", 50),
-                    fill=data.fillColor_SU_Text,
+                    fill=GUI_CONFIG.fillColor_SU_Text,
                 )
                 self.canvas.create_text(
                     145,
                     20,
                     text="Connector side",
                     anchor="nw",
-                    fill=data.fillColor_SU_Text,
+                    fill=GUI_CONFIG.fillColor_SU_Text,
                 )
                 self.canvas.create_text(
                     145,
                     545,
                     text="Capacitor side",
                     anchor="nw",
-                    fill=data.fillColor_SU_Text,
+                    fill=GUI_CONFIG.fillColor_SU_Text,
                 )
                 if "FI10" in DU_SN:
                     self.canvas.create_text(
@@ -4381,7 +4414,7 @@ class App(customtkinter.CTk):
                         290,
                         text="Connector side",
                         anchor="nw",
-                        fill=data.fillColor_SU_Text,
+                        fill=GUI_CONFIG.fillColor_SU_Text,
                         angle=90,
                     )
                     self.canvas.create_text(
@@ -4389,7 +4422,7 @@ class App(customtkinter.CTk):
                         290,
                         text="Capacitor side",
                         anchor="nw",
-                        fill=data.fillColor_SU_Text,
+                        fill=GUI_CONFIG.fillColor_SU_Text,
                         angle=90,
                     )
                 # get the children of that DU, interested in Modules only here; get potential detector parent
@@ -4425,8 +4458,8 @@ class App(customtkinter.CTk):
                                             mod["y"],
                                             mod["w"],
                                             mod["h"],
-                                            fill=data.fillColor_AlreadyLoadedSlot,
-                                            outline=data.fillColor_InterlockSlot,
+                                            fill=GUI_CONFIG.fillColor_AlreadyLoadedSlot,
+                                            outline=GUI_CONFIG.fillColor_InterlockSlot,
                                             width=10,
                                         )
                                     else:
@@ -4435,7 +4468,7 @@ class App(customtkinter.CTk):
                                             mod["y"],
                                             mod["w"],
                                             mod["h"],
-                                            fill=data.fillColor_AlreadyLoadedSlot,
+                                            fill=GUI_CONFIG.fillColor_AlreadyLoadedSlot,
                                         )
                                     self.clicked_module = r["part"]
                 if len(self.this_DU_relations_MODULE) == len(
@@ -4446,7 +4479,7 @@ class App(customtkinter.CTk):
                         475,
                         text="Fully loaded DU",
                         anchor="nw",
-                        fill=data.fillColor_SU_Text,
+                        fill=GUI_CONFIG.fillColor_SU_Text,
                     )
                 if detector != []:
                     # this DU was already placed somewhere in the detector!!
@@ -4456,7 +4489,7 @@ class App(customtkinter.CTk):
                             525,
                             text=f"Already placed at:\n{r['position']}",
                             anchor="nw",
-                            fill=data.fillColor_SU_Text,
+                            fill=GUI_CONFIG.fillColor_SU_Text,
                         )
                 break
         else:
