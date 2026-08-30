@@ -300,6 +300,24 @@ class App(customtkinter.CTk):
         else:
             print(f"You are running the most recent release {self.my_version}. Enjoy!")
 
+    def _confirm_by_typing(self, prompt, expected):
+        """Show an input dialog and return whether the user typed `expected` exactly.
+
+        Args:
+            prompt: full text shown in the dialog body.
+            expected: the string the user must retype verbatim. Can be a hardcoded
+                keyword like "OVERWRITE" or a dynamic value like a VLQ position
+                ("V0L1Q2"). Whatever you pass is what gets compared — keeps the
+                dialog logic uniform across both confirmation styles.
+
+        Returns:
+            True iff the user typed exactly `expected`, False if they cancelled
+            or typed anything else.
+        """
+        dialog = customtkinter.CTkInputDialog(text=prompt, title="Confirm dialog")
+        confirmed = dialog.get_input()
+        return confirmed == expected
+
     def _run_with_progress(self, target, *args):
         """Spawn a daemon thread for `target(*args)` and start polling the progressbar.
 
@@ -1979,7 +1997,7 @@ class App(customtkinter.CTk):
         else:
             self.user_window.focus()  # if window exists focus it
 
-    def button_add_child_module_flex_event_click(self, debug=False):
+    def button_add_child_module_flex_event_click(self):
         chi = self.combobox_MA_MF_chi.get()
         par = self.combobox_MA_mod_par.get()
         pos = ""  # A relation between MF and MO does not require a position.
@@ -2026,8 +2044,6 @@ class App(customtkinter.CTk):
                         title="Confirm dialog",
                     )
                     confirmed = dialog.get_input()
-                    if debug:
-                        print("Typed in confirmation from confirm dialog:", confirmed)
                     if confirmed == "OVERWRITE":
                         # DELETION OF PREVIOUS STUFF
 
@@ -2080,7 +2096,7 @@ class App(customtkinter.CTk):
                 wrapped_text.fill(info_text),
             )
 
-    def button_add_child_HY_HV_event_click(self, debug=False):
+    def button_add_child_HY_HV_event_click(self):
         chi = self.combobox_MA_HY_HV_chi.get()
         par = self.combobox_MA_mod_par.get()
         pos = "HV"
@@ -2161,11 +2177,6 @@ class App(customtkinter.CTk):
                             title="Confirm dialog",
                         )
                         confirmed = dialog.get_input()
-                        if debug:
-                            print(
-                                "Typed in confirmation from confirm dialog:",
-                                confirmed,
-                            )
                         if confirmed == "OVERWRITE":
                             # DELETION OF PREVIOUS STUFF
 
@@ -2216,7 +2227,7 @@ class App(customtkinter.CTk):
                 self.wrap_data_ui_fetch_MA_p_c, "HY_HV", wrapped_text.fill(info_text)
             )
 
-    def button_add_child_HY_LV_event_click(self, debug=False):
+    def button_add_child_HY_LV_event_click(self):
         chi = self.combobox_MA_HY_LV_chi.get()
         par = self.combobox_MA_mod_par.get()
         pos = "LV"
@@ -2298,11 +2309,6 @@ class App(customtkinter.CTk):
                             title="Confirm dialog",
                         )
                         confirmed = dialog.get_input()
-                        if debug:
-                            print(
-                                "Typed in confirmation from confirm dialog:",
-                                confirmed,
-                            )
                         if confirmed == "OVERWRITE":
                             # DELETION OF PREVIOUS STUFF
 
@@ -2353,7 +2359,7 @@ class App(customtkinter.CTk):
                 self.wrap_data_ui_fetch_MA_p_c, "HY_LV", wrapped_text.fill(info_text)
             )
 
-    def button_add_ft_event_click(self, debug=False):
+    def button_add_ft_event_click(self):
         chi = self.combobox_ft.get()
         par = self.combined_slot
         if not self._selected_non_placeholders(
@@ -2408,11 +2414,6 @@ class App(customtkinter.CTk):
                         title="Confirm dialog",
                     )
                     confirmed = dialog.get_input()
-                    if debug:
-                        print(
-                            "Typed in confirmation from confirm dialog:",
-                            confirmed,
-                        )
                     if confirmed == "OVERWRITE":
                         # DELETION OF PREVIOUS STUFF
 
@@ -2453,8 +2454,6 @@ class App(customtkinter.CTk):
                         )
                         if len(mod_in_DU) > 0:
                             for du_rel in mod_in_DU:
-                                if debug:
-                                    print(du_rel)
                                 part_tree = {
                                     "position": du_rel["position"],
                                     "is_record_deleted": "F",
@@ -2543,7 +2542,7 @@ class App(customtkinter.CTk):
         self.this_FT_relations_SLOT = []
         self._run_with_progress(self.fetch_ft)
 
-    def button_add_event_click(self, debug=False):
+    def button_add_event_click(self):
         chi = self.combobox_child.get()
         par = self.combobox_parent.get()
         pos = self.position_entry.get()
@@ -2658,11 +2657,6 @@ class App(customtkinter.CTk):
                                         title="Confirm dialog",
                                     )
                                     confirmed = dialog.get_input()
-                                    if debug:
-                                        print(
-                                            "Typed in slot from confirm dialog:",
-                                            confirmed,
-                                        )
                                     if confirmed == pos:
                                         # DELETION OF PREVIOUS STUFF
 
@@ -2690,18 +2684,6 @@ class App(customtkinter.CTk):
                                                 )
                                                 for p in affected_parents_of_children:
                                                     # delete those Slot -> Mod relations
-                                                    if debug:
-                                                        print(
-                                                            str(
-                                                                p["part_parent"][
-                                                                    "kind_of_part"
-                                                                ]["kind_of_part_id"]
-                                                            )
-                                                        )
-                                                        print(
-                                                            "Delete Slot -> Module relation",
-                                                            p,
-                                                        )
                                                     self.last_responseText = api.delete_information(
                                                         f"/partstreedelete/{p['record_id']}/"
                                                     )
@@ -2813,11 +2795,6 @@ class App(customtkinter.CTk):
                                             title="Confirm dialog",
                                         )
                                         confirmed = dialog.get_input()
-                                        if debug:
-                                            print(
-                                                "Typed in slot from confirm dialog:",
-                                                confirmed,
-                                            )
                                         if confirmed == pos:
                                             # DELETION OF PREVIOUS STUFF
 
@@ -3597,7 +3574,7 @@ class App(customtkinter.CTk):
             self.slot_glob_mod_variable.set("")
             self._run_with_progress(self.fetch_ft)
 
-    def canvas_event_click(self, event, debug=False):
+    def canvas_event_click(self, event):
         self.clicked_module = []
         self.button_inspect_clicked.configure(text=f"INSPECT CLICKED MODULE")
         self.button_inspect_clicked.configure(state="disabled")
@@ -3610,8 +3587,6 @@ class App(customtkinter.CTk):
                 alreadyConnectedModules = (
                     self.this_DU_relations_MODULE
                 )  # list of relations, as in partstree
-                if debug:
-                    print(alreadyConnectedModules)
                 alreadyUsedSlots = [
                     entry["position"] for entry in alreadyConnectedModules
                 ]
@@ -3722,21 +3697,6 @@ class App(customtkinter.CTk):
                     self.position_variable.set("- automatic -")
                     info_text = "Warning: Your selected child is already connected to some parent.\nSelect a different one, or disconnect the parents of this module by inspecting the Module.\nThere you can delete existing relations with the red trash button."
                     print(f">>> {info_text}")
-                    if debug:
-                        print(
-                            "Existing connections to the following DU(s):",
-                            [
-                                DU["part_parent"]["serial_number"]
-                                for DU in alreadyConnectedDUsForModule
-                            ],
-                        )
-                        print(
-                            "Existing connections to the following Slot(s):",
-                            [
-                                SLOT["part_parent"]["serial_number"]
-                                for SLOT in alreadyConnectedSLOTsForModule
-                            ],
-                        )
                     self.label_info.configure(text=info_text)
                 if not mouseInSomeMod:
                     self.position_variable.set("- automatic -")
@@ -3768,8 +3728,6 @@ class App(customtkinter.CTk):
                 alreadyConnectedModules = (
                     self.this_DU_relations_MODULE
                 )  # list of relations, as in partstree
-                if debug:
-                    print(alreadyConnectedModules)
                 alreadyUsedSlots = [
                     entry["position"] for entry in alreadyConnectedModules
                 ]
@@ -4138,22 +4096,15 @@ class App(customtkinter.CTk):
         self.destroy()
 
     def fetch_and_write_module_slots(
-        self, attribute_Vessel, attribute_Layer, attribute_Quadrant, debug=False
+        self, attribute_Vessel, attribute_Layer, attribute_Quadrant
     ):
         if self.api_status == 1:
-            if debug:
-                if len(self.this_DU_relations_MODULE) == 0:
-                    info_text = wrapped_text.fill(
-                        f"Warning: There is no relation to a module for this DU."
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
             self.fetch_slots()
             self.delete_old_and_post_new_slots_for_loaded_modules(
                 attribute_Vessel, attribute_Layer, attribute_Quadrant
             )
 
-    def fetch_loaded_DU_and_display(self, childSNIn, parentSNIn, debug=False):
+    def fetch_loaded_DU_and_display(self, childSNIn, parentSNIn):
         if self.operation_mode == "Module Loading":
             DU_SN = parentSNIn
             parentDU_partID = self.possible_parents_partIDs[
@@ -4175,8 +4126,6 @@ class App(customtkinter.CTk):
                     return
 
                 for r in self.module_parents:
-                    if debug:
-                        print(r)
                     if str(r["part_parent"]["kind_of_part"]["kind_of_part_id"]) == str(
                         data.KoPID_from_partKoPName["Detector Unit"]
                     ):
@@ -4331,12 +4280,8 @@ class App(customtkinter.CTk):
             print(f">>> {info_text}")
             self.label_info.configure(text=info_text)
 
-    def fetch_loaded_FT(self, ftSNIn, debug=False):
+    def fetch_loaded_FT(self, ftSNIn):
         FT_partID = self.possible_ft_partIDs[self.possible_ft_SNs.index(ftSNIn)]
-        if debug:
-            print(ftSNIn)
-            print(FT_partID)
-            print(self.possible_ft)
         self.label_info.configure(text=" ")
         self.button_delete_connected_ft.configure(state="disabled")
         ft_par, ok = self._fetch_relations(
@@ -4350,23 +4295,17 @@ class App(customtkinter.CTk):
         if ft_par != []:
             # this FT is already connected to some slot!!
             for r in ft_par:
-                if debug:
-                    print(r)
                 info_text = f"Info: This FT is already connected to a slot: {r['part_parent']['serial_number']}."
                 print(f">>> {info_text}")
                 self.label_info.configure(text=info_text)
                 self.this_FT_relations_SLOT.append(r)
                 self.button_delete_connected_ft.configure(state="normal")
 
-    def fetch_loaded_PEB(self, childSNIn, parentSNIn, debug=False):
+    def fetch_loaded_PEB(self, childSNIn, parentSNIn):
         PEB_SN = childSNIn
         PEB_partID = self.possible_children_partIDs[
             self.possible_children_SNs.index(PEB_SN)
         ]
-        if debug:
-            print(childSNIn)
-            print(PEB_partID)
-            print(self.possible_children)
         for key in data.allPEBs:
             if key in PEB_SN:
                 self.displayed_PEB_type = key
@@ -4868,14 +4807,10 @@ class App(customtkinter.CTk):
 
         self._run_with_progress(_worker)
 
-    def fetch_MA_mod(self, SN, debug=False):
+    def fetch_MA_mod(self, SN):
         partID = self.possible_MA_mod_par_partIDs[
             self.possible_MA_mod_par_SNs.index(SN)
         ]
-        if debug:
-            print(SN)
-            print(partID)
-            print(self.possible_MA_mod_par)
         self.label_info.configure(text=" ")
         par, ok = self._fetch_relations(
             lambda: util.get_children(partID),
@@ -4894,8 +4829,6 @@ class App(customtkinter.CTk):
             print(f">>> {info_text}")
             self.label_info.configure(text=info_text)
             for r in par:
-                if debug:
-                    print(r)
                 if str(data.KoPID_from_partKoPName["Module Flex"]) == str(
                     r["part"]["kind_of_part"]["kind_of_part_id"]
                 ):
@@ -4943,12 +4876,8 @@ class App(customtkinter.CTk):
                     info_text += add_info_text
                 self.label_info.configure(text=info_text)
 
-    def fetch_MA_MF(self, SN, debug=False):
+    def fetch_MA_MF(self, SN):
         partID = self.possible_MF_partIDs[self.possible_MF_SNs.index(SN)]
-        if debug:
-            print(SN)
-            print(partID)
-            print(self.possible_MF)
         self.label_info.configure(text=" ")
         self.button_delete_child_MF.configure(state="disabled")
 
@@ -4962,20 +4891,14 @@ class App(customtkinter.CTk):
 
         if par != []:
             for r in par:
-                if debug:
-                    print(r)
                 info_text = f"Info: This MF is already connected to a module: {r['part_parent']['serial_number']}."
                 print(f">>> {info_text}")
                 self.label_info.configure(text=info_text)
                 self.this_MF_relations_MOD.append(r)
                 self.button_delete_child_MF.configure(state="normal")
 
-    def fetch_MA_HY_HV(self, SN, debug=False):
+    def fetch_MA_HY_HV(self, SN):
         partID = self.possible_HY_HV_partIDs[self.possible_HY_HV_SNs.index(SN)]
-        if debug:
-            print(SN)
-            print(partID)
-            print(self.possible_HY_HV)
         self.label_info.configure(text=" ")
         self.button_delete_child_HY_HV.configure(state="disabled")
 
@@ -4989,20 +4912,14 @@ class App(customtkinter.CTk):
 
         if par != []:
             for r in par:
-                if debug:
-                    print(r)
                 info_text = f"Info: This HY HV-side is already connected to a module: {r['part_parent']['serial_number']}."
                 print(f">>> {info_text}")
                 self.label_info.configure(text=info_text)
                 self.this_HY_HV_relations_MOD.append(r)
                 self.button_delete_child_HY_HV.configure(state="normal")
 
-    def fetch_MA_HY_LV(self, SN, debug=False):
+    def fetch_MA_HY_LV(self, SN):
         partID = self.possible_HY_LV_partIDs[self.possible_HY_LV_SNs.index(SN)]
-        if debug:
-            print(SN)
-            print(partID)
-            print(self.possible_HY_LV)
         self.label_info.configure(text=" ")
         self.button_delete_child_HY_LV.configure(state="disabled")
 
@@ -5016,8 +4933,6 @@ class App(customtkinter.CTk):
 
         if par != []:
             for r in par:
-                if debug:
-                    print(r)
                 info_text = f"Info: This HY LV-side is already connected to a module: {r['part_parent']['serial_number']}."
                 print(f">>> {info_text}")
                 self.label_info.configure(text=info_text)

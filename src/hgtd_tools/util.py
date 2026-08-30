@@ -268,9 +268,7 @@ def select_parts(
             if str(iP["manufacturer"]["manufacturer_id"]) == str(manu_id)
         ]
     if sn_does_include != None:
-        parts = [
-            iP for iP in parts if str(sn_does_not_include) in str(iP["serial_number"])
-        ]
+        parts = [iP for iP in parts if str(sn_does_include) in str(iP["serial_number"])]
     if name_label_does_include != None:  # case-insensitive
         parts = [
             iP
