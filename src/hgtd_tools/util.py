@@ -89,18 +89,6 @@ def get_MO_SN_prefix(site, prod, batch):
     return snprefix.upper()
 
 
-# === Operations with canvas objects
-def isInSlot(rect, x, y):
-    isInSlot = False
-    left = rect["x"]
-    right = rect["x"] + rect["w"]
-    top = rect["y"]
-    bottom = rect["y"] + rect["h"]
-    if right >= x and left <= x and bottom >= y and top <= y:
-        isInSlot = True
-    return isInSlot
-
-
 # === Operations with API or Browser
 def open_webbrowser_with_url(url, debug=False, noExtraPrefix=False):
     if noExtraPrefix:
@@ -354,7 +342,6 @@ def get_relevant_parts(
                     for s in slots:
                         if str(alSl["part_serial_number"]) == str(s["serial_number"]):
                             alSl["part_id"] = s["part_id"]
-
             else:
                 these_parts, responseText = api.fetch_information(
                     f"/{retrieve}/{KoP_ID}/"
@@ -369,7 +356,6 @@ def get_relevant_parts(
             # the lifetime of the detector, the Slot table itself stays constant
             # => can be stored as a local file, don't need to load it freshly each time
             # the following two files result from manually downloading, exporting and converting them
-            # this was done because the API endpoint above results in OOMKilled errors!
             if partKoP_shortname != "Slot":
                 raise NotImplementedError
             these_parts = load_json_from_assets(
@@ -377,13 +363,6 @@ def get_relevant_parts(
             )
             slots = load_json_from_assets("Slot_fullJuly2026_withPreliminaryNTC.json")
             responseText = "200: Local File"
-            #            with open(
-            #                "./local/Slot_Table_fullJuly2026_withPreliminaryNTC.json"
-            #            ) as allSlotsJson:
-            #                these_parts, responseText = json.load(allSlotsJson), "200: Local File"
-            #            with open("./local/Slot_fullJuly2026_withPreliminaryNTC.json") as slotsJson:
-            #                slots, responseText = json.load(slotsJson), "200: Local File"
-
             for alSl in these_parts:
                 for s in slots:
                     if str(alSl["part_serial_number"]) == str(s["Serial #"]):

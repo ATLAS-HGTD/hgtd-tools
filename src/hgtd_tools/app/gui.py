@@ -57,7 +57,6 @@ OPERATION_MODES = [
     ("Detector Assembly (CERN): PEB", "PEB"),
     ("Detector Assembly (CERN): FT", "FT"),
 ]
-
 _MODE_TO_SHORT = {mode: short for mode, short in OPERATION_MODES}
 _SHORT_TO_MODE = {short: mode for mode, short in OPERATION_MODES}
 SELECTION_PLACEHOLDERS = {"- Select -", "", "- automatic -", "VxLyQz"}
@@ -109,7 +108,7 @@ class ToplevelWindow(customtkinter.CTkToplevel):
         self.textbox.pack(fill="both", expand=True, padx=10, pady=10)
         self.textbox.insert(
             "0.0",
-            "Each Support Unit is oriented in such a way that when looking at its face, the module connectors are at the top (or on the right), and module capacitors are on the bottom (or on the left).\nUser actions (loading sites / assembly at CERN): First step at a loading site: fill the Detector Unit with modules, click on the canvas to select the correct position and use the button below. Once finished, move to the assembly step at CERN and enter the position manually when connecting a Detector Unit with the Detector (VxLxQx). Note: A back Detector Unit can only be on layer 1 or 2, a front Detector Unit can only be on layer 0 or 3.\nToo long dropdown selections are split into chunks, you can select which chunk shall be shown with the arrow buttons. This is to ensure compatibility with more operating systems.\n\nHint: manufacturers for modules should be interpreted as assembly sites. This field is taken live from all manufacturers available in the database and hence does not necessarily agree with the six defined assembly sites.\n\nHint 2: Blue option menus contain static choices (=hardcoded), while grey comboboxes are retrieved dynamically (=from the DB).\n\nHint 3: if you do not pre-select children by trivial attributes like manufacturer or type, the option to choose only not-yet-connected children will be slow, as is has to check from the full set of children. Pre-select with the other options to speed this process up.",
+            "Each Support Unit is oriented in such a way that when looking at its face, the module connectors are at the top (or on the right), and module capacitors are on the bottom (or on the left).\nNote: A back Detector Unit can only be on layer 1 or 2, a front Detector Unit can only be on layer 0 or 3.\n\nToo long dropdown selections are split into chunks, you can select which chunk shall be shown with the arrow buttons. This is to ensure compatibility with more operating systems.\n\nHint: manufacturers for modules should be interpreted as assembly sites. This field is taken live from all manufacturers available in the database and hence does not necessarily agree with the six defined assembly sites.\n\nHint 2: Blue option menus contain static choices (=hardcoded), while grey comboboxes are retrieved dynamically (=from the DB).\n\nHint 3: if you do not pre-select children by trivial attributes like manufacturer or type, the option to choose only not-yet-connected children will be slow, as is has to check from the full set of children. Pre-select with the other options to speed this process up.",
         )
         self.textbox.configure(state="disabled")
 
@@ -279,29 +278,27 @@ class App(customtkinter.CTk):
         ) as e:
             upstream_version = None
             self.last_responseText = str(e)
-
         if not self._report_api_status(expected_prefix="200"):
             self._show_error(
                 "Version of hgtd-tools could not be compared to upstream, check your web connection!"
             )
             return
 
-        if self.my_version != upstream_version and "rc" not in self.my_version:
-            print(f"You are not running the most recent version of hgtd-tools.")
-            print(
-                f"Your release: {self.my_version} / latest published release: {upstream_version}."
-            )
-            print(
-                f"Consider updating to a new release, either via git workflow (pull) or by downloading a specific release archive from gitlab."
-            )
+        if "rc" in self.my_version:
+            print(f"This is Release Candidate {self.my_version}.")
+            print(f"Latest published release: {upstream_version}.")
+            return
+        if self.my_version != upstream_version:
+            print("You are not running the most recent release.")
+            print(f"Yours: {self.my_version}; latest published: {upstream_version}.")
+            print("Consider updating to a new release, following these instructions:")
+            print("https://hgtd-tools.docs.cern.ch/getting_started/update/")
             self.version_full_text = (
                 self.version_full_text + f"\noutdated release, please update"
             )
             self.label_credits.configure(text=self.version_full_text)
         else:
-            print(
-                f"You are running version {self.my_version}, the most recent release of hgtd-tools. Enjoy!"
-            )
+            print(f"You are running the most recent release {self.my_version}. Enjoy!")
 
     def _run_with_progress(self, target, *args):
         """Spawn a daemon thread for `target(*args)` and start polling the progressbar.
@@ -635,6 +632,16 @@ class App(customtkinter.CTk):
         if not ok:
             self._show_error(error_msg)
         return parts, ok
+
+    def _isInSlot(rect, x, y):
+        isInSlot = False
+        left = rect["x"]
+        right = rect["x"] + rect["w"]
+        top = rect["y"]
+        bottom = rect["y"] + rect["h"]
+        if right >= x and left <= x and bottom >= y and top <= y:
+            isInSlot = True
+        return isInSlot
 
     def __init__(self):
         super().__init__()
@@ -1897,109 +1904,17 @@ class App(customtkinter.CTk):
         # First startup of program: default values
         self.api_status = 1
         self.last_responseText = ""
-        self.slots = None
-        self.partstree = None
-        self.this_DU_relations_MODULE = []
-        self.this_MODULE_relations_DU = []
-        self.this_MODULE_relations_SLOT = []
-        self.this_FT_relations_SLOT = []
-        self.this_SLOT_relations_FT = []
-        self.ft_filter = ""
-        self.combined_slot = ""
-        self.this_MOD_relations_MF = []
-        self.this_MOD_relations_HY_HV = []
-        self.this_MOD_relations_HY_LV = []
-        self.this_MOD_relations_HY_unknownPosition = []
-        self.this_MOD_relations_HY_invalidPosition = []
-        self.this_MF_relations_MOD = []
-        self.this_HY_HV_relations_MOD = []
-        self.this_HY_LV_relations_MOD = []
-
-        self.possible_parents = []
-        self.possible_children = []
-        self.possible_ft = []
-        self.possible_MA_mod_par = []
-        self.possible_MF = []
-        self.possible_HY_HV = []
-        self.possible_HY_LV = []
-
-        self.cbx_par_n_pages = 0
-        self.cbx_chi_n_pages = 0
-        self.cbx_ft_n_pages = 0
-        self.cbx_ptype_n_pages = 0
-        self.cbx_ctype_n_pages = 0
-        self.cbx_par_shown_page = 0
-        self.cbx_chi_shown_page = 0
-        self.cbx_ft_shown_page = 0
-        self.cbx_ptype_shown_page = 0
-        self.cbx_ctype_shown_page = 0
-        self.clicked_module = []
-
-        self.par_type = None
-        self.par_conn = None
-        self.chi_type = None
-        self.child_conn = None
-        self.child_manu = None
-        self.parent_SN_filter = ""
-        self.child_SN_filter = ""
-        self.child0_SN_filter = ""
-        self.child1_SN_filter = ""
-        self.child2_SN_filter = ""
-        self.childFT_SN_filter = ""
-        self.ft_conn = None
-
-        # Module Assembly
-        self.MA_mod_par_manu = None
-        self.MA_mod_par_loc = None
-        self.MA_mod_par_conn = None
-        self.module_flex_child_loc = None
-        self.HY_HV_child_loc = None
-        self.HY_LV_child_loc = None
-
-        self.MF_child_conn = None
-        self.HY_HV_child_conn = None
-        self.HY_LV_child_conn = None
-
-        self.HY_HV_child_cluster = None
-        self.HY_LV_child_cluster = None
-
         self.user = "None"
         self.users = ["None", "new..."]
-
-        # these are not taken from the DB, but from conventions
-        self.possible_par_types_chunked = DATA_CONSTANTS.DU_types_chunked
-        self.possible_chi_types_chunked = DATA_CONSTANTS.DU_types_chunked
-        self.cbx_ptype_n_pages = DATA_CONSTANTS.DU_types_n_pages
-        self.cbx_ctype_n_pages = DATA_CONSTANTS.DU_types_n_pages
-        self.cbx_ptype_shown_page = 1
-        self.cbx_ctype_shown_page = 1
-        self.label_combobox_par_type_paginationFrame.configure(
-            text=f"page {self.cbx_ptype_shown_page}/{self.cbx_ptype_n_pages}"
-        )
-        self.label_combobox_chi_type_paginationFrame.configure(
-            text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}"
-        )
-        self.combobox_par_type.configure(values=self.possible_par_types_chunked[0])
-        self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[0])
 
         print("=" * 80)
         print(f"Welcome to hgtd-tools!")
         print("-" * 80)
         self._check_version_against_upstream()
-        # Get first parents and children for default operating mode
+
         try:
             self.manufacturers, self.last_responseText = util.get_manufacturers()
             self.locations, self.last_responseText = util.get_locations()
-            self.possible_MA_mod_par, self.last_responseText = util.get_relevant_parts(
-                "Module"
-            )
-            self.possible_MF, self.last_responseText = util.get_relevant_parts(
-                "Module Flex"
-            )
-            self.possible_HY_HV, self.last_responseText = util.get_relevant_parts(
-                "Hybrid"
-            )
-            self.possible_HY_LV = self.possible_HY_HV
         except (
             requests.exceptions.HTTPError,
             requests.exceptions.ConnectionError,
@@ -2010,13 +1925,11 @@ class App(customtkinter.CTk):
         ) as e:
             self.manufacturers = []
             self.locations = []
-            self.possible_MA_mod_par = []
-            self.possible_MF = []
-            self.possible_HY_HV = []
-            self.possible_HY_LV = []
             self.last_responseText = str(e)
         if not self._report_api_status(expected_prefix="200"):
-            self._show_error("Parents / Children could not be loaded from ProdDB API.")
+            self._show_error(
+                "Manufacturers / locations could not be loaded from ProdDB API."
+            )
             return
 
         self.combobox_child_manu.configure(
@@ -2039,100 +1952,7 @@ class App(customtkinter.CTk):
         self.combobox_MA_HY_LV_child_loc.configure(
             values=["All locations"] + [m["location_name"] for m in self.locations]
         )
-
-        # Module
-        self.possible_MA_mod_par_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-            self.possible_MA_mod_par
-        )
-        self.possible_MA_mod_par_SNs = [
-            entry[0] for entry in self.possible_MA_mod_par_SNs_and_partIDs
-        ]
-        self.possible_MA_mod_par_SNs_chunked = [
-            self.possible_MA_mod_par_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
-            for i in range(
-                0,
-                len(self.possible_MA_mod_par_SNs),
-                DATA_CONSTANTS.n_items_to_show_in_cbx,
-            )
-        ]
-        self.possible_MA_mod_par_partIDs = [
-            entry[1] for entry in self.possible_MA_mod_par_SNs_and_partIDs
-        ]
-        self.cbx_MA_mod_par_n_pages = len(self.possible_MA_mod_par_SNs_chunked)
-        self.cbx_MA_mod_par_shown_page = 1
-        self.label_combobox_MA_mod_par_paginationFrame.configure(
-            text=f"page {self.cbx_MA_mod_par_shown_page}/{self.cbx_MA_mod_par_n_pages}"
-        )
-        self.combobox_MA_mod_par.configure(
-            values=self.possible_MA_mod_par_SNs_chunked[0]
-        )
-
-        # Module Flex
-        self.possible_MF_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-            self.possible_MF
-        )
-        self.possible_MF_SNs = [entry[0] for entry in self.possible_MF_SNs_and_partIDs]
-        self.possible_MF_SNs_chunked = [
-            self.possible_MF_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
-            for i in range(
-                0, len(self.possible_MF_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
-            )
-        ]
-        self.possible_MF_partIDs = [
-            entry[1] for entry in self.possible_MF_SNs_and_partIDs
-        ]
-        self.cbx_MF_n_pages = len(self.possible_MF_SNs_chunked)
-        self.cbx_MF_shown_page = 1
-        self.label_combobox_MA_MF_chi_paginationFrame.configure(
-            text=f"page {self.cbx_MF_shown_page}/{self.cbx_MF_n_pages}"
-        )
-        self.combobox_MA_MF_chi.configure(values=self.possible_MF_SNs_chunked[0])
-
-        # Hybrid HV-side
-        self.possible_HY_HV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-            self.possible_HY_HV
-        )
-        self.possible_HY_HV_SNs = [
-            entry[0] for entry in self.possible_HY_HV_SNs_and_partIDs
-        ]
-        self.possible_HY_HV_SNs_chunked = [
-            self.possible_HY_HV_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
-            for i in range(
-                0, len(self.possible_HY_HV_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
-            )
-        ]
-        self.possible_HY_HV_partIDs = [
-            entry[1] for entry in self.possible_HY_HV_SNs_and_partIDs
-        ]
-        self.cbx_HY_HV_n_pages = len(self.possible_HY_HV_SNs_chunked)
-        self.cbx_HY_HV_shown_page = 1
-        self.label_combobox_HY_HV_paginationFrame.configure(
-            text=f"page {self.cbx_HY_HV_shown_page}/{self.cbx_HY_HV_n_pages}"
-        )
-        self.combobox_MA_HY_HV_chi.configure(values=self.possible_HY_HV_SNs_chunked[0])
-
-        # Hybrid LV-side
-        self.possible_HY_LV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-            self.possible_HY_LV
-        )
-        self.possible_HY_LV_SNs = [
-            entry[0] for entry in self.possible_HY_LV_SNs_and_partIDs
-        ]
-        self.possible_HY_LV_SNs_chunked = [
-            self.possible_HY_LV_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
-            for i in range(
-                0, len(self.possible_HY_LV_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
-            )
-        ]
-        self.possible_HY_LV_partIDs = [
-            entry[1] for entry in self.possible_HY_LV_SNs_and_partIDs
-        ]
-        self.cbx_HY_LV_n_pages = len(self.possible_HY_LV_SNs_chunked)
-        self.cbx_HY_LV_shown_page = 1
-        self.label_combobox_HY_LV_paginationFrame.configure(
-            text=f"page {self.cbx_HY_LV_shown_page}/{self.cbx_HY_LV_n_pages}"
-        )
-        self.combobox_MA_HY_LV_chi.configure(values=self.possible_HY_LV_SNs_chunked[0])
+        self.select_operation_mode_reload(GUI_CONFIG.default_operation_mode)
 
     def authenticate_return_function(self, result, response):
         self.last_responseText = response
@@ -2255,7 +2075,9 @@ class App(customtkinter.CTk):
             info_text = "Child Module Flex added successfully to ProdDB API."
             self._show_info(info_text)
             self._run_with_progress(
-                self.fetch_MA_p_c, "Module Flex", wrapped_text.fill(info_text)
+                self.wrap_data_ui_fetch_MA_p_c,
+                "Module Flex",
+                wrapped_text.fill(info_text),
             )
 
     def button_add_child_HY_HV_event_click(self, debug=False):
@@ -2391,7 +2213,7 @@ class App(customtkinter.CTk):
             info_text = "Info: Child HV Hybrid added successfully to ProdDB API."
             self._show_info(info_text)
             self._run_with_progress(
-                self.fetch_MA_p_c, "HY_HV", wrapped_text.fill(info_text)
+                self.wrap_data_ui_fetch_MA_p_c, "HY_HV", wrapped_text.fill(info_text)
             )
 
     def button_add_child_HY_LV_event_click(self, debug=False):
@@ -2528,7 +2350,7 @@ class App(customtkinter.CTk):
             info_text = "Info: Child LV Hybrid added successfully to ProdDB API."
             self._show_info(info_text)
             self._run_with_progress(
-                self.fetch_MA_p_c, "HY_LV", wrapped_text.fill(info_text)
+                self.wrap_data_ui_fetch_MA_p_c, "HY_LV", wrapped_text.fill(info_text)
             )
 
     def button_add_ft_event_click(self, debug=False):
@@ -3398,7 +3220,7 @@ class App(customtkinter.CTk):
                 self.combobox_MA_HY_HV_chi.set("- Select -")
             elif childIdentifier == "HY_LV":
                 self.combobox_MA_HY_LV_chi.set("- Select -")
-            self._run_with_progress(self.fetch_MA_p_c, childIdentifier)
+            self._run_with_progress(self.wrap_data_ui_fetch_MA_p_c, childIdentifier)
         elif self.operation_mode == "Detector Assembly (CERN): FT":
             self.combobox_ft.set("- Select -")
             self._run_with_progress(self.fetch_ft)
@@ -3414,7 +3236,7 @@ class App(customtkinter.CTk):
     def button_onclick_event_filter_parent_SN(self, parentIdentifier="Module"):
         if self.operation_mode == "Module Assembly":
             self.combobox_MA_mod_par.set("- Select -")
-            self._run_with_progress(self.fetch_MA_p_c, parentIdentifier)
+            self._run_with_progress(self.wrap_data_ui_fetch_MA_p_c, parentIdentifier)
 
     def button_find_slot_event_click(self):
         self.label_info.configure(text=" ")
@@ -3557,6 +3379,8 @@ class App(customtkinter.CTk):
     # https://stackoverflow.com/a/23944658
     def select_operation_mode_reload(self, value):
         self.operation_mode = value
+        self._update_sidebar_operation_modes(value)
+
         self.displayedDUtype = "None"
         self.interlockSlots = []
         self.this_DU_relations_MODULE = []
@@ -3582,8 +3406,6 @@ class App(customtkinter.CTk):
         self.possible_MF = []
         self.possible_HY_HV = []
         self.possible_HY_LV = []
-
-        self._update_sidebar_operation_modes(value)
 
         self.slots = None
         self.partstree = None
@@ -3651,7 +3473,7 @@ class App(customtkinter.CTk):
             self.combobox_MA_HY_HV_chi.set("- Select -")
             self.combobox_MA_HY_LV_chi.set("- Select -")
 
-            self._run_with_progress(self.fetch_MA_p_c)
+            self.wrap_data_ui_fetch_MA_p_c()
 
         elif self.operation_mode == "Module Loading":
             self.frame_ma.grid_remove()
@@ -3661,6 +3483,13 @@ class App(customtkinter.CTk):
             self.label_info.grid()
             self.frame_ft_rel.grid_remove()
 
+            self.possible_par_types_chunked = DATA_CONSTANTS.DU_types_chunked
+            self.cbx_ptype_n_pages = DATA_CONSTANTS.DU_types_n_pages
+            self.cbx_ptype_shown_page = 1
+            self.label_combobox_par_type_paginationFrame.configure(
+                text=f"page {self.cbx_ptype_shown_page}/{self.cbx_ptype_n_pages}"
+            )
+            self.combobox_par_type.configure(values=self.possible_par_types_chunked[0])
             self.label_combobox_par_type.grid()
             self.combobox_par_type_paginationFrame.grid()
 
@@ -3703,7 +3532,6 @@ class App(customtkinter.CTk):
                 text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}"
             )
             self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[0])
-
             self.combobox_chi_type_paginationFrame.grid()
 
             self.frame_clicked_position.grid()
@@ -3795,7 +3623,7 @@ class App(customtkinter.CTk):
                 mouseX = self.canvas.canvasx(event.x)
                 mouseY = self.canvas.canvasy(event.y)
                 for slot in arrayOfModulesInDU:
-                    if util.isInSlot(slot, mouseX, mouseY):
+                    if _isInSlot(slot, mouseX, mouseY):
                         mouseInSomeMod = True
                         possible_slot = slot["slot"]
                         notAllowedSlot = False
@@ -3949,7 +3777,7 @@ class App(customtkinter.CTk):
                 mouseX = self.canvas.canvasx(event.x)
                 mouseY = self.canvas.canvasy(event.y)
                 for slot in arrayOfModulesInDU:
-                    if util.isInSlot(slot, mouseX, mouseY):
+                    if _isInSlot(slot, mouseX, mouseY):
                         mouseInSomeMod = True
                         if slot["slot"] in alreadyUsedSlots:
                             self.clicked_module = alreadyConnectedModules[
@@ -4071,14 +3899,14 @@ class App(customtkinter.CTk):
         self.MA_mod_par_conn = self.optionmenu_MA_mod_par_conn.get()
         self.combobox_MA_mod_par.set("- Select -")
 
-        self._run_with_progress(self.fetch_MA_p_c, "Module")
+        self._run_with_progress(self.wrap_data_ui_fetch_MA_p_c, "Module")
 
     def change_MA_child_MF_filter_event(self, foo):
         self.module_flex_child_loc = self.combobox_MA_MF_child_loc.get()
         self.MF_child_conn = self.optionmenu_MA_child_MF_conn.get()
         self.combobox_MA_MF_chi.set("- Select -")
 
-        self._run_with_progress(self.fetch_MA_p_c, "Module Flex")
+        self._run_with_progress(self.wrap_data_ui_fetch_MA_p_c, "Module Flex")
 
     def change_MA_child_HY_HV_filter_event(self, foo):
         self.HY_HV_child_loc = self.combobox_MA_HY_HV_child_loc.get()
@@ -4088,7 +3916,7 @@ class App(customtkinter.CTk):
         # let user know when trying to add a relation between non-matching HYs
         self.combobox_MA_HY_HV_chi.set("- Select -")
 
-        self._run_with_progress(self.fetch_MA_p_c, "HY_HV")
+        self._run_with_progress(self.wrap_data_ui_fetch_MA_p_c, "HY_HV")
 
     def change_MA_child_HY_LV_filter_event(self, foo):
         self.HY_LV_child_loc = self.combobox_MA_HY_LV_child_loc.get()
@@ -4098,7 +3926,7 @@ class App(customtkinter.CTk):
         # let user know when trying to add a relation between non-matching HYs
         self.combobox_MA_HY_LV_chi.set("- Select -")
 
-        self._run_with_progress(self.fetch_MA_p_c, "HY_LV")
+        self._run_with_progress(self.wrap_data_ui_fetch_MA_p_c, "HY_LV")
 
     def change_child_conn_event(self, child_conn):
         self.child_conn = self.optionmenu_child_conn.get()
@@ -4626,16 +4454,25 @@ class App(customtkinter.CTk):
             self.combobox_ft.configure(values=[])
             self.combobox_ft.set("- Select -")
 
-    def fetch_MA_p_c(self, update="all", withMessage=" "):
-        # this happens when any filter is changed and at the beginning
-        self.progressbar.set(0)
-        # self.label_info.configure(text=withMessage)
+    def fetch_MA_p_c_data(self, update="all", withMessage=" "):
+        """Data-only worker for the Module Assembly operation mode.
+
+        Safe to call from a worker thread (i.e. via _run_with_progress).
+        UI updates are performed by apply_MA_p_c_to_ui, which must run on
+        the Tk main thread.
+
+        `update` controls which lists are refreshed:
+          - "all"         : refresh all four (default)
+          - "Module"      : Module parents only
+          - "Module Flex" : Module Flex only
+          - "HY_HV"       : HV-side hybrids only
+          - "HY_LV"       : LV-side hybrids only
+        """
         try:
             if update == "all" or update == "Module":
                 self.possible_MA_mod_par, self.last_responseText = (
                     util.get_relevant_parts("Module")
                 )
-                self.combobox_MA_mod_par.set("- Select -")
                 self.this_MOD_relations_MF = []
                 self.this_MOD_relations_HY_HV = []
                 self.this_MOD_relations_HY_LV = []
@@ -4645,19 +4482,16 @@ class App(customtkinter.CTk):
                 self.possible_MF, self.last_responseText = util.get_relevant_parts(
                     "Module Flex"
                 )
-                self.combobox_MA_MF_chi.set("- Select -")
                 self.this_MF_relations_MOD = []
             if update == "all" or update == "HY_HV":
                 self.possible_HY_HV, self.last_responseText = util.get_relevant_parts(
                     "Hybrid"
                 )
-                self.combobox_MA_HY_HV_chi.set("- Select -")
                 self.this_HY_HV_relations_MOD = []
             if update == "all" or update == "HY_LV":
                 self.possible_HY_LV, self.last_responseText = util.get_relevant_parts(
                     "Hybrid"
                 )
-                self.combobox_MA_HY_LV_chi.set("- Select -")
                 self.this_HY_LV_relations_MOD = []
         except (
             requests.exceptions.HTTPError,
@@ -4669,7 +4503,6 @@ class App(customtkinter.CTk):
         ) as e:
             if update == "all" or update == "Module":
                 self.possible_MA_mod_par = []
-                self.combobox_MA_mod_par.set("- Select -")
                 self.this_MOD_relations_MF = []
                 self.this_MOD_relations_HY_HV = []
                 self.this_MOD_relations_HY_LV = []
@@ -4677,25 +4510,23 @@ class App(customtkinter.CTk):
                 self.this_MOD_relations_HY_invalidPosition = []
             if update == "all" or update == "Module Flex":
                 self.possible_MF = []
-                self.combobox_MA_MF_chi.set("- Select -")
                 self.this_MF_relations_MOD = []
             if update == "all" or update == "HY_HV":
                 self.possible_HY_HV = []
-                self.combobox_MA_HY_HV_chi.set("- Select -")
                 self.this_HY_HV_relations_MOD = []
             if update == "all" or update == "HY_LV":
                 self.possible_HY_LV = []
-                self.combobox_MA_HY_LV_chi.set("- Select -")
                 self.this_HY_LV_relations_MOD = []
             self.last_responseText = str(e)
-        if not self._report_api_status(expected_prefix="200"):
-            self._show_error("Parents / Children could not be loaded from ProdDB API.")
-            return
 
+        if not self._report_api_status(expected_prefix="200"):
+            return False
+
+        # ---------- Module: SN/ID lookups + filters ----------
         if update == "all" or update == "Module":
             no_filters_except_conn = True
             if (
-                self.MA_mod_par_manu != None
+                self.MA_mod_par_manu is not None
                 and self.MA_mod_par_manu != "All manufacturers"
             ):
                 no_filters_except_conn = False
@@ -4706,7 +4537,10 @@ class App(customtkinter.CTk):
                     == str(pp["manufacturer"]["manufacturer_name"])
                 ]
 
-            if self.MA_mod_par_loc != None and self.MA_mod_par_loc != "All locations":
+            if (
+                self.MA_mod_par_loc is not None
+                and self.MA_mod_par_loc != "All locations"
+            ):
                 no_filters_except_conn = False
                 self.possible_MA_mod_par = [
                     pp
@@ -4723,13 +4557,9 @@ class App(customtkinter.CTk):
                     if self.par_mod_SN_filter in str(pp["serial_number"])
                 ]
 
-            if self.MA_mod_par_conn != None and self.MA_mod_par_conn != "No filter":
-                if no_filters_except_conn == True:
-                    info_text = wrapped_text.fill(
-                        f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
+            if self.MA_mod_par_conn is not None and self.MA_mod_par_conn != "No filter":
+                if no_filters_except_conn:
+                    self._pending_conn_only_warning = True
                 self.possible_MA_mod_par = [
                     pp
                     for pp in self.possible_MA_mod_par
@@ -4740,10 +4570,11 @@ class App(customtkinter.CTk):
                     or ((len(util.get_children(pp["part_id"], ofKind="Hybrid")[0])) < 2)
                 ]
 
+        # ---------- Module Flex: filters ----------
         if update == "all" or update == "Module Flex":
             no_filters_except_conn = True
             if (
-                self.module_flex_child_loc != None
+                self.module_flex_child_loc is not None
                 and self.module_flex_child_loc != "All locations"
             ):
                 no_filters_except_conn = False
@@ -4754,7 +4585,6 @@ class App(customtkinter.CTk):
                     == str(pp["location"]["location_name"])
                 ]
 
-            # MF child SN filter input
             self.child0_SN_filter = self.entry_child0_SN_filter.get()
             if self.child0_SN_filter != "":
                 no_filters_except_conn = False
@@ -4764,22 +4594,22 @@ class App(customtkinter.CTk):
                     if self.child0_SN_filter in str(pc["serial_number"])
                 ]
 
-            if self.MF_child_conn != None and self.MF_child_conn != "All children":
-                if no_filters_except_conn == True:
-                    info_text = wrapped_text.fill(
-                        f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
+            if self.MF_child_conn is not None and self.MF_child_conn != "All children":
+                if no_filters_except_conn:
+                    self._pending_conn_only_warning = True
                 self.possible_MF = [
                     pp
                     for pp in self.possible_MF
                     if (len(util.get_parents(pp["part_id"], ofKind="Module")[0])) == 0
                 ]
 
+        # ---------- HY_HV: filters ----------
         if update == "all" or update == "HY_HV":
             no_filters_except_conn = True
-            if self.HY_HV_child_loc != None and self.HY_HV_child_loc != "All locations":
+            if (
+                self.HY_HV_child_loc is not None
+                and self.HY_HV_child_loc != "All locations"
+            ):
                 no_filters_except_conn = False
                 self.possible_HY_HV = [
                     pp
@@ -4787,7 +4617,6 @@ class App(customtkinter.CTk):
                     if self.HY_HV_child_loc == str(pp["location"]["location_name"])
                 ]
 
-            # HY_HV child SN filter input
             self.child1_SN_filter = self.entry_child1_SN_filter.get()
             if self.child1_SN_filter != "":
                 no_filters_except_conn = False
@@ -4798,7 +4627,7 @@ class App(customtkinter.CTk):
                 ]
 
             if (
-                self.HY_HV_child_cluster != None
+                self.HY_HV_child_cluster is not None
                 and self.HY_HV_child_cluster != "All clusters"
             ):
                 no_filters_except_conn = False
@@ -4806,24 +4635,24 @@ class App(customtkinter.CTk):
                 self.possible_HY_HV = [pp for pp in self.possible_HY_HV if True]
 
             if (
-                self.HY_HV_child_conn != None
+                self.HY_HV_child_conn is not None
                 and self.HY_HV_child_conn != "All children"
             ):
-                if no_filters_except_conn == True:
-                    info_text = wrapped_text.fill(
-                        f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
+                if no_filters_except_conn:
+                    self._pending_conn_only_warning = True
                 self.possible_HY_HV = [
                     pp
                     for pp in self.possible_HY_HV
                     if (len(util.get_parents(pp["part_id"], ofKind="Module")[0])) == 0
                 ]
 
+        # ---------- HY_LV: filters ----------
         if update == "all" or update == "HY_LV":
             no_filters_except_conn = True
-            if self.HY_LV_child_loc != None and self.HY_LV_child_loc != "All locations":
+            if (
+                self.HY_LV_child_loc is not None
+                and self.HY_LV_child_loc != "All locations"
+            ):
                 no_filters_except_conn = False
                 self.possible_HY_LV = [
                     pp
@@ -4831,7 +4660,6 @@ class App(customtkinter.CTk):
                     if self.HY_LV_child_loc == str(pp["location"]["location_name"])
                 ]
 
-            # HY_LV child SN filter input
             self.child2_SN_filter = self.entry_child2_SN_filter.get()
             if self.child2_SN_filter != "":
                 no_filters_except_conn = False
@@ -4842,7 +4670,7 @@ class App(customtkinter.CTk):
                 ]
 
             if (
-                self.HY_LV_child_cluster != None
+                self.HY_LV_child_cluster is not None
                 and self.HY_LV_child_cluster != "All clusters"
             ):
                 no_filters_except_conn = False
@@ -4850,22 +4678,18 @@ class App(customtkinter.CTk):
                 self.possible_HY_LV = [pp for pp in self.possible_HY_LV if True]
 
             if (
-                self.HY_LV_child_conn != None
+                self.HY_LV_child_conn is not None
                 and self.HY_LV_child_conn != "All children"
             ):
-                if no_filters_except_conn == True:
-                    info_text = wrapped_text.fill(
-                        f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
+                if no_filters_except_conn:
+                    self._pending_conn_only_warning = True
                 self.possible_HY_LV = [
                     pp
                     for pp in self.possible_HY_LV
                     if (len(util.get_parents(pp["part_id"], ofKind="Module")[0])) == 0
                 ]
 
-        # begin updating the paginated SN comboboxes shown to user
+        # ---------- Pagination + SN/ID lookups for all four lists ----------
         # Module
         self.possible_MA_mod_par_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
             self.possible_MA_mod_par
@@ -4886,16 +4710,6 @@ class App(customtkinter.CTk):
         ]
         self.cbx_MA_mod_par_n_pages = len(self.possible_MA_mod_par_SNs_chunked)
         self.cbx_MA_mod_par_shown_page = min(1, self.cbx_MA_mod_par_n_pages)
-        self.label_combobox_MA_mod_par_paginationFrame.configure(
-            text=f"page {self.cbx_MA_mod_par_shown_page}/{self.cbx_MA_mod_par_n_pages}"
-        )
-        if self.cbx_MA_mod_par_n_pages > 0:
-            self.combobox_MA_mod_par.configure(
-                values=self.possible_MA_mod_par_SNs_chunked[0]
-            )
-        else:
-            self.combobox_MA_mod_par.configure(values=[])
-            self.combobox_MA_mod_par.set("- Select -")
 
         # Module Flex
         self.possible_MF_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
@@ -4913,14 +4727,6 @@ class App(customtkinter.CTk):
         ]
         self.cbx_MF_n_pages = len(self.possible_MF_SNs_chunked)
         self.cbx_MF_shown_page = min(1, self.cbx_MF_n_pages)
-        self.label_combobox_MA_MF_chi_paginationFrame.configure(
-            text=f"page {self.cbx_MF_shown_page}/{self.cbx_MF_n_pages}"
-        )
-        if self.cbx_MF_n_pages > 0:
-            self.combobox_MA_MF_chi.configure(values=self.possible_MF_SNs_chunked[0])
-        else:
-            self.combobox_MA_MF_chi.configure(values=[])
-            self.combobox_MA_MF_chi.set("- Select -")
 
         # Hybrid HV-side
         self.possible_HY_HV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
@@ -4940,16 +4746,6 @@ class App(customtkinter.CTk):
         ]
         self.cbx_HY_HV_n_pages = len(self.possible_HY_HV_SNs_chunked)
         self.cbx_HY_HV_shown_page = min(1, self.cbx_HY_HV_n_pages)
-        self.label_combobox_HY_HV_paginationFrame.configure(
-            text=f"page {self.cbx_HY_HV_shown_page}/{self.cbx_HY_HV_n_pages}"
-        )
-        if self.cbx_HY_HV_n_pages > 0:
-            self.combobox_MA_HY_HV_chi.configure(
-                values=self.possible_HY_HV_SNs_chunked[0]
-            )
-        else:
-            self.combobox_MA_HY_HV_chi.configure(values=[])
-            self.combobox_MA_HY_HV_chi.set("- Select -")
 
         # Hybrid LV-side
         self.possible_HY_LV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
@@ -4969,16 +4765,108 @@ class App(customtkinter.CTk):
         ]
         self.cbx_HY_LV_n_pages = len(self.possible_HY_LV_SNs_chunked)
         self.cbx_HY_LV_shown_page = min(1, self.cbx_HY_LV_n_pages)
-        self.label_combobox_HY_LV_paginationFrame.configure(
-            text=f"page {self.cbx_HY_LV_shown_page}/{self.cbx_HY_LV_n_pages}"
-        )
-        if self.cbx_HY_LV_n_pages > 0:
-            self.combobox_MA_HY_LV_chi.configure(
-                values=self.possible_HY_LV_SNs_chunked[0]
+
+        return True
+
+    def apply_MA_p_c_to_ui(self, update="all", withMessage=" ", api_ok=True):
+        """UI-only update for the Module Assembly operation mode.
+
+        Must be called on the Tk main thread (NOT from inside _run_with_progress).
+        Reads the self.possible_* lists populated by fetch_MA_p_c and configures
+        the corresponding customtkinter widgets.
+        """
+        self.label_info.configure(text=withMessage)
+
+        if not api_ok:
+            self._show_error("Parents / Children could not be loaded from ProdDB API.")
+            return
+
+        if getattr(self, "_pending_conn_only_warning", False):
+            info_text = wrapped_text.fill(
+                f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
             )
-        else:
-            self.combobox_MA_HY_LV_chi.configure(values=[])
+            print(f">>> {info_text}")
+            self.label_info.configure(text=info_text)
+            self._pending_conn_only_warning = False
+
+        # Reset the comboboxes to "- Select -" so the user sees a clean state
+        # regardless of whether the fetch succeeded or raised.
+        if update == "all" or update == "Module":
+            self.combobox_MA_mod_par.set("- Select -")
+        if update == "all" or update == "Module Flex":
+            self.combobox_MA_MF_chi.set("- Select -")
+        if update == "all" or update == "HY_HV":
+            self.combobox_MA_HY_HV_chi.set("- Select -")
+        if update == "all" or update == "HY_LV":
             self.combobox_MA_HY_LV_chi.set("- Select -")
+
+        # Module
+        if update == "all" or update == "Module":
+            self.label_combobox_MA_mod_par_paginationFrame.configure(
+                text=f"page {self.cbx_MA_mod_par_shown_page}/{self.cbx_MA_mod_par_n_pages}"
+            )
+            if self.cbx_MA_mod_par_n_pages > 0:
+                self.combobox_MA_mod_par.configure(
+                    values=self.possible_MA_mod_par_SNs_chunked[0]
+                )
+            else:
+                self.combobox_MA_mod_par.configure(values=[])
+                self.combobox_MA_mod_par.set("- Select -")
+
+        # Module Flex
+        if update == "all" or update == "Module Flex":
+            self.label_combobox_MA_MF_chi_paginationFrame.configure(
+                text=f"page {self.cbx_MF_shown_page}/{self.cbx_MF_n_pages}"
+            )
+            if self.cbx_MF_n_pages > 0:
+                self.combobox_MA_MF_chi.configure(
+                    values=self.possible_MF_SNs_chunked[0]
+                )
+            else:
+                self.combobox_MA_MF_chi.configure(values=[])
+                self.combobox_MA_MF_chi.set("- Select -")
+
+        # Hybrid HV-side
+        if update == "all" or update == "HY_HV":
+            self.label_combobox_HY_HV_paginationFrame.configure(
+                text=f"page {self.cbx_HY_HV_shown_page}/{self.cbx_HY_HV_n_pages}"
+            )
+            if self.cbx_HY_HV_n_pages > 0:
+                self.combobox_MA_HY_HV_chi.configure(
+                    values=self.possible_HY_HV_SNs_chunked[0]
+                )
+            else:
+                self.combobox_MA_HY_HV_chi.configure(values=[])
+                self.combobox_MA_HY_HV_chi.set("- Select -")
+
+        # Hybrid LV-side
+        if update == "all" or update == "HY_LV":
+            self.label_combobox_HY_LV_paginationFrame.configure(
+                text=f"page {self.cbx_HY_LV_shown_page}/{self.cbx_HY_LV_n_pages}"
+            )
+            if self.cbx_HY_LV_n_pages > 0:
+                self.combobox_MA_HY_LV_chi.configure(
+                    values=self.possible_HY_LV_SNs_chunked[0]
+                )
+            else:
+                self.combobox_MA_HY_LV_chi.configure(values=[])
+                self.combobox_MA_HY_LV_chi.set("- Select -")
+
+    def wrap_data_ui_fetch_MA_p_c(self, update="all", withMessage=" "):
+        """Drop-in replacement for the original fetch_MA_p_c.
+
+        Runs the data fetch on a worker thread (with progressbar), then
+        updates the UI on the Tk main thread.
+        """
+
+        def _worker():
+            ok = self.fetch_MA_p_c_data(update, withMessage)
+            # Bounce back to the Tk main thread for all widget work.
+            self.after(
+                0, lambda: self.apply_MA_p_c_to_ui(update, withMessage, api_ok=ok)
+            )
+
+        self._run_with_progress(_worker)
 
     def fetch_MA_mod(self, SN, debug=False):
         partID = self.possible_MA_mod_par_partIDs[
