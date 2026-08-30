@@ -300,7 +300,7 @@ class App(customtkinter.CTk):
         else:
             print(f"You are running the most recent release {self.my_version}. Enjoy!")
 
-    def _confirm_by_typing(self, prompt, expected):
+    def _confirm_by_typing(self, prompt, expected="OVERWRITE"):
         """Show an input dialog and return whether the user typed `expected` exactly.
 
         Args:
@@ -1395,22 +1395,7 @@ class App(customtkinter.CTk):
             row=4, column=0, padx=5, pady=5, columnspan=2
         )
         self.optionmenu_MA_child_HY_HV_conn.set("All children")
-        self.label_HY_HV_child_conn = customtkinter.CTkLabel(
-            self.frame_HY_HV_child, text="Cluster based on VBD"
-        )
-        self.label_HY_HV_child_conn.grid(
-            row=5, column=0, padx=5, pady=(5, 0), columnspan=2
-        )
-        self.combobox_MA_HY_HV_child_cluster = customtkinter.CTkComboBox(
-            self.frame_HY_HV_child,
-            values=["All clusters"],
-            command=self.change_MA_child_HY_HV_filter_event,
-            width=250,
-        )
-        self.combobox_MA_HY_HV_child_cluster.grid(
-            row=6, column=0, padx=5, pady=5, columnspan=2
-        )
-        self.combobox_MA_HY_HV_child_cluster.set("All clusters")
+
         self.label_HY_HV_child_SN = customtkinter.CTkLabel(
             self.frame_HY_HV_child, text="HY HV-side SN"
         )
@@ -1547,22 +1532,7 @@ class App(customtkinter.CTk):
             row=4, column=0, padx=5, pady=5, columnspan=2
         )
         self.optionmenu_MA_child_HY_LV_conn.set("All children")
-        self.label_HY_LV_child_conn = customtkinter.CTkLabel(
-            self.frame_HY_LV_child, text="Cluster based on VBD"
-        )
-        self.label_HY_LV_child_conn.grid(
-            row=5, column=0, padx=5, pady=(5, 0), columnspan=2
-        )
-        self.combobox_MA_HY_LV_child_cluster = customtkinter.CTkComboBox(
-            self.frame_HY_LV_child,
-            values=["All clusters"],
-            command=self.change_MA_child_HY_LV_filter_event,
-            width=250,
-        )
-        self.combobox_MA_HY_LV_child_cluster.grid(
-            row=6, column=0, padx=5, pady=5, columnspan=2
-        )
-        self.combobox_MA_HY_LV_child_cluster.set("All clusters")
+
         self.label_HY_LV_child_SN = customtkinter.CTkLabel(
             self.frame_HY_LV_child, text="HY LV-side SN"
         )
@@ -2000,7 +1970,6 @@ class App(customtkinter.CTk):
     def button_add_child_module_flex_event_click(self):
         chi = self.combobox_MA_MF_chi.get()
         par = self.combobox_MA_mod_par.get()
-        pos = ""  # A relation between MF and MO does not require a position.
         if not self._selected_non_placeholders(
             [chi, par],
             "Warning: Select a Module Flex & Module from the respective lists to proceed.",
@@ -2013,14 +1982,14 @@ class App(customtkinter.CTk):
             self.possible_MA_mod_par_SNs.index(par)
         ]
         part_tree = {
-            "position": pos,
+            "position": "",
             "is_record_deleted": "F",
             "part": chi_partID,
             "part_parent": par_partID,
             "record_insertion_user": self.user,
         }
         occupied = False
-        confirmed = "OVERWRITE"
+        overwrite_confirmed = False
         try:
             parents_of_target_MF, self.last_responseText = util.get_parents(
                 chi_partID, ofKind="Module"
@@ -2030,31 +1999,27 @@ class App(customtkinter.CTk):
                     par_partID, ofKind="Module Flex"
                 )
                 MF_already_occupying_target_position = ""
-                Mod_MF_relation_to_delete = ""
                 # all children found are also matching (we have no position to fill with a MO to MF relation)
                 for c in children_of_targetMod:
                     occupied = True
                     MF_already_occupying_target_position = c["part"]["serial_number"]
-                    Mod_MF_relation_to_delete = c["record_id"]
                 if occupied:
-                    confirmed = ""
-                    dialog = customtkinter.CTkInputDialog(
-                        text=f"This Module is already connected to (at least one) MF {MF_already_occupying_target_position}.\n"
-                        + "Confirm by typing a confirmation: OVERWRITE to overwrite it with your selected MF:",
-                        title="Confirm dialog",
+                    overwrite_confirmed = self._confirm_by_typing(
+                        prompt=(
+                            f"This Module is already connected to (at least one) MF "
+                            f"{MF_already_occupying_target_position}.\n"
+                            + "Confirm by typing a confirmation: OVERWRITE to "
+                            "overwrite it with your selected MF:"
+                        ),
                     )
-                    confirmed = dialog.get_input()
-                    if confirmed == "OVERWRITE":
+                    if overwrite_confirmed:
                         # DELETION OF PREVIOUS STUFF
-
                         # delete Mod -> MF relation for the MF that already connects to that Mod
                         for c in children_of_targetMod:
                             self.last_responseText = api.delete_information(
                                 f"/partstreedelete/{c['record_id']}/"
                             )
-
                         # POSTING NEW STUFF
-
                         # connect new MF there by creating a new Mod -> MF relation
                         self.last_responseText = api.post_information(
                             "/partstreelist", part_tree, dryrun=False
@@ -2063,14 +2028,12 @@ class App(customtkinter.CTk):
                     self.last_responseText = api.post_information(
                         "/partstreelist", part_tree, dryrun=False
                     )
-
             else:
                 info_text = wrapped_text.fill(
                     f"Error: You can not connect this MF to the selected module.\nFirst you need to delete its existing relation to a module!"
                 )
                 print(f">>> {info_text}")
                 self.label_info.configure(text=info_text)
-
         except (
             requests.exceptions.HTTPError,
             requests.exceptions.ConnectionError,
@@ -2085,9 +2048,7 @@ class App(customtkinter.CTk):
                 "Parent / Child relations could not be fetched, deleted or posted to ProdDB API."
             )
             return
-        if len(parents_of_target_MF) == 0 and (
-            (occupied == False) or (occupied == True and confirmed == "OVERWRITE")
-        ):
+        if len(parents_of_target_MF) == 0 and (not occupied or overwrite_confirmed):
             info_text = "Child Module Flex added successfully to ProdDB API."
             self._show_info(info_text)
             self._run_with_progress(
@@ -2099,7 +2060,6 @@ class App(customtkinter.CTk):
     def button_add_child_HY_HV_event_click(self):
         chi = self.combobox_MA_HY_HV_chi.get()
         par = self.combobox_MA_mod_par.get()
-        pos = "HV"
         if not self._selected_non_placeholders(
             [chi, par],
             "Warning: Select a HY HV-side & Module from the respective lists to proceed.",
@@ -2112,14 +2072,14 @@ class App(customtkinter.CTk):
             self.possible_MA_mod_par_SNs.index(par)
         ]
         part_tree = {
-            "position": pos,
+            "position": "HV",
             "is_record_deleted": "F",
             "part": chi_partID,
             "part_parent": par_partID,
             "record_insertion_user": self.user,
         }
         occupied = False
-        confirmed = "OVERWRITE"
+        overwrite_confirmed = False
         posted_new_rel = False
         try:
             parents_of_target_HY, self.last_responseText = util.get_parents(
@@ -2132,10 +2092,6 @@ class App(customtkinter.CTk):
                 HYs_already_occupying_target_position = []
                 occupied_target_positions = []
                 Mod_HY_relations_to_delete = []
-                # test whether sensor VBD clusters match (or something else that makes two hybrids form a good pair),
-                # if yes or the user confirms to connect another hybrid regardless, proceed
-                mismatch = False
-                confirmed_mismatch = "OVERWRITE"
                 for c in children_of_targetMod:
                     # need to check whether a hybrid occupies the module HV-side OR no particular position
                     # old relations between MO & HY did NOT enforce position attribute, so we are left with
@@ -2150,62 +2106,42 @@ class App(customtkinter.CTk):
                             c["part"]["serial_number"]
                         )
                         Mod_HY_relations_to_delete.append(c["record_id"])
-                    else:
-                        # ToDo: implement the actual call to something like child sensor of other hybrid
-                        # or some attribute / measurement of the hybrid itself
-                        if (
-                            str(c["part"]["serial_number"])
-                            == "something_that_tells_us_the_VBD_mismatch"
-                        ):
-                            mismatch = True
-                if mismatch:
-                    confirmed_mismatch = ""
-                    dialog_mismatch = customtkinter.CTkInputDialog(
-                        text=f"This Module is already connected to a LV-side HY"
-                        + f" which does not match the VBD pairing cluster of your currently selected HV-side HY.\n"
-                        + "Confirm by typing a confirmation: OVERWRITE to connect your selected HY irrespective of this mismatch:",
-                        title="Confirm dialog",
+                if occupied:
+                    overwrite_confirmed = self._confirm_by_typing(
+                        prompt=(
+                            f"This Module is already connected to the non-LV-side HY(s) "
+                            f"{','.join(HYs_already_occupying_target_position)}\n"
+                            f"at position(s) {','.join(occupied_target_positions)}.\n"
+                            + "Confirm by typing a confirmation: OVERWRITE to "
+                            "overwrite ALL known non-LV-side hybrid children of "
+                            "the selected parent module with your selected HY:"
+                        ),
                     )
-                    confirmed_mismatch = dialog_mismatch.get_input()
-                if confirmed_mismatch == "OVERWRITE":
-                    if occupied:
-                        confirmed = ""
-                        dialog = customtkinter.CTkInputDialog(
-                            text=f"This Module is already connected to the non-LV-side HY(s) {','.join(HYs_already_occupying_target_position)}\n"
-                            + f"at position(s) {','.join(occupied_target_positions)}.\n"
-                            + "Confirm by typing a confirmation: OVERWRITE to overwrite ALL known non-LV-side hybrid children of the selected parent module with your selected HY:",
-                            title="Confirm dialog",
-                        )
-                        confirmed = dialog.get_input()
-                        if confirmed == "OVERWRITE":
-                            # DELETION OF PREVIOUS STUFF
-
-                            # delete Mod -> HY relations for the HYs that already connect to that Mod
-                            for del_this in Mod_HY_relations_to_delete:
-                                self.last_responseText = api.delete_information(
-                                    f"/partstreedelete/{del_this}/"
-                                )
-
-                            # POSTING NEW STUFF
-
-                            # connect new HY there by creating a new Mod -> HY relation
-                            self.last_responseText = api.post_information(
-                                "/partstreelist", part_tree, dryrun=False
+                    if overwrite_confirmed:
+                        # DELETION OF PREVIOUS STUFF
+                        # delete Mod -> HY relations for the HYs that already connect to that Mod
+                        for del_this in Mod_HY_relations_to_delete:
+                            self.last_responseText = api.delete_information(
+                                f"/partstreedelete/{del_this}/"
                             )
-                            posted_new_rel = True
-                    else:
+
+                        # POSTING NEW STUFF
+                        # connect new HY there by creating a new Mod -> HY relation
                         self.last_responseText = api.post_information(
                             "/partstreelist", part_tree, dryrun=False
                         )
                         posted_new_rel = True
-
+                else:
+                    self.last_responseText = api.post_information(
+                        "/partstreelist", part_tree, dryrun=False
+                    )
+                    posted_new_rel = True
             else:
                 info_text = wrapped_text.fill(
                     f"Error: You can not connect this hybrid to the selected module.\nFirst you need to delete its existing relation to a module!"
                 )
                 print(f">>> {info_text}")
                 self.label_info.configure(text=info_text)
-
         except (
             requests.exceptions.HTTPError,
             requests.exceptions.ConnectionError,
@@ -2230,7 +2166,6 @@ class App(customtkinter.CTk):
     def button_add_child_HY_LV_event_click(self):
         chi = self.combobox_MA_HY_LV_chi.get()
         par = self.combobox_MA_mod_par.get()
-        pos = "LV"
         if not self._selected_non_placeholders(
             [chi, par],
             "Warning: Select a HY LV-side & Module from the respective lists to proceed.",
@@ -2244,14 +2179,14 @@ class App(customtkinter.CTk):
             self.possible_MA_mod_par_SNs.index(par)
         ]
         part_tree = {
-            "position": pos,
+            "position": "LV",
             "is_record_deleted": "F",
             "part": chi_partID,
             "part_parent": par_partID,
             "record_insertion_user": self.user,
         }
         occupied = False
-        confirmed = "OVERWRITE"
+        overwrite_confirmed = False
         posted_new_rel = False
         try:
             parents_of_target_HY, self.last_responseText = util.get_parents(
@@ -2264,10 +2199,6 @@ class App(customtkinter.CTk):
                 HYs_already_occupying_target_position = []
                 occupied_target_positions = []
                 Mod_HY_relations_to_delete = []
-                # test whether sensor VBD clusters match (or something else that makes two hybrids form a good pair),
-                # if yes or the user confirms to connect another hybrid regardless, proceed
-                mismatch = False
-                confirmed_mismatch = "OVERWRITE"
                 for c in children_of_targetMod:
                     # need to check whether a hybrid occupies the module LV-side OR no particular position
                     # old relations between MO & HY did NOT enforce position attribute, so we are left with
@@ -2282,62 +2213,42 @@ class App(customtkinter.CTk):
                             c["part"]["serial_number"]
                         )
                         Mod_HY_relations_to_delete.append(c["record_id"])
-                    else:
-                        # ToDo: implement the actual call to something like child sensor of other hybrid
-                        # or some attribute / measurement of the hybrid itself
-                        if (
-                            str(c["part"]["serial_number"])
-                            == "something_that_tells_us_the_VBD_mismatch"
-                        ):
-                            mismatch = True
-                if mismatch:
-                    confirmed_mismatch = ""
-                    dialog_mismatch = customtkinter.CTkInputDialog(
-                        text=f"This Module is already connected to a HV-side HY"
-                        + f" which does not match the VBD pairing cluster of your currently selected LV-side HY.\n"
-                        + "Confirm by typing a confirmation: OVERWRITE to connect your selected HY irrespective of this mismatch:",
-                        title="Confirm dialog",
+                if occupied:
+                    overwrite_confirmed = self._confirm_by_typing(
+                        prompt=(
+                            f"This Module is already connected to the non-HV-side HY(s) "
+                            f"{','.join(HYs_already_occupying_target_position)}\n"
+                            f"at position(s) {','.join(occupied_target_positions)}.\n"
+                            + "Confirm by typing a confirmation: OVERWRITE to "
+                            "overwrite ALL known non-HV-side hybrid children of "
+                            "the selected parent module with your selected HY:"
+                        ),
                     )
-                    confirmed_mismatch = dialog_mismatch.get_input()
-                if confirmed_mismatch == "OVERWRITE":
-                    if occupied:
-                        confirmed = ""
-                        dialog = customtkinter.CTkInputDialog(
-                            text=f"This Module is already connected to the non-HV-side HY(s) {','.join(HYs_already_occupying_target_position)}\n"
-                            + f"at position(s) {','.join(occupied_target_positions)}.\n"
-                            + "Confirm by typing a confirmation: OVERWRITE to overwrite ALL known non-HV-side hybrid children of the selected parent module with your selected HY:",
-                            title="Confirm dialog",
-                        )
-                        confirmed = dialog.get_input()
-                        if confirmed == "OVERWRITE":
-                            # DELETION OF PREVIOUS STUFF
-
-                            # delete Mod -> HY relations for the HYs that already connect to that Mod
-                            for del_this in Mod_HY_relations_to_delete:
-                                self.last_responseText = api.delete_information(
-                                    f"/partstreedelete/{del_this}/"
-                                )
-
-                            # POSTING NEW STUFF
-
-                            # connect new HY there by creating a new Mod -> HY relation
-                            self.last_responseText = api.post_information(
-                                "/partstreelist", part_tree, dryrun=False
+                    if overwrite_confirmed:
+                        # DELETION OF PREVIOUS STUFF
+                        # delete Mod -> HY relations for the HYs that already connect to that Mod
+                        for del_this in Mod_HY_relations_to_delete:
+                            self.last_responseText = api.delete_information(
+                                f"/partstreedelete/{del_this}/"
                             )
-                            posted_new_rel = True
-                    else:
+
+                        # POSTING NEW STUFF
+                        # connect new HY there by creating a new Mod -> HY relation
                         self.last_responseText = api.post_information(
                             "/partstreelist", part_tree, dryrun=False
                         )
                         posted_new_rel = True
-
+                else:
+                    self.last_responseText = api.post_information(
+                        "/partstreelist", part_tree, dryrun=False
+                    )
+                    posted_new_rel = True
             else:
                 info_text = wrapped_text.fill(
                     f"Error: You can not connect this hybrid to the selected module.\nFirst you need to delete its existing relation to a module!"
                 )
                 print(f">>> {info_text}")
                 self.label_info.configure(text=info_text)
-
         except (
             requests.exceptions.HTTPError,
             requests.exceptions.ConnectionError,
@@ -2385,7 +2296,7 @@ class App(customtkinter.CTk):
         }
         allowed_slot = False
         occupied_slot = False
-        confirmed = ""
+        overwrite_confirmed = False
         try:
             # allowed: chosen FT matches the generation and category that the slot requires
             gen = self.ft_filter.split("+")[0].split("/")  # multiple generations
@@ -2407,16 +2318,16 @@ class App(customtkinter.CTk):
                     matching_partIDs.append(c["part"]["part_id"])
                     break
                 if occupied_slot:
-                    confirmed = ""
-                    dialog = customtkinter.CTkInputDialog(
-                        text=f"This Slot is already occupied by (at least one) FT {FT_already_occupying_target_position}.\n"
-                        + "Confirm by typing a confirmation: OVERWRITE to overwrite it with your selected FT:",
-                        title="Confirm dialog",
+                    overwrite_confirmed = self._confirm_by_typing(
+                        prompt=(
+                            f"This Slot is already occupied by (at least one) FT "
+                            f"{FT_already_occupying_target_position}.\n"
+                            + "Confirm by typing a confirmation: OVERWRITE to "
+                            "overwrite it with your selected FT:"
+                        ),
                     )
-                    confirmed = dialog.get_input()
-                    if confirmed == "OVERWRITE":
+                    if overwrite_confirmed:
                         # DELETION OF PREVIOUS STUFF
-
                         # delete Slot -> FT relation for the FT that already occupies that Slot
                         # the deletion of slot relations will be done as part of parent deletion
                         # but not only that, we need to delete the already occupying FTs' parents (all of them, Slot, DU, PEB, MO)
@@ -2424,12 +2335,10 @@ class App(customtkinter.CTk):
                             self.last_responseText = util.delete_parents(occ_pid)
 
                 # POSTING NEW STUFF
-
                 # connect new FT there by creating a new Slot -> FT relation
                 self.last_responseText = api.post_information(
                     "/partstreelist", part_tree, dryrun=False
                 )
-
                 # mod to connect FT to
                 mod_for_FT, self.last_responseText = util.get_children(
                     par_partID, ofKind="Module"
@@ -2447,7 +2356,6 @@ class App(customtkinter.CTk):
                         self.last_responseText = api.post_information(
                             "/partstreelist", part_tree, dryrun=False
                         )
-
                         # the DU this FT will connect to
                         mod_in_DU, self.last_responseText = util.get_parents(
                             parentMod_for_FT_partID, ofKind="Detector Unit"
@@ -2464,7 +2372,6 @@ class App(customtkinter.CTk):
                                 self.last_responseText = api.post_information(
                                     "/partstreelist", part_tree, dryrun=False
                                 )
-
                             # the PEB this FT will connect to
                             (
                                 all_PEB_childs_of_mainDet,
@@ -2567,13 +2474,12 @@ class App(customtkinter.CTk):
         }
         allowed_VLQ = False
         occupied_VLQ = False
-        confirmed = pos
+        overwrite_confirmed = False
         try:
             if self.operation_mode == "Module Loading":
                 self.last_responseText = api.post_information(
                     "/partstreelist", part_tree, dryrun=False
                 )
-
                 self.displayedDUtype = "None"
                 self.interlockSlots = []
                 self.this_DU_relations_MODULE = []
@@ -2583,7 +2489,6 @@ class App(customtkinter.CTk):
                 self.possible_children = []
                 self.slots = None
                 self.partstree = None
-
                 self._run_with_progress(self.fetch_loaded_DU_and_display, chi, par)
             elif self.operation_mode == "Detector Assembly (CERN): DU":
                 attribute_Vessel = pos.split("V").pop().split("L")[0]
@@ -2648,18 +2553,18 @@ class App(customtkinter.CTk):
                                         Det_DU_relation_to_delete = c["record_id"]
                                         matching_relations.append(c)
                                         break
-
                                 if occupied_VLQ:
-                                    confirmed = ""
-                                    dialog = customtkinter.CTkInputDialog(
-                                        text=f"This Vessel Layer Quadrant is already occupied by (at least one) DU {DU_already_occupying_target_position}.\n"
-                                        + "Confirm by typing the desired Vessel Layer Quadrant (VxLyQz) again to overwrite it with your selected DU:",
-                                        title="Confirm dialog",
+                                    overwrite_confirmed = self._confirm_by_typing(
+                                        prompt=(
+                                            f"This Vessel Layer Quadrant is already occupied by (at least one) "
+                                            f"DU {DU_already_occupying_target_position}.\n"
+                                            + "Confirm by typing the desired Vessel Layer Quadrant (VxLyQz) "
+                                            "again to overwrite it with your selected DU:"
+                                        ),
+                                        expected=pos,
                                     )
-                                    confirmed = dialog.get_input()
-                                    if confirmed == pos:
+                                    if overwrite_confirmed:
                                         # DELETION OF PREVIOUS STUFF
-
                                         # delete Det -> DU relation for the DUs that already occupy that VLQ
                                         for c in matching_relations:
                                             self.last_responseText = api.delete_information(
@@ -2670,8 +2575,7 @@ class App(customtkinter.CTk):
                                                 affected_previous_modules,
                                                 self.last_responseText,
                                             ) = util.get_children(
-                                                c["part"]["part_id"],
-                                                ofKind="Module",
+                                                c["part"]["part_id"], ofKind="Module"
                                             )
                                             # the parent slots of modules of the DU that previously occupied the VLQ
                                             for a in affected_previous_modules:
@@ -2679,22 +2583,17 @@ class App(customtkinter.CTk):
                                                     affected_parents_of_children,
                                                     self.last_responseText,
                                                 ) = util.get_parents(
-                                                    a["part"]["part_id"],
-                                                    ofKind="Slot",
+                                                    a["part"]["part_id"], ofKind="Slot"
                                                 )
                                                 for p in affected_parents_of_children:
                                                     # delete those Slot -> Mod relations
                                                     self.last_responseText = api.delete_information(
                                                         f"/partstreedelete/{p['record_id']}/"
                                                     )
-
                                         # POSTING NEW STUFF
-
                                         # place new DU at this position by creating a new Det -> DU relation
                                         self.last_responseText = api.post_information(
-                                            "/partstreelist",
-                                            part_tree,
-                                            dryrun=False,
+                                            "/partstreelist", part_tree, dryrun=False
                                         )
                                         self.canvas.itemconfig(
                                             self.duAlreadyPlacedText,
@@ -2702,9 +2601,7 @@ class App(customtkinter.CTk):
                                         )
                                 else:
                                     self.last_responseText = api.post_information(
-                                        "/partstreelist",
-                                        part_tree,
-                                        dryrun=False,
+                                        "/partstreelist", part_tree, dryrun=False
                                     )
                                     self.canvas.itemconfig(
                                         self.duAlreadyPlacedText,
@@ -2788,25 +2685,24 @@ class App(customtkinter.CTk):
                                                 matching_relations.append(c)
                                                 break
                                     if occupied_VLQ:
-                                        confirmed = ""
-                                        dialog = customtkinter.CTkInputDialog(
-                                            text=f"This Vessel Layer Quadrant is already occupied by (at least one) PEB {PEB_already_occupying_target_position}.\n"
-                                            + "Confirm by typing the desired Vessel Layer Quadrant (VxLyQz) again to overwrite it with your selected PEB:",
-                                            title="Confirm dialog",
+                                        overwrite_confirmed = self._confirm_by_typing(
+                                            prompt=(
+                                                f"This Vessel Layer Quadrant is already occupied by (at least one) "
+                                                f"PEB {PEB_already_occupying_target_position}.\n"
+                                                + "Confirm by typing the desired Vessel Layer Quadrant (VxLyQz) "
+                                                "again to overwrite it with your selected PEB:"
+                                            ),
+                                            expected=pos,
                                         )
-                                        confirmed = dialog.get_input()
-                                        if confirmed == pos:
+                                        if overwrite_confirmed:
                                             # DELETION OF PREVIOUS STUFF
-
                                             # delete Det -> PEB relation for the PEB that already occupies that VLQ
                                             for c in matching_relations:
                                                 self.last_responseText = api.delete_information(
                                                     f"/partstreedelete/{c['record_id']}/"
                                                 )
-
                                             # POSTING NEW STUFF
-
-                                            # place new DU at this position by creating a new Det -> PEB relation
+                                            # place new PEB at this position by creating a new Det -> PEB relation
                                             self.last_responseText = (
                                                 api.post_information(
                                                     "/partstreelist",
@@ -2816,11 +2712,8 @@ class App(customtkinter.CTk):
                                             )
                                     else:
                                         self.last_responseText = api.post_information(
-                                            "/partstreelist",
-                                            part_tree,
-                                            dryrun=False,
+                                            "/partstreelist", part_tree, dryrun=False
                                         )
-
         except (
             requests.exceptions.HTTPError,
             requests.exceptions.ConnectionError,
@@ -2839,7 +2732,7 @@ class App(customtkinter.CTk):
         if (
             self.operation_mode == "Detector Assembly (CERN): DU"
             and allowed_VLQ
-            and ((occupied_VLQ and confirmed == pos) or not occupied_VLQ)
+            and ((occupied_VLQ and overwrite_confirmed) or not occupied_VLQ)
         ):
             # find all existing relations between this DU and its Modules, those are propagated to create new Slot -> Module relations
             self._run_with_progress(
@@ -3425,11 +3318,6 @@ class App(customtkinter.CTk):
         self.HY_LV_child_conn = None
         self.optionmenu_MA_child_HY_LV_conn.set("All children")
 
-        self.HY_HV_child_cluster = None
-        self.combobox_MA_HY_HV_child_cluster.set("All clusters")
-        self.HY_LV_child_cluster = None
-        self.combobox_MA_HY_LV_child_cluster.set("All clusters")
-
         self.button_delete_child_MF.configure(state="disabled")
         self.button_delete_child_HY_HV.configure(state="disabled")
         self.button_delete_child_HY_LV.configure(state="disabled")
@@ -3869,8 +3757,6 @@ class App(customtkinter.CTk):
     def change_MA_child_HY_HV_filter_event(self, foo):
         self.HY_HV_child_loc = self.combobox_MA_HY_HV_child_loc.get()
         self.HY_HV_child_conn = self.optionmenu_MA_child_HY_HV_conn.get()
-        self.HY_HV_child_cluster = self.combobox_MA_HY_HV_child_cluster.get()
-        # if cluster HV different from existing cluster LV
         # let user know when trying to add a relation between non-matching HYs
         self.combobox_MA_HY_HV_chi.set("- Select -")
 
@@ -3879,8 +3765,6 @@ class App(customtkinter.CTk):
     def change_MA_child_HY_LV_filter_event(self, foo):
         self.HY_LV_child_loc = self.combobox_MA_HY_LV_child_loc.get()
         self.HY_LV_child_conn = self.optionmenu_MA_child_HY_LV_conn.get()
-        self.HY_LV_child_cluster = self.combobox_MA_HY_LV_child_cluster.get()
-        # if cluster LV different from existing cluster HV
         # let user know when trying to add a relation between non-matching HYs
         self.combobox_MA_HY_LV_chi.set("- Select -")
 
@@ -4566,14 +4450,6 @@ class App(customtkinter.CTk):
                 ]
 
             if (
-                self.HY_HV_child_cluster is not None
-                and self.HY_HV_child_cluster != "All clusters"
-            ):
-                no_filters_except_conn = False
-                # ToDo: call the function that groups Hybrids by their child sensor VBD score into different clusters
-                self.possible_HY_HV = [pp for pp in self.possible_HY_HV if True]
-
-            if (
                 self.HY_HV_child_conn is not None
                 and self.HY_HV_child_conn != "All children"
             ):
@@ -4607,14 +4483,6 @@ class App(customtkinter.CTk):
                     for pc in self.possible_HY_LV
                     if self.child2_SN_filter in str(pc["serial_number"])
                 ]
-
-            if (
-                self.HY_LV_child_cluster is not None
-                and self.HY_LV_child_cluster != "All clusters"
-            ):
-                no_filters_except_conn = False
-                # ToDo: call the function that groups Hybrids by their child sensor VBD score into different clusters
-                self.possible_HY_LV = [pp for pp in self.possible_HY_LV if True]
 
             if (
                 self.HY_LV_child_conn is not None
