@@ -2,6 +2,7 @@ import threading
 import time
 import tkinter
 from dataclasses import dataclass
+from dataclasses import field
 from importlib import metadata
 
 import customtkinter
@@ -29,7 +30,6 @@ class GuiConfig:
 
     title: str = "HGTD Tools"
     geometry: str = "1500x1000"
-    n_items_to_show_in_cbx: int = 16
     default_operation_mode: str = "Module Assembly"
     fillColor_SU: str = "#f4f4bb"
     fillColor_Slot: str = "#FFFFFF"
@@ -49,7 +49,54 @@ class GuiConfig:
 
 
 GUI_CONFIG = GuiConfig()
+
+OPERATION_MODES = [
+    ("Module Assembly", "MA"),
+    ("Module Loading", "ML"),
+    ("Detector Assembly (CERN): DU", "DU"),
+    ("Detector Assembly (CERN): PEB", "PEB"),
+    ("Detector Assembly (CERN): FT", "FT"),
+]
+
+_MODE_TO_SHORT = {mode: short for mode, short in OPERATION_MODES}
+_SHORT_TO_MODE = {short: mode for mode, short in OPERATION_MODES}
 SELECTION_PLACEHOLDERS = {"- Select -", "", "- automatic -", "VxLyQz"}
+
+
+@dataclass(frozen=True)
+class DataConstants:
+    """Immutable data constants."""
+
+    n_items_to_show_in_cbx: int = 16
+
+    DU_types_including_all: list = field(
+        default_factory=lambda: ["All DU types"] + data.allDUkeysList
+    )
+    DU_types_chunked: list[list[str]] = field(init=False)
+    DU_types_n_pages: int = field(init=False)
+
+    PEB_types_including_all: list = field(
+        default_factory=lambda: ["All PEB types"] + data.allPEBs
+    )
+    PEB_types_chunked: list[list[str]] = field(init=False)
+    PEB_types_n_pages: int = field(init=False)
+
+    def __post_init__(self):
+        chunk = self.n_items_to_show_in_cbx
+        du = self.DU_types_including_all
+        peb = self.PEB_types_including_all
+
+        du_chunks = [du[i : i + chunk] for i in range(0, len(du), chunk)]
+        peb_chunks = [peb[i : i + chunk] for i in range(0, len(peb), chunk)]
+
+        # Frozen dataclasses need object.__setattr__ to assign in __post_init__
+        object.__setattr__(self, "DU_types_chunked", du_chunks)
+        object.__setattr__(self, "DU_types_n_pages", len(du_chunks))
+        object.__setattr__(self, "PEB_types_chunked", peb_chunks)
+        object.__setattr__(self, "PEB_types_n_pages", len(peb_chunks))
+
+
+DATA_CONSTANTS = DataConstants()
 
 
 class ToplevelWindow(customtkinter.CTkToplevel):
@@ -214,6 +261,48 @@ class App(customtkinter.CTk):
         self.label_info.configure(text=" ")
         return True
 
+    def _check_version_against_upstream(self):
+        """Compare local __version__ to upstream, warn if outdated.
+
+        Sets self.version_full_text and updates self.label_credits on stale release.
+        Returns None — purely a side-effecting setup step called from __init__.
+        """
+        try:
+            upstream_version, self.last_responseText = api.get_version()
+        except (
+            requests.exceptions.HTTPError,
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.RequestException,
+            ValueError,
+            RuntimeError,
+        ) as e:
+            upstream_version = None
+            self.last_responseText = str(e)
+
+        if not self._report_api_status(expected_prefix="200"):
+            self._show_error(
+                "Version of hgtd-tools could not be compared to upstream, check your web connection!"
+            )
+            return
+
+        if self.my_version != upstream_version and "rc" not in self.my_version:
+            print(f"You are not running the most recent version of hgtd-tools.")
+            print(
+                f"Your release: {self.my_version} / latest published release: {upstream_version}."
+            )
+            print(
+                f"Consider updating to a new release, either via git workflow (pull) or by downloading a specific release archive from gitlab."
+            )
+            self.version_full_text = (
+                self.version_full_text + f"\noutdated release, please update"
+            )
+            self.label_credits.configure(text=self.version_full_text)
+        else:
+            print(
+                f"You are running version {self.my_version}, the most recent release of hgtd-tools. Enjoy!"
+            )
+
     def _run_with_progress(self, target, *args):
         """Spawn a daemon thread for `target(*args)` and start polling the progressbar.
 
@@ -297,44 +386,13 @@ class App(customtkinter.CTk):
         )
         header.grid(row=0, column=0, padx=10, pady=5, columnspan=2)
 
-        # (label_text, mode_id, short_id, is_active_by_default)
-        modes = [
-            ("Module Assembly", "Module Assembly", "MA", True),
-            ("Module Loading", "Module Loading", "ML", False),
-            (
-                "Detector Assembly (CERN): DU",
-                "Detector Assembly (CERN): DU",
-                "DU",
-                False,
-            ),
-            (
-                "Detector Assembly (CERN): PEB",
-                "Detector Assembly (CERN): PEB",
-                "PEB",
-                False,
-            ),
-            (
-                "Detector Assembly (CERN): FT",
-                "Detector Assembly (CERN): FT",
-                "FT",
-                False,
-            ),
-        ]
-        for i, (text, mode_id, short_id, is_active) in enumerate(modes, start=1):
+        default_short = _MODE_TO_SHORT[GUI_CONFIG.default_operation_mode]
+        for i, (mode_id, short_id) in enumerate(OPERATION_MODES, start=1):
             btn = customtkinter.CTkButton(
                 self.frame_operation_mode,
-                text=text,
-                command=lambda m=mode_id: self.button_mode_event_click(m),
-                fg_color=(
-                    GUI_CONFIG.fg_active_color
-                    if is_active
-                    else GUI_CONFIG.fg_inactive_color
-                ),
-                hover_color=(
-                    GUI_CONFIG.hover_active_color
-                    if is_active
-                    else GUI_CONFIG.hover_inactive_color
-                ),
+                text=mode_id,
+                command=lambda m=mode_id: self.select_operation_mode_reload(m),
+                **self._button_colors(short_id == default_short),
             )
             btn.grid(
                 row=i,
@@ -345,6 +403,25 @@ class App(customtkinter.CTk):
                 columnspan=2,
             )
             self.operation_mode_buttons[short_id] = btn
+
+    def _update_sidebar_operation_modes(self, value):
+        active_short = _MODE_TO_SHORT[value]
+        for short_id, btn in self.operation_mode_buttons.items():
+            btn.configure(**self._button_colors(short_id == active_short))
+
+    def _button_colors(self, is_active: bool) -> dict:
+        return {
+            "fg_color": (
+                GUI_CONFIG.fg_active_color
+                if is_active
+                else GUI_CONFIG.fg_inactive_color
+            ),
+            "hover_color": (
+                GUI_CONFIG.hover_active_color
+                if is_active
+                else GUI_CONFIG.hover_inactive_color
+            ),
+        }
 
     def _build_sidebar_useful_links(self):
         """External links panel: DB frontend, docs, gitlab, mattermost, etc."""
@@ -568,9 +645,6 @@ class App(customtkinter.CTk):
         icon = tkinter.PhotoImage(data=load_image_from_assets_as_b64("windowIcon.png"))
         self.wm_iconbitmap()
         self.iconphoto(True, icon)
-
-        # === global constants used by comboboxes ===
-        self.n_items_to_show_in_cbx = GUI_CONFIG.n_items_to_show_in_cbx
 
         # === root-level grid ===
         self.grid_columnconfigure((0, 1, 2), weight=1)
@@ -1893,20 +1967,10 @@ class App(customtkinter.CTk):
         self.users = ["None", "new..."]
 
         # these are not taken from the DB, but from conventions
-        self.possible_par_types = ["All DU types"] + data.allDUkeysList
-        self.possible_par_types_chunked = [
-            self.possible_par_types[i : i + self.n_items_to_show_in_cbx]
-            for i in range(0, len(self.possible_par_types), self.n_items_to_show_in_cbx)
-        ]
-        self.possible_chi_types = ["All DU types"] + data.allDUkeysList
-        self.possible_chi_types_chunked = [
-            self.possible_chi_types[i : i + self.n_items_to_show_in_cbx]
-            for i in range(0, len(self.possible_chi_types), self.n_items_to_show_in_cbx)
-        ]
-        self.cbx_ptype_n_pages = len(self.possible_par_types_chunked)
-        self.cbx_ctype_n_pages = len(self.possible_chi_types_chunked)
-        self.cbx_ptype_n_pages = len(self.possible_par_types_chunked)
-        self.cbx_ctype_n_pages = len(self.possible_chi_types_chunked)
+        self.possible_par_types_chunked = DATA_CONSTANTS.DU_types_chunked
+        self.possible_chi_types_chunked = DATA_CONSTANTS.DU_types_chunked
+        self.cbx_ptype_n_pages = DATA_CONSTANTS.DU_types_n_pages
+        self.cbx_ctype_n_pages = DATA_CONSTANTS.DU_types_n_pages
         self.cbx_ptype_shown_page = 1
         self.cbx_ctype_shown_page = 1
         self.label_combobox_par_type_paginationFrame.configure(
@@ -1921,39 +1985,7 @@ class App(customtkinter.CTk):
         print("=" * 80)
         print(f"Welcome to hgtd-tools!")
         print("-" * 80)
-        try:
-            upstream_version, upstream_version_last_responseText = api.get_version()
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
-            upstream_version_last_responseText = str(e)
-        if upstream_version_last_responseText[:3] != "200":
-            self._show_error(
-                "Version of hgtd-tools could not be compared to upstream, check your web connection!"
-            )
-        else:
-            if self.my_version != upstream_version and "rc" not in self.my_version:
-                print(f"You are not running the most recent version of hgtd-tools.")
-                print(
-                    f"Your release: {self.my_version} / latest published release: {upstream_version}."
-                )
-                print(
-                    f"Consider updating to a new release, either via git workflow (pull) or by downloading a specific release archive from gitlab."
-                )
-                self.version_full_text = (
-                    self.version_full_text + f"\noutdated release, please update"
-                )
-                self.label_credits.configure(text=self.version_full_text)
-            else:
-                print(
-                    f"You are running version {self.my_version}, the most recent release of hgtd-tools. Enjoy!"
-                )
-
+        self._check_version_against_upstream()
         # Get first parents and children for default operating mode
         try:
             self.manufacturers, self.last_responseText = util.get_manufacturers()
@@ -2016,9 +2048,11 @@ class App(customtkinter.CTk):
             entry[0] for entry in self.possible_MA_mod_par_SNs_and_partIDs
         ]
         self.possible_MA_mod_par_SNs_chunked = [
-            self.possible_MA_mod_par_SNs[i : i + self.n_items_to_show_in_cbx]
+            self.possible_MA_mod_par_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
             for i in range(
-                0, len(self.possible_MA_mod_par_SNs), self.n_items_to_show_in_cbx
+                0,
+                len(self.possible_MA_mod_par_SNs),
+                DATA_CONSTANTS.n_items_to_show_in_cbx,
             )
         ]
         self.possible_MA_mod_par_partIDs = [
@@ -2039,8 +2073,10 @@ class App(customtkinter.CTk):
         )
         self.possible_MF_SNs = [entry[0] for entry in self.possible_MF_SNs_and_partIDs]
         self.possible_MF_SNs_chunked = [
-            self.possible_MF_SNs[i : i + self.n_items_to_show_in_cbx]
-            for i in range(0, len(self.possible_MF_SNs), self.n_items_to_show_in_cbx)
+            self.possible_MF_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
+            for i in range(
+                0, len(self.possible_MF_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
+            )
         ]
         self.possible_MF_partIDs = [
             entry[1] for entry in self.possible_MF_SNs_and_partIDs
@@ -2060,8 +2096,10 @@ class App(customtkinter.CTk):
             entry[0] for entry in self.possible_HY_HV_SNs_and_partIDs
         ]
         self.possible_HY_HV_SNs_chunked = [
-            self.possible_HY_HV_SNs[i : i + self.n_items_to_show_in_cbx]
-            for i in range(0, len(self.possible_HY_HV_SNs), self.n_items_to_show_in_cbx)
+            self.possible_HY_HV_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
+            for i in range(
+                0, len(self.possible_HY_HV_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
+            )
         ]
         self.possible_HY_HV_partIDs = [
             entry[1] for entry in self.possible_HY_HV_SNs_and_partIDs
@@ -2081,8 +2119,10 @@ class App(customtkinter.CTk):
             entry[0] for entry in self.possible_HY_LV_SNs_and_partIDs
         ]
         self.possible_HY_LV_SNs_chunked = [
-            self.possible_HY_LV_SNs[i : i + self.n_items_to_show_in_cbx]
-            for i in range(0, len(self.possible_HY_LV_SNs), self.n_items_to_show_in_cbx)
+            self.possible_HY_LV_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
+            for i in range(
+                0, len(self.possible_HY_LV_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
+            )
         ]
         self.possible_HY_LV_partIDs = [
             entry[1] for entry in self.possible_HY_LV_SNs_and_partIDs
@@ -3515,7 +3555,7 @@ class App(customtkinter.CTk):
             util.open_webbrowser_with_url(f"/viewparts/{chi_partID}")
 
     # https://stackoverflow.com/a/23944658
-    def button_mode_event_click(self, value):
+    def select_operation_mode_reload(self, value):
         self.operation_mode = value
         self.displayedDUtype = "None"
         self.interlockSlots = []
@@ -3543,29 +3583,7 @@ class App(customtkinter.CTk):
         self.possible_HY_HV = []
         self.possible_HY_LV = []
 
-        # Map mode_id -> short_id so we can flip exactly one button "on"
-        mode_to_short = {
-            "Module Assembly": "MA",
-            "Module Loading": "ML",
-            "Detector Assembly (CERN): DU": "DU",
-            "Detector Assembly (CERN): PEB": "PEB",
-            "Detector Assembly (CERN): FT": "FT",
-        }
-        active_short = mode_to_short[value]
-        for short_id, btn in self.operation_mode_buttons.items():
-            is_active = short_id == active_short
-            btn.configure(
-                fg_color=(
-                    GUI_CONFIG.fg_active_color
-                    if is_active
-                    else GUI_CONFIG.fg_inactive_color
-                ),
-                hover_color=(
-                    GUI_CONFIG.hover_active_color
-                    if is_active
-                    else GUI_CONFIG.hover_inactive_color
-                ),
-            )
+        self._update_sidebar_operation_modes(value)
 
         self.slots = None
         self.partstree = None
@@ -3678,14 +3696,8 @@ class App(customtkinter.CTk):
 
             self.combobox_child_manu.grid_remove()
 
-            self.possible_chi_types = ["All DU types"] + data.allDUkeysList
-            self.possible_chi_types_chunked = [
-                self.possible_chi_types[i : i + self.n_items_to_show_in_cbx]
-                for i in range(
-                    0, len(self.possible_chi_types), self.n_items_to_show_in_cbx
-                )
-            ]
-            self.cbx_ctype_n_pages = len(self.possible_chi_types_chunked)
+            self.possible_chi_types_chunked = DATA_CONSTANTS.DU_types_chunked
+            self.cbx_ctype_n_pages = DATA_CONSTANTS.DU_types_n_pages
             self.cbx_ctype_shown_page = 1
             self.label_combobox_chi_type_paginationFrame.configure(
                 text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}"
@@ -3718,14 +3730,8 @@ class App(customtkinter.CTk):
 
             self.combobox_child_manu.grid_remove()
 
-            self.possible_chi_types = ["All PEB types"] + data.allPEBs
-            self.possible_chi_types_chunked = [
-                self.possible_chi_types[i : i + self.n_items_to_show_in_cbx]
-                for i in range(
-                    0, len(self.possible_chi_types), self.n_items_to_show_in_cbx
-                )
-            ]
-            self.cbx_ctype_n_pages = len(self.possible_chi_types_chunked)
+            self.possible_chi_types_chunked = DATA_CONSTANTS.PEB_types_chunked
+            self.cbx_ctype_n_pages = DATA_CONSTANTS.PEB_types_n_pages
             self.cbx_ctype_shown_page = 1
             self.label_combobox_chi_type_paginationFrame.configure(
                 text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}"
@@ -4601,8 +4607,10 @@ class App(customtkinter.CTk):
         )
         self.possible_ft_SNs = [entry[0] for entry in self.possible_ft_SNs_and_partIDs]
         self.possible_ft_SNs_chunked = [
-            self.possible_ft_SNs[i : i + self.n_items_to_show_in_cbx]
-            for i in range(0, len(self.possible_ft_SNs), self.n_items_to_show_in_cbx)
+            self.possible_ft_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
+            for i in range(
+                0, len(self.possible_ft_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
+            )
         ]
         self.possible_ft_partIDs = [
             entry[1] for entry in self.possible_ft_SNs_and_partIDs
@@ -4866,9 +4874,11 @@ class App(customtkinter.CTk):
             entry[0] for entry in self.possible_MA_mod_par_SNs_and_partIDs
         ]
         self.possible_MA_mod_par_SNs_chunked = [
-            self.possible_MA_mod_par_SNs[i : i + self.n_items_to_show_in_cbx]
+            self.possible_MA_mod_par_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
             for i in range(
-                0, len(self.possible_MA_mod_par_SNs), self.n_items_to_show_in_cbx
+                0,
+                len(self.possible_MA_mod_par_SNs),
+                DATA_CONSTANTS.n_items_to_show_in_cbx,
             )
         ]
         self.possible_MA_mod_par_partIDs = [
@@ -4893,8 +4903,10 @@ class App(customtkinter.CTk):
         )
         self.possible_MF_SNs = [entry[0] for entry in self.possible_MF_SNs_and_partIDs]
         self.possible_MF_SNs_chunked = [
-            self.possible_MF_SNs[i : i + self.n_items_to_show_in_cbx]
-            for i in range(0, len(self.possible_MF_SNs), self.n_items_to_show_in_cbx)
+            self.possible_MF_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
+            for i in range(
+                0, len(self.possible_MF_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
+            )
         ]
         self.possible_MF_partIDs = [
             entry[1] for entry in self.possible_MF_SNs_and_partIDs
@@ -4918,8 +4930,10 @@ class App(customtkinter.CTk):
             entry[0] for entry in self.possible_HY_HV_SNs_and_partIDs
         ]
         self.possible_HY_HV_SNs_chunked = [
-            self.possible_HY_HV_SNs[i : i + self.n_items_to_show_in_cbx]
-            for i in range(0, len(self.possible_HY_HV_SNs), self.n_items_to_show_in_cbx)
+            self.possible_HY_HV_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
+            for i in range(
+                0, len(self.possible_HY_HV_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
+            )
         ]
         self.possible_HY_HV_partIDs = [
             entry[1] for entry in self.possible_HY_HV_SNs_and_partIDs
@@ -4945,8 +4959,10 @@ class App(customtkinter.CTk):
             entry[0] for entry in self.possible_HY_LV_SNs_and_partIDs
         ]
         self.possible_HY_LV_SNs_chunked = [
-            self.possible_HY_LV_SNs[i : i + self.n_items_to_show_in_cbx]
-            for i in range(0, len(self.possible_HY_LV_SNs), self.n_items_to_show_in_cbx)
+            self.possible_HY_LV_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
+            for i in range(
+                0, len(self.possible_HY_LV_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
+            )
         ]
         self.possible_HY_LV_partIDs = [
             entry[1] for entry in self.possible_HY_LV_SNs_and_partIDs
@@ -5193,18 +5209,20 @@ class App(customtkinter.CTk):
             entry[0] for entry in self.possible_parents_SNs_and_partIDs
         ]
         self.possible_parents_SNs_chunked = [
-            self.possible_parents_SNs[i : i + self.n_items_to_show_in_cbx]
+            self.possible_parents_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
             for i in range(
-                0, len(self.possible_parents_SNs), self.n_items_to_show_in_cbx
+                0, len(self.possible_parents_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
             )
         ]
         self.possible_children_SNs = [
             entry[0] for entry in self.possible_children_SNs_and_partIDs
         ]
         self.possible_children_SNs_chunked = [
-            self.possible_children_SNs[i : i + self.n_items_to_show_in_cbx]
+            self.possible_children_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
             for i in range(
-                0, len(self.possible_children_SNs), self.n_items_to_show_in_cbx
+                0,
+                len(self.possible_children_SNs),
+                DATA_CONSTANTS.n_items_to_show_in_cbx,
             )
         ]
         self.possible_parents_partIDs = [
