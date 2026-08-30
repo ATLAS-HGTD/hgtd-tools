@@ -250,12 +250,11 @@ class App(customtkinter.CTk):
     def _logged_in(self):
         """True if a user is authenticated, else False. Configures label_info."""
         if self.user == "None" or self.user == "new...":
-            info = (
-                "Error: Please login with your CERN account, because this "
+            err_text = (
+                "Please login with your CERN account, because this "
                 "operation requires a user name."
             )
-            print(f">>> {info}")
-            self.label_info.configure(text=info)
+            self._show_error(err_text, exception="")
             return False
         self.label_info.configure(text=" ")
         return True
@@ -2029,11 +2028,8 @@ class App(customtkinter.CTk):
                         "/partstreelist", part_tree, dryrun=False
                     )
             else:
-                info_text = wrapped_text.fill(
-                    f"Error: You can not connect this MF to the selected module.\nFirst you need to delete its existing relation to a module!"
-                )
-                print(f">>> {info_text}")
-                self.label_info.configure(text=info_text)
+                info_text = f"You can not connect this MF to the selected module.\nFirst you need to delete its existing relation to a module!"
+                self._show_error(info_text, exception="")
         except (
             requests.exceptions.HTTPError,
             requests.exceptions.ConnectionError,
@@ -2057,22 +2053,27 @@ class App(customtkinter.CTk):
                 wrapped_text.fill(info_text),
             )
 
-    def button_add_child_HY_HV_event_click(self):
-        chi = self.combobox_MA_HY_HV_chi.get()
-        par = self.combobox_MA_mod_par.get()
-        if not self._selected_non_placeholders(
-            [chi, par],
-            "Warning: Select a HY HV-side & Module from the respective lists to proceed.",
-        ):
-            return
-        if not self._logged_in():
-            return
-        chi_partID = self.possible_HY_HV_partIDs[self.possible_HY_HV_SNs.index(chi)]
-        par_partID = self.possible_MA_mod_par_partIDs[
-            self.possible_MA_mod_par_SNs.index(par)
-        ]
+    def _add_child_hybrid_to_module(
+        self,
+        chi,
+        chi_partID,
+        par,
+        par_partID,
+        position,  # "HV" or "LV"
+        occupied_position_to_skip,  # "LV" / "HV"
+    ):
+        """Attach a hybrid to a module's HV or LV side, with overwrite confirmation.
+
+        The caller has already resolved `chi`/`par` from their respective
+        comboboxes and looked up the part IDs. Position semantics:
+          * `position` = the side we are attaching TO
+          * `occupied_position_to_skip` = the OTHER side, whose existing HY is harmless
+            and must NOT be deleted (old MO↔HY relations had no enforced position;
+            the only safe assumption is that a HY on the opposite side does not
+            interfere with our attach).
+        """
         part_tree = {
-            "position": "HV",
+            "position": position,
             "is_record_deleted": "F",
             "part": chi_partID,
             "part_parent": par_partID,
@@ -2093,13 +2094,10 @@ class App(customtkinter.CTk):
                 occupied_target_positions = []
                 Mod_HY_relations_to_delete = []
                 for c in children_of_targetMod:
-                    # need to check whether a hybrid occupies the module HV-side OR no particular position
-                    # old relations between MO & HY did NOT enforce position attribute, so we are left with
-                    # empty or invalid position attributes
-                    # the only thing we can be sure about is that a hybrid that is connected on LV-side is
-                    # harmless for the following operation, such potential relation does not need to be deleted
-                    # similar for the other side (swap HV & LV)
-                    if str(c["position"]) != "LV":
+                    # old MO <-> HY relations had no enforced position attribute;
+                    # only HYs on `occupied_position_to_skip` (the opposite side) are
+                    # harmless. Empty / invalid positions count as interfering.
+                    if str(c["position"]) != occupied_position_to_skip:
                         occupied = True
                         occupied_target_positions.append(c["position"])
                         HYs_already_occupying_target_position.append(
@@ -2109,24 +2107,23 @@ class App(customtkinter.CTk):
                 if occupied:
                     overwrite_confirmed = self._confirm_by_typing(
                         prompt=(
-                            f"This Module is already connected to the non-LV-side HY(s) "
-                            f"{','.join(HYs_already_occupying_target_position)}\n"
+                            f"This Module is already connected to the non-{occupied_position_to_skip}-side "
+                            f"HY(s) {','.join(HYs_already_occupying_target_position)}\n"
                             f"at position(s) {','.join(occupied_target_positions)}.\n"
-                            + "Confirm by typing a confirmation: OVERWRITE to "
-                            "overwrite ALL known non-LV-side hybrid children of "
-                            "the selected parent module with your selected HY:"
+                            f"Confirm by typing a confirmation: OVERWRITE to "
+                            f"overwrite ALL known non-{occupied_position_to_skip}-side "
+                            f"hybrid children of the selected parent module "
+                            f"with your selected HY:"
                         ),
                     )
                     if overwrite_confirmed:
                         # DELETION OF PREVIOUS STUFF
-                        # delete Mod -> HY relations for the HYs that already connect to that Mod
                         for del_this in Mod_HY_relations_to_delete:
                             self.last_responseText = api.delete_information(
                                 f"/partstreedelete/{del_this}/"
                             )
 
                         # POSTING NEW STUFF
-                        # connect new HY there by creating a new Mod -> HY relation
                         self.last_responseText = api.post_information(
                             "/partstreelist", part_tree, dryrun=False
                         )
@@ -2137,11 +2134,8 @@ class App(customtkinter.CTk):
                     )
                     posted_new_rel = True
             else:
-                info_text = wrapped_text.fill(
-                    f"Error: You can not connect this hybrid to the selected module.\nFirst you need to delete its existing relation to a module!"
-                )
-                print(f">>> {info_text}")
-                self.label_info.configure(text=info_text)
+                info_text = "You can not connect this hybrid to the selected module.\nFirst you need to delete its existing relation to a module!"
+                self._show_error(info_text, exception="")
         except (
             requests.exceptions.HTTPError,
             requests.exceptions.ConnectionError,
@@ -2157,11 +2151,36 @@ class App(customtkinter.CTk):
             )
             return
         if posted_new_rel:
-            info_text = "Info: Child HV Hybrid added successfully to ProdDB API."
+            info_text = (
+                f"Child {position}-side Hybrid added successfully to ProdDB API."
+            )
             self._show_info(info_text)
             self._run_with_progress(
-                self.wrap_data_ui_fetch_MA_p_c, "HY_HV", wrapped_text.fill(info_text)
+                self.wrap_data_ui_fetch_MA_p_c,
+                "HY_" + position,
+                wrapped_text.fill(info_text),
             )
+
+    def button_add_child_HY_HV_event_click(self):
+        chi = self.combobox_MA_HY_HV_chi.get()
+        par = self.combobox_MA_mod_par.get()
+        if not self._selected_non_placeholders(
+            [chi, par],
+            "Warning: Select a HY HV-side & Module from the respective lists to proceed.",
+        ):
+            return
+        if not self._logged_in():
+            return
+        self._add_child_hybrid_to_module(
+            chi=chi,
+            chi_partID=self.possible_HY_HV_partIDs[self.possible_HY_HV_SNs.index(chi)],
+            par=par,
+            par_partID=self.possible_MA_mod_par_partIDs[
+                self.possible_MA_mod_par_SNs.index(par)
+            ],
+            position="HV",
+            occupied_position_to_skip="LV",
+        )
 
     def button_add_child_HY_LV_event_click(self):
         chi = self.combobox_MA_HY_LV_chi.get()
@@ -2173,102 +2192,16 @@ class App(customtkinter.CTk):
             return
         if not self._logged_in():
             return
-
-        chi_partID = self.possible_HY_LV_partIDs[self.possible_HY_LV_SNs.index(chi)]
-        par_partID = self.possible_MA_mod_par_partIDs[
-            self.possible_MA_mod_par_SNs.index(par)
-        ]
-        part_tree = {
-            "position": "LV",
-            "is_record_deleted": "F",
-            "part": chi_partID,
-            "part_parent": par_partID,
-            "record_insertion_user": self.user,
-        }
-        occupied = False
-        overwrite_confirmed = False
-        posted_new_rel = False
-        try:
-            parents_of_target_HY, self.last_responseText = util.get_parents(
-                chi_partID, ofKind="Module"
-            )
-            if len(parents_of_target_HY) == 0:
-                children_of_targetMod, self.last_responseText = util.get_children(
-                    par_partID, ofKind="Hybrid"
-                )
-                HYs_already_occupying_target_position = []
-                occupied_target_positions = []
-                Mod_HY_relations_to_delete = []
-                for c in children_of_targetMod:
-                    # need to check whether a hybrid occupies the module LV-side OR no particular position
-                    # old relations between MO & HY did NOT enforce position attribute, so we are left with
-                    # empty or invalid position attributes
-                    # the only thing we can be sure about is that a hybrid that is connected on HV-side is
-                    # harmless for the following operation, such potential relation does not need to be deleted
-                    # similar for the other side (swap HV & LV)
-                    if str(c["position"]) != "HV":
-                        occupied = True
-                        occupied_target_positions.append(c["position"])
-                        HYs_already_occupying_target_position.append(
-                            c["part"]["serial_number"]
-                        )
-                        Mod_HY_relations_to_delete.append(c["record_id"])
-                if occupied:
-                    overwrite_confirmed = self._confirm_by_typing(
-                        prompt=(
-                            f"This Module is already connected to the non-HV-side HY(s) "
-                            f"{','.join(HYs_already_occupying_target_position)}\n"
-                            f"at position(s) {','.join(occupied_target_positions)}.\n"
-                            + "Confirm by typing a confirmation: OVERWRITE to "
-                            "overwrite ALL known non-HV-side hybrid children of "
-                            "the selected parent module with your selected HY:"
-                        ),
-                    )
-                    if overwrite_confirmed:
-                        # DELETION OF PREVIOUS STUFF
-                        # delete Mod -> HY relations for the HYs that already connect to that Mod
-                        for del_this in Mod_HY_relations_to_delete:
-                            self.last_responseText = api.delete_information(
-                                f"/partstreedelete/{del_this}/"
-                            )
-
-                        # POSTING NEW STUFF
-                        # connect new HY there by creating a new Mod -> HY relation
-                        self.last_responseText = api.post_information(
-                            "/partstreelist", part_tree, dryrun=False
-                        )
-                        posted_new_rel = True
-                else:
-                    self.last_responseText = api.post_information(
-                        "/partstreelist", part_tree, dryrun=False
-                    )
-                    posted_new_rel = True
-            else:
-                info_text = wrapped_text.fill(
-                    f"Error: You can not connect this hybrid to the selected module.\nFirst you need to delete its existing relation to a module!"
-                )
-                print(f">>> {info_text}")
-                self.label_info.configure(text=info_text)
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
-            self.last_responseText = str(e)
-        if not self._report_api_status(expected_prefix="20"):
-            self._show_error(
-                "Parent / Child relations could not be fetched, deleted or posted to ProdDB API."
-            )
-            return
-        if posted_new_rel:
-            info_text = "Info: Child LV Hybrid added successfully to ProdDB API."
-            self._show_info(info_text)
-            self._run_with_progress(
-                self.wrap_data_ui_fetch_MA_p_c, "HY_LV", wrapped_text.fill(info_text)
-            )
+        self._add_child_hybrid_to_module(
+            chi=chi,
+            chi_partID=self.possible_HY_LV_partIDs[self.possible_HY_LV_SNs.index(chi)],
+            par=par,
+            par_partID=self.possible_MA_mod_par_partIDs[
+                self.possible_MA_mod_par_SNs.index(par)
+            ],
+            position="LV",
+            occupied_position_to_skip="HV",
+        )
 
     def button_add_ft_event_click(self):
         chi = self.combobox_ft.get()
@@ -2406,29 +2339,17 @@ class App(customtkinter.CTk):
                                         )
                                         break
                             if not found_PEB_for_FT:
-                                info_text = wrapped_text.fill(
-                                    f"Error: You can not connect this FT to the selected slot.\nThere is no PEB on the cooling plate!"
-                                )
-                                print(f">>> {info_text}")
-                                self.label_info.configure(text=info_text)
+                                info_text = "You can not connect this FT to the selected slot.\nThere is no PEB on the cooling plate!"
+                                self._show_error(info_text, exception="")
                         else:
-                            info_text = wrapped_text.fill(
-                                f"Error: You can not connect this FT to the selected slot.\nThere is no detector unit on the cooling plate!"
-                            )
-                            print(f">>> {info_text}")
-                            self.label_info.configure(text=info_text)
+                            info_text = "You can not connect this FT to the selected slot.\nThere is no detector unit on the cooling plate!"
+                            self._show_error(info_text, exception="")
                 else:
-                    info_text = wrapped_text.fill(
-                        f"Error: You can not connect this FT to the selected slot.\nThere is no module occupying this slot!"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
+                    info_text = "You can not connect this FT to the selected slot.\nThere is no module occupying this slot!"
+                    self._show_error(info_text, exception="")
             else:
-                info_text = wrapped_text.fill(
-                    f"Error: You can not connect this FT to the selected slot.\nCheck the FT generation and FT category requirements!"
-                )
-                print(f">>> {info_text}")
-                self.label_info.configure(text=info_text)
+                info_text = "You can not connect this FT to the selected slot.\nCheck the FT generation and FT category requirements!"
+                self._show_error(info_text, exception="")
 
         except (
             requests.exceptions.HTTPError,
@@ -2493,19 +2414,13 @@ class App(customtkinter.CTk):
             elif self.operation_mode == "Detector Assembly (CERN): DU":
                 attribute_Vessel = pos.split("V").pop().split("L")[0]
                 if attribute_Vessel not in ["1", "2", "M", "D"]:
-                    info_text = wrapped_text.fill(
-                        f"Error: You can not load to this vessel.\nVessel attribute only accepts 1, 2, M, or D, but you selected {attribute_Vessel}!"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
+                    info_text = f"You can not load to this vessel.\nVessel attribute only accepts 1, 2, M, or D, but you selected {attribute_Vessel}!"
+                    self._show_error(info_text, exception="")
                 else:
                     attribute_Layer = pos.split("L").pop().split("Q")[0]
                     if attribute_Layer not in ["0", "1", "2", "3"]:
-                        info_text = wrapped_text.fill(
-                            f"Error: You can not load to this layer.\nLayer attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Layer}!"
-                        )
-                        print(f">>> {info_text}")
-                        self.label_info.configure(text=info_text)
+                        info_text = f"You can not load to this layer.\nLayer attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Layer}!"
+                        self._show_error(info_text, exception="")
                     else:
                         if attribute_Layer == "0" or attribute_Layer == "3":
                             allowed_type = "F"
@@ -2514,19 +2429,13 @@ class App(customtkinter.CTk):
                             allowed_type = "B"
                             not_allowed_type = "F"
                         if self.displayedDUtype[0] == not_allowed_type:
-                            info_text = wrapped_text.fill(
-                                f"Error: You can not load this DU to this layer.\nLayer {attribute_Layer} only accepts {allowed_type} DUs, but you selected a {self.displayedDUtype[0]} DU!"
-                            )
-                            print(f">>> {info_text}")
-                            self.label_info.configure(text=info_text)
+                            info_text = f"You can not load this DU to this layer.\nLayer {attribute_Layer} only accepts {allowed_type} DUs, but you selected a {self.displayedDUtype[0]} DU!"
+                            self._show_error(info_text, exception="")
                         else:
                             attribute_Quadrant = pos.split("Q").pop()
                             if attribute_Quadrant not in ["0", "1", "2", "3"]:
-                                info_text = wrapped_text.fill(
-                                    f"Error: You can not load to this quadrant.\nQuadrant attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Quadrant}!"
-                                )
-                                print(f">>> {info_text}")
-                                self.label_info.configure(text=info_text)
+                                info_text = f"You can not load to this quadrant.\nQuadrant attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Quadrant}!"
+                                self._show_error(info_text, exception="")
                             else:
                                 allowed_VLQ = True
                                 # make sure to only check for DU children KoP, nothing else
@@ -2610,26 +2519,17 @@ class App(customtkinter.CTk):
             elif self.operation_mode == "Detector Assembly (CERN): PEB":
                 attribute_Vessel = pos.split("V").pop().split("L")[0]
                 if attribute_Vessel not in ["1", "2", "M", "D"]:
-                    info_text = wrapped_text.fill(
-                        f"Error: You can not load to this vessel.\nVessel attribute only accepts 1, 2, M, or D, but you selected {attribute_Vessel}!"
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
+                    info_text = f"You can not load to this vessel.\nVessel attribute only accepts 1, 2, M, or D, but you selected {attribute_Vessel}!"
+                    self._show_error(info_text, exception="")
                 else:
                     if attribute_Vessel in ["D"] and self.displayed_PEB_type != "1F":
-                        info_text = wrapped_text.fill(
-                            f"Error: You can not load to this vessel (demonstrator).\nDemonstratorV1 only accepts PEB type 1F, but you selected a PEB of type {self.displayed_PEB_type}!"
-                        )
-                        print(f">>> {info_text}")
-                        self.label_info.configure(text=info_text)
+                        info_text = f"You can not load to this vessel (demonstrator).\nDemonstratorV1 only accepts PEB type 1F, but you selected a PEB of type {self.displayed_PEB_type}!"
+                        self._show_error(info_text, exception="")
                     else:
                         attribute_Layer = pos.split("L").pop().split("Q")[0]
                         if attribute_Layer not in ["0", "1", "2", "3"]:
-                            info_text = wrapped_text.fill(
-                                f"Error: You can not load to this layer.\nLayer attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Layer}!"
-                            )
-                            print(f">>> {info_text}")
-                            self.label_info.configure(text=info_text)
+                            info_text = f"You can not load to this layer.\nLayer attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Layer}!"
+                            self._show_error(info_text, exception="")
                         else:
                             if attribute_Layer == "0" or attribute_Layer == "3":
                                 allowed_types = data.F_PEBs
@@ -2638,11 +2538,8 @@ class App(customtkinter.CTk):
                                 allowed_types = data.B_PEBs
                                 not_allowed_type = "3F"
                             if self.displayed_PEB_type == not_allowed_type:
-                                info_text = wrapped_text.fill(
-                                    f"Error: You can not load this PEB to this layer.\nLayer {attribute_Layer} only accepts {allowed_types} PEBs, but you selected a {self.displayed_PEB_type} PEB!"
-                                )
-                                print(f">>> {info_text}")
-                                self.label_info.configure(text=info_text)
+                                info_text = f"You can not load this PEB to this layer.\nLayer {attribute_Layer} only accepts {allowed_types} PEBs, but you selected a {self.displayed_PEB_type} PEB!"
+                                self._show_error(info_text, exception="")
                             else:
                                 attribute_Quadrant = pos.split("Q").pop()
                                 if attribute_Quadrant not in [
@@ -2651,11 +2548,8 @@ class App(customtkinter.CTk):
                                     "2",
                                     "3",
                                 ]:
-                                    info_text = wrapped_text.fill(
-                                        f"Error: You can not load to this quadrant.\nQuadrant attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Quadrant}!"
-                                    )
-                                    print(f">>> {info_text}")
-                                    self.label_info.configure(text=info_text)
+                                    info_text = f"You can not load to this quadrant.\nQuadrant attribute only accepts 0, 1, 2, or 3, but you selected {attribute_Quadrant}!"
+                                    self._show_error(info_text, exception="")
                                 else:
                                     allowed_VLQ = True
                                     # make sure to only check for PEB children KoP, nothing else
@@ -3167,11 +3061,8 @@ class App(customtkinter.CTk):
                 self._run_with_progress(self.fetch_ft)
                 break
         else:
-            info_text = wrapped_text.fill(
-                f"Error: Your combination of Vessel, Layer, Quadrant, Global Row & Module does not exist in the slot table."
-            )
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
+            info_text = "Your combination of Vessel, Layer, Quadrant, Global Row & Module does not exist in the slot table."
+            self._show_error(info_text, exception="")
 
     def button_inspect_child_event_click(self):
         childSNIn = self.combobox_child.get()
@@ -3204,11 +3095,8 @@ class App(customtkinter.CTk):
                     break
             util.open_webbrowser_with_url(f"/viewparts/{par_partID}")
         else:
-            info_text = wrapped_text.fill(
-                f"Error: You first need to find the slot in the slot table to inspect its properties."
-            )
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
+            info_text = "You first need to find the slot in the slot table to inspect its properties."
+            self._show_error(info_text, exception="")
 
     def button_inspect_ft_event_click(self):
         childSNIn = self.combobox_ft.get()
@@ -4179,9 +4067,8 @@ class App(customtkinter.CTk):
         if ft_par != []:
             # this FT is already connected to some slot!!
             for r in ft_par:
-                info_text = f"Info: This FT is already connected to a slot: {r['part_parent']['serial_number']}."
-                print(f">>> {info_text}")
-                self.label_info.configure(text=info_text)
+                info_text = f"This FT is already connected to a slot: {r['part_parent']['serial_number']}."
+                self._show_info(info_text)
                 self.this_FT_relations_SLOT.append(r)
                 self.button_delete_connected_ft.configure(state="normal")
 
@@ -4208,9 +4095,8 @@ class App(customtkinter.CTk):
                 if detector != []:
                     # this PEB was already placed somewhere in the detector!!
                     for r in detector:
-                        info_text = f"Info: This PEB is already mounted to the parent detector, at {r['position']}."
-                        print(f">>> {info_text}")
-                        self.label_info.configure(text=info_text)
+                        info_text = f"This PEB is already mounted to the parent detector, at {r['position']}."
+                        self._show_info(info_text)
                 break
         else:
             info_text = "Warning: PEB type could not be retrieved from PEB SN."
@@ -4693,9 +4579,8 @@ class App(customtkinter.CTk):
             return
 
         if par != []:
-            info_text = f"Info: This Module is already connected to some children."
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
+            info_text = f"This Module is already connected to some children."
+            self._show_info(info_text)
             for r in par:
                 if str(data.KoPID_from_partKoPName["Module Flex"]) == str(
                     r["part"]["kind_of_part"]["kind_of_part_id"]
@@ -4759,9 +4644,8 @@ class App(customtkinter.CTk):
 
         if par != []:
             for r in par:
-                info_text = f"Info: This MF is already connected to a module: {r['part_parent']['serial_number']}."
-                print(f">>> {info_text}")
-                self.label_info.configure(text=info_text)
+                info_text = f"This MF is already connected to a module: {r['part_parent']['serial_number']}."
+                self._show_info(info_text)
                 self.this_MF_relations_MOD.append(r)
                 self.button_delete_child_MF.configure(state="normal")
 
@@ -4780,9 +4664,8 @@ class App(customtkinter.CTk):
 
         if par != []:
             for r in par:
-                info_text = f"Info: This HY HV-side is already connected to a module: {r['part_parent']['serial_number']}."
-                print(f">>> {info_text}")
-                self.label_info.configure(text=info_text)
+                info_text = f"This HY HV-side is already connected to a module: {r['part_parent']['serial_number']}."
+                self._show_info(info_text)
                 self.this_HY_HV_relations_MOD.append(r)
                 self.button_delete_child_HY_HV.configure(state="normal")
 
@@ -4801,9 +4684,8 @@ class App(customtkinter.CTk):
 
         if par != []:
             for r in par:
-                info_text = f"Info: This HY LV-side is already connected to a module: {r['part_parent']['serial_number']}."
-                print(f">>> {info_text}")
-                self.label_info.configure(text=info_text)
+                info_text = f"This HY LV-side is already connected to a module: {r['part_parent']['serial_number']}."
+                self._show_info(info_text)
                 self.this_HY_LV_relations_MOD.append(r)
                 self.button_delete_child_HY_LV.configure(state="normal")
 
