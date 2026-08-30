@@ -59,6 +59,14 @@ OPERATION_MODES = [
 ]
 _MODE_TO_SHORT = {mode: short for mode, short in OPERATION_MODES}
 _SHORT_TO_MODE = {short: mode for mode, short in OPERATION_MODES}
+_REQUEST_EXCEPTIONS = (
+    requests.exceptions.HTTPError,
+    requests.exceptions.ConnectionError,
+    requests.exceptions.Timeout,
+    requests.exceptions.RequestException,
+    ValueError,
+    RuntimeError,
+)
 SELECTION_PLACEHOLDERS = {"- Select -", "", "- automatic -", "VxLyQz"}
 
 
@@ -191,14 +199,7 @@ class LoginDialog(customtkinter.CTkToplevel):
                 self.password_variable.get(),
                 self.totp_variable.get(),
             )
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
+        except _REQUEST_EXCEPTIONS as e:
             self.last_responseText = str(e)
 
         self.callback(self.auth_user, self.last_responseText)
@@ -267,14 +268,7 @@ class App(customtkinter.CTk):
         """
         try:
             upstream_version, self.last_responseText = api.get_version()
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
+        except _REQUEST_EXCEPTIONS as e:
             upstream_version = None
             self.last_responseText = str(e)
         if not self._report_api_status(expected_prefix="200"):
@@ -608,14 +602,7 @@ class App(customtkinter.CTk):
             if ofKind is not None:
                 kwargs["ofKind"] = ofKind
             rels, self.last_responseText = fn(**kwargs)
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
+        except _REQUEST_EXCEPTIONS as e:
             rels, self.last_responseText = [], str(e)
 
         ok = self._report_api_status(expected_prefix="200")
@@ -635,14 +622,7 @@ class App(customtkinter.CTk):
                 getFullAttributes=getFullAttributes,
                 useLocal=useLocal,
             )
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
+        except _REQUEST_EXCEPTIONS as e:
             parts, self.last_responseText = [], str(e)
 
         ok = self._report_api_status(expected_prefix="200")
@@ -1902,14 +1882,7 @@ class App(customtkinter.CTk):
         try:
             self.manufacturers, self.last_responseText = util.get_manufacturers()
             self.locations, self.last_responseText = util.get_locations()
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
+        except _REQUEST_EXCEPTIONS as e:
             self.manufacturers = []
             self.locations = []
             self.last_responseText = str(e)
@@ -2030,14 +2003,7 @@ class App(customtkinter.CTk):
             else:
                 info_text = f"You can not connect this MF to the selected module.\nFirst you need to delete its existing relation to a module!"
                 self._show_error(info_text, exception="")
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
+        except _REQUEST_EXCEPTIONS as e:
             self.last_responseText = str(e)
         if not self._report_api_status(expected_prefix="20"):
             self._show_error(
@@ -2136,14 +2102,7 @@ class App(customtkinter.CTk):
             else:
                 info_text = "You can not connect this hybrid to the selected module.\nFirst you need to delete its existing relation to a module!"
                 self._show_error(info_text, exception="")
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
+        except _REQUEST_EXCEPTIONS as e:
             self.last_responseText = str(e)
         if not self._report_api_status(expected_prefix="20"):
             self._show_error(
@@ -2350,15 +2309,7 @@ class App(customtkinter.CTk):
             else:
                 info_text = "You can not connect this FT to the selected slot.\nCheck the FT generation and FT category requirements!"
                 self._show_error(info_text, exception="")
-
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
+        except _REQUEST_EXCEPTIONS as e:
             self.last_responseText = str(e)
         if not self._report_api_status(expected_prefix="20"):
             self._show_error(
@@ -2608,14 +2559,7 @@ class App(customtkinter.CTk):
                                         self.last_responseText = api.post_information(
                                             "/partstreelist", part_tree, dryrun=False
                                         )
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            ValueError,
-            RuntimeError,
-        ) as e:
+        except _REQUEST_EXCEPTIONS as e:
             self.last_responseText = str(e)
         if not self._report_api_status(expected_prefix="20"):
             self._show_error(
@@ -2828,14 +2772,7 @@ class App(customtkinter.CTk):
                 for k in self.this_FT_relations_SLOT:
                     # this already deletes ALL relations of this FT to any parent, including: Slot, DU, PEB, MO
                     self.last_responseText = util.delete_parents(k["part"]["part_id"])
-            except (
-                requests.exceptions.HTTPError,
-                requests.exceptions.ConnectionError,
-                requests.exceptions.Timeout,
-                requests.exceptions.RequestException,
-                ValueError,
-                RuntimeError,
-            ) as e:
+            except _REQUEST_EXCEPTIONS as e:
                 self.last_responseText = str(e)
             if not self._report_api_status(expected_prefix="20"):
                 self._show_error(
@@ -2855,14 +2792,7 @@ class App(customtkinter.CTk):
                 self.last_responseText = util.delete_parents(
                     self.clicked_module["part"]["part_id"]
                 )
-            except (
-                requests.exceptions.HTTPError,
-                requests.exceptions.ConnectionError,
-                requests.exceptions.Timeout,
-                requests.exceptions.RequestException,
-                ValueError,
-                RuntimeError,
-            ) as e:
+            except _REQUEST_EXCEPTIONS as e:
                 self.last_responseText = str(e)
             if not self._report_api_status(expected_prefix="20"):
                 self._show_error(
@@ -2901,14 +2831,7 @@ class App(customtkinter.CTk):
                     self.last_responseText = util.delete_parents(
                         k["part"]["part_id"], ofKind="Module"
                     )
-            except (
-                requests.exceptions.HTTPError,
-                requests.exceptions.ConnectionError,
-                requests.exceptions.Timeout,
-                requests.exceptions.RequestException,
-                ValueError,
-                RuntimeError,
-            ) as e:
+            except _REQUEST_EXCEPTIONS as e:
                 self.last_responseText = str(e)
             if not self._report_api_status(expected_prefix="20"):
                 self._show_error(
@@ -2929,14 +2852,7 @@ class App(customtkinter.CTk):
                     self.last_responseText = util.delete_parents(
                         k["part"]["part_id"], ofKind="Module"
                     )
-            except (
-                requests.exceptions.HTTPError,
-                requests.exceptions.ConnectionError,
-                requests.exceptions.Timeout,
-                requests.exceptions.RequestException,
-                ValueError,
-                RuntimeError,
-            ) as e:
+            except _REQUEST_EXCEPTIONS as e:
                 self.last_responseText = str(e)
             if not self._report_api_status(expected_prefix="20"):
                 self._show_error(
@@ -2957,14 +2873,7 @@ class App(customtkinter.CTk):
                     self.last_responseText = util.delete_parents(
                         k["part"]["part_id"], ofKind="Module"
                     )
-            except (
-                requests.exceptions.HTTPError,
-                requests.exceptions.ConnectionError,
-                requests.exceptions.Timeout,
-                requests.exceptions.RequestException,
-                ValueError,
-                RuntimeError,
-            ) as e:
+            except _REQUEST_EXCEPTIONS as e:
                 self.last_responseText = str(e)
             if not self._report_api_status(expected_prefix="20"):
                 self._show_error(
@@ -3676,14 +3585,7 @@ class App(customtkinter.CTk):
             # authenticate as user
             try:
                 self.authenticate_user()
-            except (
-                requests.exceptions.HTTPError,
-                requests.exceptions.ConnectionError,
-                requests.exceptions.Timeout,
-                requests.exceptions.RequestException,
-                ValueError,
-                RuntimeError,
-            ) as e:
+            except _REQUEST_EXCEPTIONS as e:
                 self.last_responseText = str(e)
             if not self._report_api_status(expected_prefix="200"):
                 self._show_error("New user could not be authenticated.")
@@ -3797,14 +3699,7 @@ class App(customtkinter.CTk):
                 parents_of_child_module, self.responseText = util.get_parents(
                     entry["part"]["part_id"], ofKind="Slot"
                 )
-            except (
-                requests.exceptions.HTTPError,
-                requests.exceptions.ConnectionError,
-                requests.exceptions.Timeout,
-                requests.exceptions.RequestException,
-                ValueError,
-                RuntimeError,
-            ) as e:
+            except _REQUEST_EXCEPTIONS as e:
                 self.last_responseText = str(e)
             if not self._report_api_status(expected_prefix="200"):
                 self._show_error("Parents could not be loaded from ProdDB API.")
@@ -3814,14 +3709,7 @@ class App(customtkinter.CTk):
                     self.last_responseText = api.delete_information(
                         f"/partstreedelete/{r['record_id']}/"
                     )
-                except (
-                    requests.exceptions.HTTPError,
-                    requests.exceptions.ConnectionError,
-                    requests.exceptions.Timeout,
-                    requests.exceptions.RequestException,
-                    ValueError,
-                    RuntimeError,
-                ) as e:
+                except _REQUEST_EXCEPTIONS as e:
                     self.last_responseText = str(e)
                 if not self._report_api_status(expected_prefix="20"):
                     self._show_error("Record could not be deleted from ProdDB API.")
@@ -3849,23 +3737,13 @@ class App(customtkinter.CTk):
                             self.last_responseText = api.post_information(
                                 "/partstreelist", part_tree, dryrun=False
                             )
-                        except (
-                            requests.exceptions.HTTPError,
-                            requests.exceptions.ConnectionError,
-                            requests.exceptions.Timeout,
-                            requests.exceptions.RequestException,
-                            ValueError,
-                            RuntimeError,
-                        ) as e:
+                        except _REQUEST_EXCEPTIONS as e:
                             self.last_responseText = str(e)
                         if not self._report_api_status(expected_prefix="20"):
                             self._show_error(
                                 "Parent / Child relation could not be patched to ProdDB API."
                             )
                             return
-
-    def exit(self):
-        self.destroy()
 
     def fetch_and_write_module_slots(
         self, attribute_Vessel, attribute_Layer, attribute_Quadrant
@@ -4202,14 +4080,7 @@ class App(customtkinter.CTk):
                     "Hybrid"
                 )
                 self.this_HY_LV_relations_MOD = []
-        except (
-            requests.exceptions.HTTPError,
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-            requests.exceptions.RequestException,
-            RuntimeError,
-            ValueError,
-        ) as e:
+        except _REQUEST_EXCEPTIONS as e:
             if update == "all" or update == "Module":
                 self.possible_MA_mod_par = []
                 self.this_MOD_relations_MF = []
@@ -4822,6 +4693,9 @@ class App(customtkinter.CTk):
             )  # create window if its None or destroyed
         else:
             self.help_window.focus()  # if window exists focus it
+
+    def exit(self):
+        self.destroy()
 
 
 def run_gui():
