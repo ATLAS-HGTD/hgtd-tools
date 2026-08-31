@@ -630,7 +630,7 @@ class App(customtkinter.CTk):
             self._show_error(error_msg)
         return parts, ok
 
-    def _isInSlot(rect, x, y):
+    def _isInSlot(self, rect, x, y):
         isInSlot = False
         left = rect["x"]
         right = rect["x"] + rect["w"]
@@ -1879,6 +1879,7 @@ class App(customtkinter.CTk):
         print("-" * 80)
         self._check_version_against_upstream()
 
+        self.fetch_slots()
         try:
             self.manufacturers, self.last_responseText = util.get_manufacturers()
             self.locations, self.last_responseText = util.get_locations()
@@ -2016,7 +2017,6 @@ class App(customtkinter.CTk):
             self._run_with_progress(
                 self.wrap_data_ui_fetch_MA_p_c,
                 "Module Flex",
-                wrapped_text.fill(info_text),
             )
 
     def _add_child_hybrid_to_module(
@@ -2117,7 +2117,6 @@ class App(customtkinter.CTk):
             self._run_with_progress(
                 self.wrap_data_ui_fetch_MA_p_c,
                 "HY_" + position,
-                wrapped_text.fill(info_text),
             )
 
     def button_add_child_HY_HV_event_click(self):
@@ -2359,7 +2358,6 @@ class App(customtkinter.CTk):
                 self.this_MODULE_relations_SLOT = []
                 self.possible_parents = []
                 self.possible_children = []
-                self.slots = None
                 self.partstree = None
                 self._run_with_progress(self.fetch_loaded_DU_and_display, chi, par)
             elif self.operation_mode == "Detector Assembly (CERN): DU":
@@ -2764,126 +2762,115 @@ class App(customtkinter.CTk):
             affected_cbx_part.configure(values=[])
             affected_cbx_part.set("- Select -")
 
-    def button_delete_connected_ft_event_click(self):
-        if len(self.this_FT_relations_SLOT) > 0:
-            if not self._logged_in():
-                return
-            try:
-                for k in self.this_FT_relations_SLOT:
-                    # this already deletes ALL relations of this FT to any parent, including: Slot, DU, PEB, MO
-                    self.last_responseText = util.delete_parents(k["part"]["part_id"])
-            except _REQUEST_EXCEPTIONS as e:
-                self.last_responseText = str(e)
-            if not self._report_api_status(expected_prefix="20"):
-                self._show_error(
-                    "Existing FT relation could not be deleted (disconnected from slot) with ProdDB API."
-                )
-                return
+    def _delete_single_part_parents(self, part_id, error_msg, ofKind="all"):
+        """Delete parent relations for a single part. Returns True on success."""
+        if not self._logged_in():
+            return False
+        try:
+            self.last_responseText = util.delete_parents(part_id, ofKind=ofKind)
+        except _REQUEST_EXCEPTIONS as e:
+            self.last_responseText = str(e)
+        if not self._report_api_status(expected_prefix="20"):
+            self._show_error(error_msg)
+            return False
+        self.label_info.configure(text=" ")
+        return True
 
-            self.label_info.configure(text=" ")
-            self.this_FT_relations_SLOT = []
-            self.button_delete_connected_ft.configure(state="disabled")
+    def button_delete_connected_ft_event_click(self):
+        """Deletes all parents (any kind) of the selected FT.
+
+        Multiple slot parents of the FT => just delete all parents inclusively.
+        This is possible because even for the list of relations having len>1, the
+        children will all be the same = the selected FT with at least 1 slot parent.
+        """
+        if len(self.this_FT_relations_SLOT) == 0:
+            return
+        if not self._delete_single_part_parents(
+            part_id=self.this_FT_relations_SLOT[0]["part"]["part_id"],
+            error_msg=(
+                "Existing FT relation could not be deleted "
+                "(disconnected from slot) with ProdDB API."
+            ),
+        ):
+            return
+        self.this_FT_relations_SLOT.clear()
+        self.button_delete_connected_ft.configure(state="disabled")
 
     def button_delete_clicked_event_click(self):
-        if len(self.clicked_module) > 0:
-            if not self._logged_in():
-                return
-            try:
-                self.last_responseText = util.delete_parents(
-                    self.clicked_module["part"]["part_id"]
-                )
-            except _REQUEST_EXCEPTIONS as e:
-                self.last_responseText = str(e)
-            if not self._report_api_status(expected_prefix="20"):
-                self._show_error(
-                    "Existing module relation could not be deleted (unloaded) with ProdDB API."
-                )
-                return
+        if len(self.clicked_module) == 0:
+            return
+        if not self._delete_single_part_parents(
+            part_id=self.clicked_module["part"]["part_id"],
+            error_msg=(
+                "Existing module relation could not be deleted "
+                "(unloaded) with ProdDB API."
+            ),
+        ):
+            return
 
-            # reload DU etc.
-            self.displayedDUtype = "None"
-            self.interlockSlots = []
-            self.this_DU_relations_MODULE = []
-            self.this_MODULE_relations_DU = []
-            self.this_MODULE_relations_SLOT = []
-            self.possible_parents = []
-            self.possible_children = []
-            self.slots = None
-            self.partstree = None
-            self.clicked_module = []
-            self.button_inspect_clicked.configure(text=f"INSPECT CLICKED MODULE")
-            self.button_inspect_clicked.configure(state="disabled")
-            self.button_delete_clicked.configure(text=f"UNLOAD CLICKED MODULE")
-            self.button_delete_clicked.configure(state="disabled")
+        # reload DU etc.
+        self.displayedDUtype = "None"
+        self.interlockSlots = []
+        self.this_DU_relations_MODULE = []
+        self.this_MODULE_relations_DU = []
+        self.this_MODULE_relations_SLOT = []
+        self.possible_parents = []
+        self.possible_children = []
+        self.partstree = None
+        self.clicked_module = []
+        self.button_inspect_clicked.configure(text="INSPECT CLICKED MODULE")
+        self.button_inspect_clicked.configure(state="disabled")
+        self.button_delete_clicked.configure(text="UNLOAD CLICKED MODULE")
+        self.button_delete_clicked.configure(state="disabled")
 
-            parentSNIn = self.combobox_parent.get()
-            childSNIn = self.combobox_child.get()
-            self._run_with_progress(
-                self.fetch_loaded_DU_and_display, childSNIn, parentSNIn
-            )
+        parentSNIn = self.combobox_parent.get()
+        childSNIn = self.combobox_child.get()
+        self._run_with_progress(self.fetch_loaded_DU_and_display, childSNIn, parentSNIn)
 
     def button_delete_child_module_flex_event_click(self):
-        if len(self.this_MF_relations_MOD) > 0:
-            if not self._logged_in():
-                return
-            try:
-                for k in self.this_MF_relations_MOD:
-                    self.last_responseText = util.delete_parents(
-                        k["part"]["part_id"], ofKind="Module"
-                    )
-            except _REQUEST_EXCEPTIONS as e:
-                self.last_responseText = str(e)
-            if not self._report_api_status(expected_prefix="20"):
-                self._show_error(
-                    "Existing MF relation could not be deleted (disconnected from module) with ProdDB API."
-                )
-                return
-
-            self.label_info.configure(text=" ")
-            self.this_MF_relations_MOD = []
-            self.button_delete_child_MF.configure(state="disabled")
+        if len(self.this_MF_relations_MOD) == 0:
+            return
+        if not self._delete_single_part_parents(
+            part_id=self.this_MF_relations_MOD[0]["part"]["part_id"],
+            error_msg=(
+                "Existing MF relation could not be deleted "
+                "(disconnected from module) with ProdDB API."
+            ),
+            ofKind="Module",
+        ):
+            return
+        self.this_MF_relations_MOD.clear()
+        self.button_delete_child_MF.configure(state="disabled")
 
     def button_delete_child_HY_HV_event_click(self):
-        if len(self.this_HY_HV_relations_MOD) > 0:
-            if not self._logged_in():
-                return
-            try:
-                for k in self.this_HY_HV_relations_MOD:
-                    self.last_responseText = util.delete_parents(
-                        k["part"]["part_id"], ofKind="Module"
-                    )
-            except _REQUEST_EXCEPTIONS as e:
-                self.last_responseText = str(e)
-            if not self._report_api_status(expected_prefix="20"):
-                self._show_error(
-                    "Existing HY HV-side relation could not be deleted (disconnected from module) with ProdDB API."
-                )
-                return
-
-            self.label_info.configure(text=" ")
-            self.this_HY_HV_relations_MOD = []
-            self.button_delete_child_HY_HV.configure(state="disabled")
+        if len(self.this_HY_HV_relations_MOD) == 0:
+            return
+        if not self._delete_single_part_parents(
+            part_id=self.this_HY_HV_relations_MOD[0]["part"]["part_id"],
+            error_msg=(
+                "Existing HY HV-side relation could not be deleted "
+                "(disconnected from module) with ProdDB API."
+            ),
+            ofKind="Module",
+        ):
+            return
+        self.this_HY_HV_relations_MOD.clear()
+        self.button_delete_child_HY_HV.configure(state="disabled")
 
     def button_delete_child_HY_LV_event_click(self):
-        if len(self.this_HY_LV_relations_MOD) > 0:
-            if not self._logged_in():
-                return
-            try:
-                for k in self.this_HY_LV_relations_MOD:
-                    self.last_responseText = util.delete_parents(
-                        k["part"]["part_id"], ofKind="Module"
-                    )
-            except _REQUEST_EXCEPTIONS as e:
-                self.last_responseText = str(e)
-            if not self._report_api_status(expected_prefix="20"):
-                self._show_error(
-                    "Existing HY LV-side relation could not be deleted (disconnected from module) with ProdDB API."
-                )
-                return
-
-            self.label_info.configure(text=" ")
-            self.this_HY_LV_relations_MOD = []
-            self.button_delete_child_HY_LV.configure(state="disabled")
+        if len(self.this_HY_LV_relations_MOD) == 0:
+            return
+        if not self._delete_single_part_parents(
+            part_id=self.this_HY_LV_relations_MOD[0]["part"]["part_id"],
+            error_msg=(
+                "Existing HY LV-side relation could not be deleted "
+                "(disconnected from module) with ProdDB API."
+            ),
+            ofKind="Module",
+        ):
+            return
+        self.this_HY_LV_relations_MOD.clear()
+        self.button_delete_child_HY_LV.configure(state="disabled")
 
     def button_onclick_event_filter_child_SN(self, childIdentifier="Module Flex"):
         if self.operation_mode == "Module Assembly":
@@ -3074,7 +3061,6 @@ class App(customtkinter.CTk):
         self.possible_HY_HV = []
         self.possible_HY_LV = []
 
-        self.slots = None
         self.partstree = None
         self.clicked_module = []
         self.button_inspect_clicked.configure(text=f"INSPECT CLICKED MODULE")
@@ -3283,7 +3269,7 @@ class App(customtkinter.CTk):
                 mouseX = self.canvas.canvasx(event.x)
                 mouseY = self.canvas.canvasy(event.y)
                 for slot in arrayOfModulesInDU:
-                    if _isInSlot(slot, mouseX, mouseY):
+                    if self._isInSlot(slot, mouseX, mouseY):
                         mouseInSomeMod = True
                         possible_slot = slot["slot"]
                         notAllowedSlot = False
@@ -3420,7 +3406,7 @@ class App(customtkinter.CTk):
                 mouseX = self.canvas.canvasx(event.x)
                 mouseY = self.canvas.canvasy(event.y)
                 for slot in arrayOfModulesInDU:
-                    if _isInSlot(slot, mouseX, mouseY):
+                    if self._isInSlot(slot, mouseX, mouseY):
                         mouseInSomeMod = True
                         if slot["slot"] in alreadyUsedSlots:
                             self.clicked_module = alreadyConnectedModules[
@@ -3658,7 +3644,6 @@ class App(customtkinter.CTk):
         self.this_DU_relations_MODULE = []
         self.this_MODULE_relations_DU = []
         self.this_MODULE_relations_SLOT = []
-        self.slots = None
         self.partstree = None
         self.clicked_module = []
         self.button_inspect_clicked.configure(text=f"INSPECT CLICKED MODULE")
@@ -3749,7 +3734,6 @@ class App(customtkinter.CTk):
         self, attribute_Vessel, attribute_Layer, attribute_Quadrant
     ):
         if self.api_status == 1:
-            self.fetch_slots()
             self.delete_old_and_post_new_slots_for_loaded_modules(
                 attribute_Vessel, attribute_Layer, attribute_Quadrant
             )
@@ -3948,7 +3932,7 @@ class App(customtkinter.CTk):
                 info_text = f"This FT is already connected to a slot: {r['part_parent']['serial_number']}."
                 self._show_info(info_text)
                 self.this_FT_relations_SLOT.append(r)
-                self.button_delete_connected_ft.configure(state="normal")
+            self.button_delete_connected_ft.configure(state="normal")
 
     def fetch_loaded_PEB(self, childSNIn, parentSNIn):
         PEB_SN = childSNIn
@@ -3982,7 +3966,6 @@ class App(customtkinter.CTk):
             self.label_info.configure(text=info_text)
 
     def fetch_ft(self):
-        self.fetch_slots()
         self.possible_ft, ok = self._fetch_relevant_parts(
             "Flex Tail",
             error_msg="Slots / FT could not be loaded from ProdDB API.",
@@ -4041,7 +4024,7 @@ class App(customtkinter.CTk):
             self.combobox_ft.configure(values=[])
             self.combobox_ft.set("- Select -")
 
-    def fetch_MA_p_c_data(self, update="all", withMessage=" "):
+    def fetch_MA_p_c_data(self, update="all"):
         """Data-only worker for the Module Assembly operation mode.
 
         Safe to call from a worker thread (i.e. via _run_with_progress).
@@ -4332,14 +4315,14 @@ class App(customtkinter.CTk):
 
         return True
 
-    def apply_MA_p_c_to_ui(self, update="all", withMessage=" ", api_ok=True):
+    def apply_MA_p_c_to_ui(self, update="all", api_ok=True):
         """UI-only update for the Module Assembly operation mode.
 
         Must be called on the Tk main thread (NOT from inside _run_with_progress).
         Reads the self.possible_* lists populated by fetch_MA_p_c and configures
         the corresponding customtkinter widgets.
         """
-        self.label_info.configure(text=withMessage)
+        self.label_info.configure(text=" ")
 
         if not api_ok:
             self._show_error("Parents / Children could not be loaded from ProdDB API.")
@@ -4416,7 +4399,7 @@ class App(customtkinter.CTk):
                 self.combobox_MA_HY_LV_chi.configure(values=[])
                 self.combobox_MA_HY_LV_chi.set("- Select -")
 
-    def wrap_data_ui_fetch_MA_p_c(self, update="all", withMessage=" "):
+    def wrap_data_ui_fetch_MA_p_c(self, update="all"):
         """Drop-in replacement for the original fetch_MA_p_c.
 
         Runs the data fetch on a worker thread (with progressbar), then
@@ -4424,11 +4407,9 @@ class App(customtkinter.CTk):
         """
 
         def _worker():
-            ok = self.fetch_MA_p_c_data(update, withMessage)
+            ok = self.fetch_MA_p_c_data(update)
             # Bounce back to the Tk main thread for all widget work.
-            self.after(
-                0, lambda: self.apply_MA_p_c_to_ui(update, withMessage, api_ok=ok)
-            )
+            self.after(0, lambda: self.apply_MA_p_c_to_ui(update, api_ok=ok))
 
         self._run_with_progress(_worker)
 
