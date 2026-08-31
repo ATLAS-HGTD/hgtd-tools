@@ -2572,7 +2572,7 @@ class App(customtkinter.CTk):
         ):
             # find all existing relations between this DU and its Modules, those are propagated to create new Slot -> Module relations
             self._run_with_progress(
-                self.fetch_and_write_module_slots,
+                self.delete_old_and_post_new_slots_for_loaded_modules,
                 attribute_Vessel,
                 attribute_Layer,
                 attribute_Quadrant,
@@ -3729,14 +3729,6 @@ class App(customtkinter.CTk):
                                 "Parent / Child relation could not be patched to ProdDB API."
                             )
                             return
-
-    def fetch_and_write_module_slots(
-        self, attribute_Vessel, attribute_Layer, attribute_Quadrant
-    ):
-        if self.api_status == 1:
-            self.delete_old_and_post_new_slots_for_loaded_modules(
-                attribute_Vessel, attribute_Layer, attribute_Quadrant
-            )
 
     def fetch_loaded_DU_and_display(self, childSNIn, parentSNIn):
         if self.operation_mode == "Module Loading":
