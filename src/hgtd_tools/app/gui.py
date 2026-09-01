@@ -587,6 +587,119 @@ class App(customtkinter.CTk):
         self._build_sidebar_user_and_appearance()
         self._build_sidebar_help_and_close()
 
+    def _build_paged_combobox(
+        self,
+        parent,
+        *,
+        key: str,
+        command,
+        legacy_attr: str,
+        show_label=None,
+        row: int = 0,
+        column: int = 0,
+        columnspan: int = 1,
+        padx: int = 10,
+        pady: int = 10,
+        sticky: str = "ns",
+        initial_values=("Nothing",),
+        placeholder: str = "- Select -",
+        width: int = 200,
+        readonly: bool = True,
+        initial_chunks=None,
+    ):
+        """Build a paginated combobox group."""
+        frame = customtkinter.CTkFrame(parent)
+        frame.grid(
+            row=row,
+            column=column,
+            padx=padx,
+            pady=pady,
+            columnspan=columnspan,
+            sticky=sticky,
+        )
+
+        page_label = customtkinter.CTkLabel(frame, text="page 0/0")
+        page_label.grid(row=0, column=0, padx=(10, 5), pady=5, sticky="nsew")
+
+        btn_left = customtkinter.CTkButton(
+            frame,
+            text="<",
+            width=30,
+            command=lambda k=key: self.button_combobox_paginationButton_click_refactored(
+                k, "L"
+            ),
+        )
+        btn_left.grid(row=0, column=1, padx=5, pady=5)
+
+        cb = customtkinter.CTkComboBox(
+            frame,
+            values=list(initial_values),
+            command=command,
+            state="readonly" if readonly else "normal",
+            width=width,
+        )
+        cb.grid(row=0, column=2, padx=0, pady=5, sticky="nsew")
+        cb.set(placeholder)
+
+        btn_right = customtkinter.CTkButton(
+            frame,
+            text=">",
+            width=30,
+            command=lambda k=key: self.button_combobox_paginationButton_click_refactored(
+                k, "R"
+            ),
+        )
+        btn_right.grid(row=0, column=3, padx=5, pady=5)
+
+        self.paged_comboboxes[key] = {
+            "frame": frame,
+            "page_label": page_label,
+            "btn_left": btn_left,
+            "combobox": cb,
+            "btn_right": btn_right,
+            "label": show_label,
+            "shown_page": 0,
+            "n_pages": 0,
+            "chunks": list(initial_chunks or []),
+        }
+
+        setattr(self, legacy_attr, cb)
+        return frame, page_label, cb
+
+    def _set_pagination(self, key, *, chunks, n_pages, shown_page=1, visible=True):
+        """Update consolidated state for paginated combobox `key`.
+
+        Optionally show the parent label + pagination frame in the same call.
+        """
+        state = self.paged_comboboxes[key]
+        state["chunks"] = list(chunks)
+        state["n_pages"] = n_pages
+        state["shown_page"] = shown_page
+        state["page_label"].configure(text=f"page {shown_page}/{n_pages}")
+
+        cb = state["combobox"]
+        if n_pages > 0:
+            cb.configure(values=chunks[shown_page - 1])
+        else:
+            cb.configure(values=[])
+            cb.set("- Select -")
+
+        if visible:
+            if state["label"] is not None:
+                state["label"].grid()
+            state["frame"].grid()
+        else:
+            if state["label"] is not None:
+                state["label"].grid_remove()
+            state["frame"].grid_remove()
+
+    def _show_paged_combobox(self, key, *, visible: bool):
+        """Show or hide the parent label + pagination frame for `key`."""
+        state = self.paged_comboboxes[key]
+        if state["label"] is not None:
+            (state["label"].grid if visible else state["label"].grid_remove)()
+        (state["frame"].grid if visible else state["frame"].grid_remove)()
+
     def _fetch_relations(
         self,
         fn,
@@ -665,6 +778,8 @@ class App(customtkinter.CTk):
         self.frame_main.grid_columnconfigure((0, 1), weight=1)
         self.frame_main.grid_rowconfigure(1, weight=1)
 
+        self.paged_comboboxes = {}
+
         # ********************************************
         #
         # === Parent/Child selection for ML/DU/PEB ===
@@ -700,6 +815,22 @@ class App(customtkinter.CTk):
             row=1, column=0, padx=10, pady=(5, 0), sticky="nsew"
         )
 
+        self._build_paged_combobox(
+            self.frame_parent,
+            row=1,
+            column=1,
+            key="DA-par-type",
+            command=self.combobox_par_type_event_select,
+            legacy_attr="combobox_par_type",
+            show_label=self.label_combobox_par_type,
+            initial_values=["All DU types"],
+            width=200,
+            readonly=True,
+            padx=10,
+            pady=(10, 5),
+            sticky="nsew",
+        )
+        """
         self.combobox_par_type_paginationFrame = customtkinter.CTkFrame(
             self.frame_parent
         )
@@ -714,7 +845,7 @@ class App(customtkinter.CTk):
         )
         self.combobox_par_type_paginationButtonLeft = customtkinter.CTkButton(
             self.combobox_par_type_paginationFrame,
-            text=">",
+            text="<",
             width=30,
             command=lambda: self.button_combobox_paginationButton_click(
                 "DA-par-type", "L"
@@ -742,6 +873,7 @@ class App(customtkinter.CTk):
         self.combobox_par_type_paginationButtonRight.grid(
             row=0, column=3, padx=5, pady=5
         )
+        """
 
         self.label_combobox_parent = customtkinter.CTkLabel(
             self.frame_parent, text="Parent Part SN"
@@ -828,6 +960,25 @@ class App(customtkinter.CTk):
             "All manufacturers"
         )  # ToDo: change values depending on mode
 
+        # === Child Part Type ===
+        self._build_paged_combobox(
+            self.frame_child,
+            row=1,
+            column=1,
+            key="DA-chi-type",
+            command=self.combobox_chi_type_event_select,
+            legacy_attr="combobox_chi_type",
+            show_label=None,
+            initial_values=["All DU types"],
+            width=200,
+            readonly=True,
+            padx=10,
+            pady=(10, 5),
+            sticky="nsew",
+        )
+        # Initially hidden — becomes visible once data is loaded.
+        self._show_paged_combobox("DA-chi-type", visible=False)
+        """
         self.combobox_chi_type_paginationFrame = customtkinter.CTkFrame(
             self.frame_child
         )
@@ -872,6 +1023,7 @@ class App(customtkinter.CTk):
             row=0, column=3, padx=5, pady=5
         )
         self.combobox_chi_type_paginationFrame.grid_remove()
+        """
 
         self.label_combobox_child = customtkinter.CTkLabel(
             self.frame_child, text="Child Part SN"
@@ -2579,6 +2731,41 @@ class App(customtkinter.CTk):
             )
 
     # Combobox page selection by pressing a button to go left or right (previous page / next page)
+    def button_combobox_paginationButton_click_refactored(
+        self, key: str, direction: str
+    ):
+        """Advance the paginated combobox identified by `key` by one page.
+
+        All per-combobox state lives in self.paged_comboboxes[key], so this
+        handler has no per-key branches.
+        """
+        state = self.paged_comboboxes[key]
+        shown = state["shown_page"]
+        n_pages = state["n_pages"]
+
+        if n_pages > 0:
+            if direction == "L":
+                shown = max(shown - 1, 1)
+            elif direction == "R":
+                shown = min(shown + 1, n_pages)
+            else:
+                raise NotImplementedError(
+                    "Can only go left (L) or right (R) in pagination frame!"
+                )
+        else:
+            shown = 0
+
+        state["shown_page"] = shown
+        state["page_label"].configure(text=f"page {shown}/{n_pages}")
+
+        cb = state["combobox"]
+        chunks = state["chunks"]
+        if n_pages > 0:
+            cb.configure(values=chunks[shown - 1])
+        else:
+            cb.configure(values=[])
+            cb.set("- Select -")
+
     def button_combobox_paginationButton_click(self, affects, page_dir):
         if affects == "MA-MO":
             (
@@ -3132,18 +3319,26 @@ class App(customtkinter.CTk):
             self.frame_ft_rel.grid_remove()
 
             self.possible_par_types_chunked = DATA_CONSTANTS.DU_types_chunked
-            self.cbx_ptype_n_pages = DATA_CONSTANTS.DU_types_n_pages
-            self.cbx_ptype_shown_page = 1
-            self.label_combobox_par_type_paginationFrame.configure(
-                text=f"page {self.cbx_ptype_shown_page}/{self.cbx_ptype_n_pages}"
+            self._set_pagination(
+                "DA-par-type",
+                chunks=self.possible_par_types_chunked,
+                n_pages=len(self.possible_par_types_chunked),
+                visible=True,
             )
-            self.combobox_par_type.configure(values=self.possible_par_types_chunked[0])
-            self.label_combobox_par_type.grid()
-            self.combobox_par_type_paginationFrame.grid()
+            # self.cbx_ptype_shown_page = 1
+            # self.label_combobox_par_type_paginationFrame.configure(
+            #    text=f"page {self.cbx_ptype_shown_page}/{self.cbx_ptype_n_pages}"
+            # )
+            # self.combobox_par_type.configure(values=self.possible_par_types_chunked[0])
+            # self.label_combobox_par_type.grid()
+            #
+            # self.paged_comboboxes["DA-par-type"]["frame"].grid()
+            # self.combobox_par_type_paginationFrame.grid()
 
             self.combobox_child_manu.grid()
 
-            self.combobox_chi_type_paginationFrame.grid_remove()
+            self._show_paged_combobox("DA-chi-type", visible=False)
+            # self.combobox_chi_type_paginationFrame.grid_remove()
 
             self.frame_clicked_position.grid()
 
@@ -3168,19 +3363,26 @@ class App(customtkinter.CTk):
             self.label_info.grid()
             self.frame_ft_rel.grid_remove()
 
-            self.label_combobox_par_type.grid_remove()
-            self.combobox_par_type_paginationFrame.grid_remove()
+            self._show_paged_combobox("DA-par-type", visible=False)
+            # self.label_combobox_par_type.grid_remove()
+            # self.combobox_par_type_paginationFrame.grid_remove()
 
             self.combobox_child_manu.grid_remove()
 
             self.possible_chi_types_chunked = DATA_CONSTANTS.DU_types_chunked
-            self.cbx_ctype_n_pages = DATA_CONSTANTS.DU_types_n_pages
-            self.cbx_ctype_shown_page = 1
-            self.label_combobox_chi_type_paginationFrame.configure(
-                text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}"
+            self._set_pagination(
+                "DA-chi-type",
+                chunks=self.possible_chi_types_chunked,
+                n_pages=len(self.possible_chi_types_chunked),
+                visible=True,
             )
-            self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[0])
-            self.combobox_chi_type_paginationFrame.grid()
+            # self.cbx_ctype_n_pages = DATA_CONSTANTS.DU_types_n_pages
+            # self.cbx_ctype_shown_page = 1
+            # self.label_combobox_chi_type_paginationFrame.configure(
+            #    text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}"
+            # )
+            # self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[0])
+            # self.combobox_chi_type_paginationFrame.grid()
 
             self.frame_clicked_position.grid()
 
@@ -3201,20 +3403,26 @@ class App(customtkinter.CTk):
             self.label_info.grid()
             self.frame_ft_rel.grid_remove()
 
-            self.label_combobox_par_type.grid_remove()
-            self.combobox_par_type_paginationFrame.grid_remove()
+            self._show_paged_combobox("DA-par-type", visible=False)
+            # self.label_combobox_par_type.grid_remove()
+            # self.combobox_par_type_paginationFrame.grid_remove()
 
             self.combobox_child_manu.grid_remove()
 
             self.possible_chi_types_chunked = DATA_CONSTANTS.PEB_types_chunked
-            self.cbx_ctype_n_pages = DATA_CONSTANTS.PEB_types_n_pages
-            self.cbx_ctype_shown_page = 1
-            self.label_combobox_chi_type_paginationFrame.configure(
-                text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}"
+            self._set_pagination(
+                "DA-chi-type",
+                chunks=self.possible_chi_types_chunked,
+                n_pages=len(self.possible_chi_types_chunked),
+                visible=True,
             )
-            self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[0])
-
-            self.combobox_chi_type_paginationFrame.grid()
+            # self.cbx_ctype_n_pages = DATA_CONSTANTS.PEB_types_n_pages
+            # self.cbx_ctype_shown_page = 1
+            # self.label_combobox_chi_type_paginationFrame.configure(
+            #    text=f"page {self.cbx_ctype_shown_page}/{self.cbx_ctype_n_pages}"
+            # )
+            # self.combobox_chi_type.configure(values=self.possible_chi_types_chunked[0])
+            # self.combobox_chi_type_paginationFrame.grid()
 
             self.frame_clicked_position.grid_remove()
 
