@@ -80,13 +80,11 @@ class DataConstants:
         default_factory=lambda: ["All DU types"] + data.allDUkeysList
     )
     DU_types_chunked: list[list[str]] = field(init=False)
-    DU_types_n_pages: int = field(init=False)
 
     PEB_types_including_all: list = field(
         default_factory=lambda: ["All PEB types"] + data.allPEBs
     )
     PEB_types_chunked: list[list[str]] = field(init=False)
-    PEB_types_n_pages: int = field(init=False)
 
     def __post_init__(self):
         chunk = self.n_items_to_show_in_cbx
@@ -98,9 +96,7 @@ class DataConstants:
 
         # Frozen dataclasses need object.__setattr__ to assign in __post_init__
         object.__setattr__(self, "DU_types_chunked", du_chunks)
-        object.__setattr__(self, "DU_types_n_pages", len(du_chunks))
         object.__setattr__(self, "PEB_types_chunked", peb_chunks)
-        object.__setattr__(self, "PEB_types_n_pages", len(peb_chunks))
 
 
 DATA_CONSTANTS = DataConstants()
@@ -577,7 +573,6 @@ class App(customtkinter.CTk):
         self.frame_sidebar_left = customtkinter.CTkFrame(self, corner_radius=0)
         self.frame_sidebar_left.grid(row=0, column=0, rowspan=4, sticky="nsew")
         self.frame_sidebar_left.grid_columnconfigure((0, 1), weight=1)
-        # row 5 is the stretchy "Useful Links" section
         self.frame_sidebar_left.grid_rowconfigure(5, weight=1)
 
         self._build_sidebar_logo()
@@ -848,7 +843,6 @@ class App(customtkinter.CTk):
             legacy_attr="combobox_parent",
             show_label=self.label_combobox_parent,
             initial_values=["Detector Unit", "Detector"],
-            width=200,
             readonly=True,
             padx=10,
             pady=(10, 5),
@@ -905,7 +899,6 @@ class App(customtkinter.CTk):
             legacy_attr="combobox_chi_type",
             show_label=None,
             initial_values=["All DU types"],
-            width=200,
             readonly=True,
             padx=10,
             pady=(10, 5),
@@ -943,43 +936,20 @@ class App(customtkinter.CTk):
         )
         self.btn_child_filter_SN.grid(row=0, column=1, padx=5, pady=5, columnspan=2)
 
-        self.combobox_child_paginationFrame = customtkinter.CTkFrame(self.frame_child)
-        self.combobox_child_paginationFrame.grid(
-            row=3, column=1, padx=10, pady=(10, 5), sticky="nsew"
-        )
-        self.label_combobox_child_paginationFrame = customtkinter.CTkLabel(
-            self.combobox_child_paginationFrame, text="page 0/0"
-        )
-        self.label_combobox_child_paginationFrame.grid(
-            row=0, column=0, padx=(10, 5), pady=5, sticky="nsew"
-        )
-        self.combobox_child_paginationButtonLeft = customtkinter.CTkButton(
-            self.combobox_child_paginationFrame,
-            text="<",
-            width=30,
-            command=lambda: self.button_combobox_paginationButton_click(
-                "DA-chi-SN", "L"
-            ),
-        )
-        self.combobox_child_paginationButtonLeft.grid(row=0, column=1, padx=5, pady=5)
-        self.combobox_child = customtkinter.CTkComboBox(
-            self.combobox_child_paginationFrame,
-            values=["Module", "Detector Unit"],
+        self._build_paged_combobox(
+            self.frame_child,
+            row=3,
+            column=1,
+            key="DA-chi-SN",
             command=self.combobox_p_c_event_select,
-            state="readonly",
-            width=200,
+            legacy_attr="combobox_child",
+            show_label=self.label_combobox_child,
+            initial_values=["Module", "Detector Unit"],
+            readonly=True,
+            padx=10,
+            pady=(10, 5),
+            sticky="nsew",
         )
-        self.combobox_child.grid(row=0, column=2, padx=0, pady=5, sticky="nsew")
-        self.combobox_child.set("- Select -")
-        self.combobox_child_paginationButtonRight = customtkinter.CTkButton(
-            self.combobox_child_paginationFrame,
-            text=">",
-            width=30,
-            command=lambda: self.button_combobox_paginationButton_click(
-                "DA-chi-SN", "R"
-            ),
-        )
-        self.combobox_child_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
 
         self.button_inspect_child = customtkinter.CTkButton(
             self.frame_child,
@@ -1163,44 +1133,16 @@ class App(customtkinter.CTk):
         )
         self.btn_module_parent_filter_SN.grid(row=0, column=1, padx=5, pady=5)
 
-        self.combobox_MA_mod_par_paginationFrame = customtkinter.CTkFrame(
-            self.frame_module_parent_selection
-        )
-        self.combobox_MA_mod_par_paginationFrame.grid(
-            row=4, column=1, padx=10, pady=10, sticky="nsew"
-        )
-        self.label_combobox_MA_mod_par_paginationFrame = customtkinter.CTkLabel(
-            self.combobox_MA_mod_par_paginationFrame, text="page 0/0"
-        )
-        self.label_combobox_MA_mod_par_paginationFrame.grid(
-            row=0, column=0, padx=(10, 5), pady=5, sticky="nsew"
-        )
-        self.combobox_MA_mod_par_paginationButtonLeft = customtkinter.CTkButton(
-            self.combobox_MA_mod_par_paginationFrame,
-            text="<",
-            width=30,
-            command=lambda: self.button_combobox_paginationButton_click("MA-MO", "L"),
-        )
-        self.combobox_MA_mod_par_paginationButtonLeft.grid(
-            row=0, column=1, padx=5, pady=5
-        )
-        self.combobox_MA_mod_par = customtkinter.CTkComboBox(
-            self.combobox_MA_mod_par_paginationFrame,
-            values=["Nothing"],
+        self._build_paged_combobox(
+            self.frame_module_parent_selection,
+            key="MA-MO",
             command=self.combobox_MA_mod_event_select,
-            state="readonly",
-            width=200,
-        )
-        self.combobox_MA_mod_par.grid(row=0, column=2, padx=0, pady=5, sticky="nsew")
-        self.combobox_MA_mod_par.set("- Select -")
-        self.combobox_MA_mod_par_paginationButtonRight = customtkinter.CTkButton(
-            self.combobox_MA_mod_par_paginationFrame,
-            text=">",
-            width=30,
-            command=lambda: self.button_combobox_paginationButton_click("MA-MO", "R"),
-        )
-        self.combobox_MA_mod_par_paginationButtonRight.grid(
-            row=0, column=3, padx=5, pady=5
+            legacy_attr="combobox_MA_mod_par",
+            row=4,
+            column=1,
+            padx=10,
+            pady=10,
+            sticky="nsew",
         )
 
         self.button_inspect_parent_module = customtkinter.CTkButton(
@@ -1307,44 +1249,16 @@ class App(customtkinter.CTk):
         )
         self.btn_child0_filter_SN.grid(row=0, column=1, padx=5, pady=5)
 
-        self.combobox_MA_MF_chi_paginationFrame = customtkinter.CTkFrame(
-            self.frame_module_flex_child
-        )
-        self.combobox_MA_MF_chi_paginationFrame.grid(
-            row=7, column=0, padx=10, pady=10, sticky="nsew", columnspan=2
-        )
-        self.label_combobox_MA_MF_chi_paginationFrame = customtkinter.CTkLabel(
-            self.combobox_MA_MF_chi_paginationFrame, text="page 0/0"
-        )
-        self.label_combobox_MA_MF_chi_paginationFrame.grid(
-            row=0, column=0, padx=(10, 5), pady=5, sticky="nsew"
-        )
-        self.combobox_MA_MF_chi_paginationButtonLeft = customtkinter.CTkButton(
-            self.combobox_MA_MF_chi_paginationFrame,
-            text="<",
-            width=30,
-            command=lambda: self.button_combobox_paginationButton_click("MA-MF", "L"),
-        )
-        self.combobox_MA_MF_chi_paginationButtonLeft.grid(
-            row=0, column=1, padx=5, pady=5
-        )
-        self.combobox_MA_MF_chi = customtkinter.CTkComboBox(
-            self.combobox_MA_MF_chi_paginationFrame,
-            values=["Nothing"],
+        self._build_paged_combobox(
+            self.frame_module_flex_child,
+            key="MA-MF",
             command=self.combobox_MA_MF_event_select,
-            state="readonly",
-            width=200,
-        )
-        self.combobox_MA_MF_chi.grid(row=0, column=2, padx=0, pady=5, sticky="nsew")
-        self.combobox_MA_MF_chi.set("- Select -")
-        self.combobox_MA_MF_chi_paginationButtonRight = customtkinter.CTkButton(
-            self.combobox_MA_MF_chi_paginationFrame,
-            text=">",
-            width=30,
-            command=lambda: self.button_combobox_paginationButton_click("MA-MF", "R"),
-        )
-        self.combobox_MA_MF_chi_paginationButtonRight.grid(
-            row=0, column=3, padx=5, pady=5
+            legacy_attr="combobox_MA_MF_chi",
+            row=7,
+            column=0,
+            padx=10,
+            pady=10,
+            sticky="nsew",
         )
 
         self.button_inspect_child_module_flex = customtkinter.CTkButton(
@@ -1442,45 +1356,17 @@ class App(customtkinter.CTk):
         )
         self.btn_child1_filter_SN.grid(row=0, column=1, padx=5, pady=5, columnspan=2)
 
-        self.combobox_HY_HV_paginationFrame = customtkinter.CTkFrame(
-            self.frame_HY_HV_child
-        )
-        self.combobox_HY_HV_paginationFrame.grid(
-            row=9, column=0, padx=10, pady=10, sticky="nsew", columnspan=2
-        )
-        self.label_combobox_HY_HV_paginationFrame = customtkinter.CTkLabel(
-            self.combobox_HY_HV_paginationFrame, text="page 0/0"
-        )
-        self.label_combobox_HY_HV_paginationFrame.grid(
-            row=0, column=0, padx=(10, 5), pady=5, sticky="nsew"
-        )
-        self.combobox_HY_HV_paginationButtonLeft = customtkinter.CTkButton(
-            self.combobox_HY_HV_paginationFrame,
-            text="<",
-            width=30,
-            command=lambda: self.button_combobox_paginationButton_click(
-                "MA-Hybrid-HV", "L"
-            ),
-        )
-        self.combobox_HY_HV_paginationButtonLeft.grid(row=0, column=1, padx=5, pady=5)
-        self.combobox_MA_HY_HV_chi = customtkinter.CTkComboBox(
-            self.combobox_HY_HV_paginationFrame,
-            values=["Nothing"],
+        self._build_paged_combobox(
+            self.frame_HY_HV_child,
+            key="MA-Hybrid-HV",
             command=self.combobox_MA_HY_HV_event_select,
-            state="readonly",
-            width=200,
+            legacy_attr="combobox_MA_HY_HV_chi",
+            row=9,
+            column=0,
+            padx=10,
+            pady=10,
+            sticky="nsew",
         )
-        self.combobox_MA_HY_HV_chi.grid(row=0, column=2, padx=0, pady=5, sticky="nsew")
-        self.combobox_MA_HY_HV_chi.set("- Select -")
-        self.combobox_HY_HV_paginationButtonRight = customtkinter.CTkButton(
-            self.combobox_HY_HV_paginationFrame,
-            text=">",
-            width=30,
-            command=lambda: self.button_combobox_paginationButton_click(
-                "MA-Hybrid-HV", "R"
-            ),
-        )
-        self.combobox_HY_HV_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
 
         self.button_inspect_child_HY_HV = customtkinter.CTkButton(
             self.frame_HY_HV_child,
@@ -1579,45 +1465,17 @@ class App(customtkinter.CTk):
         )
         self.btn_child2_filter_SN.grid(row=0, column=1, padx=5, pady=5, columnspan=2)
 
-        self.combobox_HY_LV_paginationFrame = customtkinter.CTkFrame(
-            self.frame_HY_LV_child
-        )
-        self.combobox_HY_LV_paginationFrame.grid(
-            row=9, column=0, padx=10, pady=10, sticky="nsew", columnspan=2
-        )
-        self.label_combobox_HY_LV_paginationFrame = customtkinter.CTkLabel(
-            self.combobox_HY_LV_paginationFrame, text="page 0/0"
-        )
-        self.label_combobox_HY_LV_paginationFrame.grid(
-            row=0, column=0, padx=(10, 5), pady=5, sticky="nsew"
-        )
-        self.combobox_HY_LV_paginationButtonLeft = customtkinter.CTkButton(
-            self.combobox_HY_LV_paginationFrame,
-            text="<",
-            width=30,
-            command=lambda: self.button_combobox_paginationButton_click(
-                "MA-Hybrid-LV", "L"
-            ),
-        )
-        self.combobox_HY_LV_paginationButtonLeft.grid(row=0, column=1, padx=5, pady=5)
-        self.combobox_MA_HY_LV_chi = customtkinter.CTkComboBox(
-            self.combobox_HY_LV_paginationFrame,
-            values=["Nothing"],
+        self._build_paged_combobox(
+            self.frame_HY_LV_child,
+            key="MA-Hybrid-LV",
             command=self.combobox_MA_HY_LV_event_select,
-            state="readonly",
-            width=200,
+            legacy_attr="combobox_MA_HY_LV_chi",
+            row=9,
+            column=0,
+            padx=10,
+            pady=10,
+            sticky="nsew",
         )
-        self.combobox_MA_HY_LV_chi.grid(row=0, column=2, padx=0, pady=5, sticky="nsew")
-        self.combobox_MA_HY_LV_chi.set("- Select -")
-        self.combobox_HY_LV_paginationButtonRight = customtkinter.CTkButton(
-            self.combobox_HY_LV_paginationFrame,
-            text=">",
-            width=30,
-            command=lambda: self.button_combobox_paginationButton_click(
-                "MA-Hybrid-LV", "R"
-            ),
-        )
-        self.combobox_HY_LV_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
 
         self.button_inspect_child_HY_LV = customtkinter.CTkButton(
             self.frame_HY_LV_child,
@@ -1837,39 +1695,14 @@ class App(customtkinter.CTk):
         self.optionmenu_ft_conn.grid(row=4, column=0, padx=10, pady=10)
         self.optionmenu_ft_conn.set("All FTs")
 
-        self.combobox_ft_paginationFrame = customtkinter.CTkFrame(self.frame_ft_rel)
-        self.combobox_ft_paginationFrame.grid(
-            row=4, column=1, padx=10, pady=10, sticky="ns"
-        )
-        self.label_combobox_ft_paginationFrame = customtkinter.CTkLabel(
-            self.combobox_ft_paginationFrame, text="page 0/0"
-        )
-        self.label_combobox_ft_paginationFrame.grid(
-            row=0, column=0, padx=(10, 5), pady=5, sticky="nsew"
-        )
-        self.combobox_ft_paginationButtonLeft = customtkinter.CTkButton(
-            self.combobox_ft_paginationFrame,
-            text="<",
-            width=30,
-            command=lambda: self.button_combobox_paginationButton_click("FT", "L"),
-        )
-        self.combobox_ft_paginationButtonLeft.grid(row=0, column=1, padx=5, pady=5)
-        self.combobox_ft = customtkinter.CTkComboBox(
-            self.combobox_ft_paginationFrame,
-            values=["Nothing"],
+        self._build_paged_combobox(
+            self.frame_ft_rel,
+            key="FT",
             command=self.combobox_ft_event_select,
-            state="readonly",
-            width=200,
+            legacy_attr="combobox_ft",
+            row=4,
+            column=1,
         )
-        self.combobox_ft.grid(row=0, column=2, padx=0, pady=5, sticky="nsew")
-        self.combobox_ft.set("- Select -")
-        self.combobox_ft_paginationButtonRight = customtkinter.CTkButton(
-            self.combobox_ft_paginationFrame,
-            text=">",
-            width=30,
-            command=lambda: self.button_combobox_paginationButton_click("FT", "R"),
-        )
-        self.combobox_ft_paginationButtonRight.grid(row=0, column=3, padx=5, pady=5)
 
         self.button_inspect_ft = customtkinter.CTkButton(
             self.frame_ft_rel,
@@ -2654,189 +2487,6 @@ class App(customtkinter.CTk):
         else:
             cb.configure(values=[])
             cb.set("- Select -")
-
-    def button_combobox_paginationButton_click(self, affects, page_dir):
-        if affects == "MA-MO":
-            (
-                affected_cbx_shown_page,
-                affected_label_cbx_page,
-                affected_cbx_n_pages,
-                affected_cbx_part,
-                affected_cbx_possible_SNs_chunked,
-            ) = (
-                self.cbx_MA_mod_par_shown_page,
-                self.label_combobox_MA_mod_par_paginationFrame,
-                self.cbx_MA_mod_par_n_pages,
-                self.combobox_MA_mod_par,
-                self.possible_MA_mod_par_SNs_chunked,
-            )
-        elif affects == "MA-MF":
-            (
-                affected_cbx_shown_page,
-                affected_label_cbx_page,
-                affected_cbx_n_pages,
-                affected_cbx_part,
-                affected_cbx_possible_SNs_chunked,
-            ) = (
-                self.cbx_MF_shown_page,
-                self.label_combobox_MA_MF_chi_paginationFrame,
-                self.cbx_MF_n_pages,
-                self.combobox_MA_MF_chi,
-                self.possible_MF_SNs_chunked,
-            )
-
-        elif affects == "MA-Hybrid-HV":
-            (
-                affected_cbx_shown_page,
-                affected_label_cbx_page,
-                affected_cbx_n_pages,
-                affected_cbx_part,
-                affected_cbx_possible_SNs_chunked,
-            ) = (
-                self.cbx_HY_HV_shown_page,
-                self.label_combobox_HY_HV_paginationFrame,
-                self.cbx_HY_HV_n_pages,
-                self.combobox_MA_HY_HV_chi,
-                self.possible_HY_HV_SNs_chunked,
-            )
-
-        elif affects == "MA-Hybrid-LV":
-            (
-                affected_cbx_shown_page,
-                affected_label_cbx_page,
-                affected_cbx_n_pages,
-                affected_cbx_part,
-                affected_cbx_possible_SNs_chunked,
-            ) = (
-                self.cbx_HY_LV_shown_page,
-                self.label_combobox_HY_LV_paginationFrame,
-                self.cbx_HY_LV_n_pages,
-                self.combobox_MA_HY_LV_chi,
-                self.possible_HY_LV_SNs_chunked,
-            )
-
-        elif affects == "FT":
-            (
-                affected_cbx_shown_page,
-                affected_label_cbx_page,
-                affected_cbx_n_pages,
-                affected_cbx_part,
-                affected_cbx_possible_SNs_chunked,
-            ) = (
-                self.cbx_ft_shown_page,
-                self.label_combobox_ft_paginationFrame,
-                self.cbx_ft_n_pages,
-                self.combobox_ft,
-                self.possible_ft_SNs_chunked,
-            )
-
-        elif affects == "DA-chi-SN":
-            (
-                affected_cbx_shown_page,
-                affected_label_cbx_page,
-                affected_cbx_n_pages,
-                affected_cbx_part,
-                affected_cbx_possible_SNs_chunked,
-            ) = (
-                self.cbx_chi_shown_page,
-                self.label_combobox_child_paginationFrame,
-                self.cbx_chi_n_pages,
-                self.combobox_child,
-                self.possible_children_SNs_chunked,
-            )
-
-        elif affects == "DA-par-SN":
-            (
-                affected_cbx_shown_page,
-                affected_label_cbx_page,
-                affected_cbx_n_pages,
-                affected_cbx_part,
-                affected_cbx_possible_SNs_chunked,
-            ) = (
-                self.cbx_par_shown_page,
-                self.label_combobox_parent_paginationFrame,
-                self.cbx_par_n_pages,
-                self.combobox_parent,
-                self.possible_parents_SNs_chunked,
-            )
-
-        elif affects == "DA-chi-type":
-            (
-                affected_cbx_shown_page,
-                affected_label_cbx_page,
-                affected_cbx_n_pages,
-                affected_cbx_part,
-                affected_cbx_possible_SNs_chunked,
-            ) = (
-                self.cbx_ctype_shown_page,
-                self.label_combobox_chi_type_paginationFrame,
-                self.cbx_ctype_n_pages,
-                self.combobox_chi_type,
-                self.possible_chi_types_chunked,
-            )
-
-        elif affects == "DA-par-type":
-            (
-                affected_cbx_shown_page,
-                affected_label_cbx_page,
-                affected_cbx_n_pages,
-                affected_cbx_part,
-                affected_cbx_possible_SNs_chunked,
-            ) = (
-                self.cbx_ptype_shown_page,
-                self.label_combobox_par_type_paginationFrame,
-                self.cbx_ptype_n_pages,
-                self.combobox_par_type,
-                self.possible_par_types_chunked,
-            )
-        else:
-            raise NotImplementedError("Pagination not refactored for this combobox!")
-
-        if page_dir == "L":
-            affected_cbx_shown_page = (
-                max(affected_cbx_shown_page - 1, 1) if affected_cbx_n_pages > 0 else 0
-            )
-        elif page_dir == "R":
-            affected_cbx_shown_page = (
-                min(affected_cbx_shown_page + 1, affected_cbx_n_pages)
-                if affected_cbx_n_pages > 0
-                else 0
-            )
-        else:
-            raise NotImplementedError(
-                "Can only go left (L) or right (R) in pagination frame!"
-            )
-
-        # one variable must be written back on a case-by-case basis,
-        # others are just updating on-the-fly by configure
-        if affects == "MA-MO":
-            self.cbx_MA_mod_par_shown_page = affected_cbx_shown_page
-        elif affects == "MA-MF":
-            self.cbx_MF_shown_page = affected_cbx_shown_page
-        elif affects == "MA-Hybrid-HV":
-            self.cbx_HY_HV_shown_page = affected_cbx_shown_page
-        elif affects == "MA-Hybrid-LV":
-            self.cbx_HY_LV_shown_page = affected_cbx_shown_page
-        elif affects == "FT":
-            self.cbx_ft_shown_page = affected_cbx_shown_page
-        elif affects == "DA-chi-SN":
-            self.cbx_chi_shown_page = affected_cbx_shown_page
-        elif affects == "DA-par-SN":
-            self.cbx_par_shown_page = affected_cbx_shown_page
-        elif affects == "DA-chi-type":
-            self.cbx_ctype_shown_page = affected_cbx_shown_page
-        elif affects == "DA-par-type":
-            self.cbx_ptype_shown_page = affected_cbx_shown_page
-        affected_label_cbx_page.configure(
-            text=f"page {affected_cbx_shown_page}/{affected_cbx_n_pages}"
-        )
-        if affected_cbx_n_pages > 0:
-            affected_cbx_part.configure(
-                values=affected_cbx_possible_SNs_chunked[affected_cbx_shown_page - 1]
-            )
-        else:
-            affected_cbx_part.configure(values=[])
-            affected_cbx_part.set("- Select -")
 
     def _delete_single_part_parents(self, part_id, error_msg, ofKind="all"):
         """Delete parent relations for a single part. Returns True on success."""
@@ -4075,14 +3725,12 @@ class App(customtkinter.CTk):
         ]
         self.cbx_ft_n_pages = len(self.possible_ft_SNs_chunked)
         self.cbx_ft_shown_page = min(1, self.cbx_ft_n_pages)
-        self.label_combobox_ft_paginationFrame.configure(
-            text=f"page {self.cbx_ft_shown_page}/{self.cbx_ft_n_pages}"
+        self._set_pagination(
+            "FT",
+            chunks=self.possible_ft_SNs_chunked,
+            n_pages=self.cbx_ft_n_pages,
+            shown_page=self.cbx_ft_shown_page,
         )
-        if len(self.possible_ft) > 0:
-            self.combobox_ft.configure(values=self.possible_ft_SNs_chunked[0])
-        else:
-            self.combobox_ft.configure(values=[])
-            self.combobox_ft.set("- Select -")
 
     def fetch_MA_p_c_data(self, update="all"):
         """Data-only worker for the Module Assembly operation mode.
@@ -4396,68 +4044,34 @@ class App(customtkinter.CTk):
             self.label_info.configure(text=info_text)
             self._pending_conn_only_warning = False
 
-        # Reset the comboboxes to "- Select -" so the user sees a clean state
-        # regardless of whether the fetch succeeded or raised.
         if update == "all" or update == "Module":
-            self.combobox_MA_mod_par.set("- Select -")
+            self._set_pagination(
+                "MA-MO",
+                chunks=self.possible_MA_mod_par_SNs_chunked,
+                n_pages=self.cbx_MA_mod_par_n_pages,
+                shown_page=self.cbx_MA_mod_par_shown_page,
+            )
         if update == "all" or update == "Module Flex":
-            self.combobox_MA_MF_chi.set("- Select -")
+            self._set_pagination(
+                "MA-MF",
+                chunks=self.possible_MF_SNs_chunked,
+                n_pages=self.cbx_MF_n_pages,
+                shown_page=self.cbx_MF_shown_page,
+            )
         if update == "all" or update == "HY_HV":
-            self.combobox_MA_HY_HV_chi.set("- Select -")
+            self._set_pagination(
+                "MA-Hybrid-HV",
+                chunks=self.possible_HY_HV_SNs_chunked,
+                n_pages=self.cbx_HY_HV_n_pages,
+                shown_page=self.cbx_HY_HV_shown_page,
+            )
         if update == "all" or update == "HY_LV":
-            self.combobox_MA_HY_LV_chi.set("- Select -")
-
-        # Module
-        if update == "all" or update == "Module":
-            self.label_combobox_MA_mod_par_paginationFrame.configure(
-                text=f"page {self.cbx_MA_mod_par_shown_page}/{self.cbx_MA_mod_par_n_pages}"
+            self._set_pagination(
+                "MA-Hybrid-LV",
+                chunks=self.possible_HY_LV_SNs_chunked,
+                n_pages=self.cbx_HY_LV_n_pages,
+                shown_page=self.cbx_HY_LV_shown_page,
             )
-            if self.cbx_MA_mod_par_n_pages > 0:
-                self.combobox_MA_mod_par.configure(
-                    values=self.possible_MA_mod_par_SNs_chunked[0]
-                )
-            else:
-                self.combobox_MA_mod_par.configure(values=[])
-                self.combobox_MA_mod_par.set("- Select -")
-
-        # Module Flex
-        if update == "all" or update == "Module Flex":
-            self.label_combobox_MA_MF_chi_paginationFrame.configure(
-                text=f"page {self.cbx_MF_shown_page}/{self.cbx_MF_n_pages}"
-            )
-            if self.cbx_MF_n_pages > 0:
-                self.combobox_MA_MF_chi.configure(
-                    values=self.possible_MF_SNs_chunked[0]
-                )
-            else:
-                self.combobox_MA_MF_chi.configure(values=[])
-                self.combobox_MA_MF_chi.set("- Select -")
-
-        # Hybrid HV-side
-        if update == "all" or update == "HY_HV":
-            self.label_combobox_HY_HV_paginationFrame.configure(
-                text=f"page {self.cbx_HY_HV_shown_page}/{self.cbx_HY_HV_n_pages}"
-            )
-            if self.cbx_HY_HV_n_pages > 0:
-                self.combobox_MA_HY_HV_chi.configure(
-                    values=self.possible_HY_HV_SNs_chunked[0]
-                )
-            else:
-                self.combobox_MA_HY_HV_chi.configure(values=[])
-                self.combobox_MA_HY_HV_chi.set("- Select -")
-
-        # Hybrid LV-side
-        if update == "all" or update == "HY_LV":
-            self.label_combobox_HY_LV_paginationFrame.configure(
-                text=f"page {self.cbx_HY_LV_shown_page}/{self.cbx_HY_LV_n_pages}"
-            )
-            if self.cbx_HY_LV_n_pages > 0:
-                self.combobox_MA_HY_LV_chi.configure(
-                    values=self.possible_HY_LV_SNs_chunked[0]
-                )
-            else:
-                self.combobox_MA_HY_LV_chi.configure(values=[])
-                self.combobox_MA_HY_LV_chi.set("- Select -")
 
     def wrap_data_ui_fetch_MA_p_c(self, update="all"):
         """Drop-in replacement for the original fetch_MA_p_c.
@@ -4696,21 +4310,16 @@ class App(customtkinter.CTk):
         self.possible_children_partIDs = [
             entry[1] for entry in self.possible_children_SNs_and_partIDs
         ]
-        self.cbx_chi_n_pages = len(self.possible_children_SNs_chunked)
-        self.cbx_chi_shown_page = min(1, self.cbx_chi_n_pages)
-        self.label_combobox_child_paginationFrame.configure(
-            text=f"page {self.cbx_chi_shown_page}/{self.cbx_chi_n_pages}"
-        )
         self._set_pagination(
             "DA-par-SN",
             chunks=self.possible_parents_SNs_chunked,
             n_pages=len(self.possible_parents_SNs_chunked),
         )
-        if self.cbx_chi_n_pages > 0:
-            self.combobox_child.configure(values=self.possible_children_SNs_chunked[0])
-        else:
-            self.combobox_child.configure(values=[])
-            self.combobox_child.set("- Select -")
+        self._set_pagination(
+            "DA-chi-SN",
+            chunks=self.possible_children_SNs_chunked,
+            n_pages=len(self.possible_children_SNs_chunked),
+        )
 
     def fetch_slots(self):
         self.slots, ok = self._fetch_relevant_parts(
