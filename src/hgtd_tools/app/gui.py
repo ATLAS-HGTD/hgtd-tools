@@ -50,15 +50,66 @@ class GuiConfig:
 
 GUI_CONFIG = GuiConfig()
 
-OPERATION_MODES = [
-    ("Module Assembly", "MA"),
-    ("Module Loading", "ML"),
-    ("Detector Assembly (CERN): DU", "DU"),
-    ("Detector Assembly (CERN): PEB", "PEB"),
-    ("Detector Assembly (CERN): FT", "FT"),
-]
-_MODE_TO_SHORT = {mode: short for mode, short in OPERATION_MODES}
-_SHORT_TO_MODE = {short: mode for mode, short in OPERATION_MODES}
+_MODE_TO_SHORT = {
+    "Module Assembly": "MA",
+    "Module Loading": "ML",
+    "Detector Assembly (CERN): DU": "DU",
+    "Detector Assembly (CERN): PEB": "PEB",
+    "Detector Assembly (CERN): FT": "FT",
+}
+LAYOUT_BY_MODE = {
+    "Module Assembly": dict(ma=True, combobox=False, canvas=False, ft=False),
+    "Module Loading": dict(ma=False, combobox=True, canvas=True, ft=False),
+    "Detector Assembly (CERN): DU": dict(
+        ma=False, combobox=True, canvas=True, ft=False
+    ),
+    "Detector Assembly (CERN): PEB": dict(
+        ma=False, combobox=True, canvas=False, ft=False
+    ),
+    "Detector Assembly (CERN): FT": dict(
+        ma=False, combobox=False, canvas=False, ft=True
+    ),
+}
+_NONE_ATTRS = (
+    "par_type",
+    "chi_type",
+    "child_conn",
+    "ft_conn",
+    "child_manu",
+    "MA_mod_par_manu",
+    "MA_mod_par_loc",
+    "module_flex_child_loc",
+    "HY_HV_child_loc",
+    "HY_LV_child_loc",
+    "MA_mod_par_conn",
+    "MF_child_conn",
+    "HY_HV_child_conn",
+    "HY_LV_child_conn",
+)
+_LIST_ATTRS = (
+    "interlockSlots",
+    "this_DU_relations_MODULE",
+    "this_MODULE_relations_DU",
+    "this_MODULE_relations_SLOT",
+    "this_FT_relations_SLOT",
+    "this_SLOT_relations_FT",
+    "this_MOD_relations_MF",
+    "this_MOD_relations_HY_HV",
+    "this_MOD_relations_HY_LV",
+    "this_MOD_relations_HY_unknownPosition",
+    "this_MOD_relations_HY_invalidPosition",
+    "this_MF_relations_MOD",
+    "this_HY_HV_relations_MOD",
+    "this_HY_LV_relations_MOD",
+    "possible_parents",
+    "possible_children",
+    "possible_ft",
+    "possible_MA_mod_par",
+    "possible_MF",
+    "possible_HY_HV",
+    "possible_HY_LV",
+    "clicked_module",
+)
 _REQUEST_EXCEPTIONS = (
     requests.exceptions.HTTPError,
     requests.exceptions.ConnectionError,
@@ -70,36 +121,15 @@ _REQUEST_EXCEPTIONS = (
 SELECTION_PLACEHOLDERS = {"- Select -", "", "- automatic -", "VxLyQz"}
 
 
-@dataclass(frozen=True)
-class DataConstants:
-    """Immutable data constants."""
-
-    n_items_to_show_in_cbx: int = 16
-
-    DU_types_including_all: list = field(
-        default_factory=lambda: ["All DU types"] + data.allDUkeysList
-    )
-    DU_types_chunked: list[list[str]] = field(init=False)
-
-    PEB_types_including_all: list = field(
-        default_factory=lambda: ["All PEB types"] + data.allPEBs
-    )
-    PEB_types_chunked: list[list[str]] = field(init=False)
-
-    def __post_init__(self):
-        chunk = self.n_items_to_show_in_cbx
-        du = self.DU_types_including_all
-        peb = self.PEB_types_including_all
-
-        du_chunks = [du[i : i + chunk] for i in range(0, len(du), chunk)]
-        peb_chunks = [peb[i : i + chunk] for i in range(0, len(peb), chunk)]
-
-        # Frozen dataclasses need object.__setattr__ to assign in __post_init__
-        object.__setattr__(self, "DU_types_chunked", du_chunks)
-        object.__setattr__(self, "PEB_types_chunked", peb_chunks)
+def _chunk(seq, n):
+    return [seq[i : i + n] for i in range(0, len(seq), n)]
 
 
-DATA_CONSTANTS = DataConstants()
+_N_ITEMS_PER_CBX_PAGE = 16
+_DU_TYPES_INCLUDING_ALL = ["All DU types"] + data.allDUkeysList
+_PEB_TYPES_INCLUDING_ALL = ["All PEB types"] + data.allPEBs
+DU_TYPES_CHUNKED = _chunk(_DU_TYPES_INCLUDING_ALL, _N_ITEMS_PER_CBX_PAGE)
+PEB_TYPES_CHUNKED = _chunk(_PEB_TYPES_INCLUDING_ALL, _N_ITEMS_PER_CBX_PAGE)
 
 
 class ToplevelWindow(customtkinter.CTkToplevel):
@@ -391,7 +421,7 @@ class App(customtkinter.CTk):
         header.grid(row=0, column=0, padx=10, pady=5, columnspan=2)
 
         default_short = _MODE_TO_SHORT[GUI_CONFIG.default_operation_mode]
-        for i, (mode_id, short_id) in enumerate(OPERATION_MODES, start=1):
+        for i, (mode_id, short_id) in enumerate(_MODE_TO_SHORT.items(), start=1):
             btn = customtkinter.CTkButton(
                 self.frame_operation_mode,
                 text=mode_id,
@@ -582,6 +612,52 @@ class App(customtkinter.CTk):
         self._build_sidebar_user_and_appearance()
         self._build_sidebar_help_and_close()
 
+    def _reset_runtime_state(self):
+        """Wipe per-mode runtime state. Called on every operation-mode change."""
+        for attr in _LIST_ATTRS:
+            setattr(self, attr, [])
+        for attr in _NONE_ATTRS:
+            setattr(self, attr, None)
+
+        self.displayedDUtype = "None"
+        self.ft_filter = ""
+        self.combined_slot = ""
+        self.partstree = None
+
+        # Module-level buttons
+        self.button_inspect_clicked.configure(
+            text="INSPECT CLICKED MODULE", state="disabled"
+        )
+        self.button_delete_clicked.configure(
+            text="UNLOAD CLICKED MODULE", state="disabled"
+        )
+        self.button_delete_child_MF.configure(state="disabled")
+        self.button_delete_child_HY_HV.configure(state="disabled")
+        self.button_delete_child_HY_LV.configure(state="disabled")
+
+        # DA-family comboboxes + optionmenus
+        self.combobox_par_type.set("- Select -")
+        self.combobox_chi_type.set("- Select -")
+        self.optionmenu_child_conn.set("All children")
+        self.optionmenu_ft_conn.set("All FTs")
+        self.combobox_child_manu.set("All manufacturers")
+
+        # MA-family comboboxes + optionmenus
+        self.combobox_MA_mod_par_manu.set("All manufacturers")
+        self.combobox_MA_mod_par_loc.set("All locations")
+        self.combobox_MA_MF_child_loc.set("All locations")
+        self.combobox_MA_HY_HV_child_loc.set("All locations")
+        self.combobox_MA_HY_LV_child_loc.set("All locations")
+        self.optionmenu_MA_mod_par_conn.set("No filter")
+        self.optionmenu_MA_child_MF_conn.set("All children")
+        self.optionmenu_MA_child_HY_HV_conn.set("All children")
+        self.optionmenu_MA_child_HY_LV_conn.set("All children")
+
+        # Progress + canvas
+        self.progressbar.set(0)
+        self.label_info.configure(text=" ")
+        self.canvas.delete("all")
+
     def _build_paged_combobox(
         self,
         parent,
@@ -677,7 +753,7 @@ class App(customtkinter.CTk):
             cb.configure(values=chunks[shown_page - 1])
         else:
             cb.configure(values=[])
-            cb.set("- Select -")
+        cb.set("- Select -")
 
         if visible:
             if state["label"] is not None:
@@ -694,6 +770,22 @@ class App(customtkinter.CTk):
         if state["label"] is not None:
             (state["label"].grid if visible else state["label"].grid_remove)()
         (state["frame"].grid if visible else state["frame"].grid_remove)()
+
+    def _apply_layout(self):
+        """Show/hide the four top-level regions for the current operation_mode."""
+        flags = LAYOUT_BY_MODE.get(self.operation_mode)
+        if flags is None:
+            return
+        self.frame_ma.grid() if flags["ma"] else self.frame_ma.grid_remove()
+        (
+            self.frame_combobox.grid()
+            if flags["combobox"]
+            else self.frame_combobox.grid_remove()
+        )
+        self.label_canvas.grid() if flags["canvas"] else self.label_canvas.grid_remove()
+        self.canvas.grid() if flags["canvas"] else self.canvas.grid_remove()
+        self.label_info.grid()  # always
+        self.frame_ft_rel.grid() if flags["ft"] else self.frame_ft_rel.grid_remove()
 
     def _fetch_relations(
         self,
@@ -787,7 +879,6 @@ class App(customtkinter.CTk):
             row=0, column=0, padx=5, pady=5, sticky="nsew", rowspan=2
         )
         self.frame_combobox.grid_columnconfigure((0, 1), weight=1)
-        self.frame_combobox.grid_remove()  # The initial frame shown will now be Module Assembly
 
         # parent
         self.frame_parent = customtkinter.CTkFrame(self.frame_combobox)
@@ -1012,14 +1103,11 @@ class App(customtkinter.CTk):
             self.frame_main, text="Interactive canvas: accepting user click"
         )
         self.label_canvas.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
-        self.label_canvas.grid_remove()
-
         self.canvas = customtkinter.CTkCanvas(
             self.frame_main, width=500, height=700, background="white"
         )
         self.canvas.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
         self.canvas.bind("<Button-1>", self.canvas_event_click)
-        self.canvas.grid_remove()
         self.displayedDUtype = "None"
         self.interlockSlots = []
 
@@ -1515,7 +1603,6 @@ class App(customtkinter.CTk):
         self.frame_ft_rel.grid(
             row=0, column=0, padx=5, pady=5, sticky="nsew", rowspan=2, columnspan=2
         )
-        self.frame_ft_rel.grid_remove()
 
         #
         # === 1st line ===
@@ -2760,104 +2847,13 @@ class App(customtkinter.CTk):
     def select_operation_mode_reload(self, value):
         self.operation_mode = value
         self._update_sidebar_operation_modes(value)
-
-        self.displayedDUtype = "None"
-        self.interlockSlots = []
-        self.this_DU_relations_MODULE = []
-        self.this_MODULE_relations_DU = []
-        self.this_MODULE_relations_SLOT = []
-        self.this_FT_relations_SLOT = []
-        self.this_SLOT_relations_FT = []
-        self.ft_filter = ""
-        self.combined_slot = ""
-        self.this_MOD_relations_MF = []
-        self.this_MOD_relations_HY_HV = []
-        self.this_MOD_relations_HY_LV = []
-        self.this_MOD_relations_HY_unknownPosition = []
-        self.this_MOD_relations_HY_invalidPosition = []
-        self.this_MF_relations_MOD = []
-        self.this_HY_HV_relations_MOD = []
-        self.this_HY_LV_relations_MOD = []
-
-        self.possible_parents = []
-        self.possible_children = []
-        self.possible_ft = []
-        self.possible_MA_mod_par = []
-        self.possible_MF = []
-        self.possible_HY_HV = []
-        self.possible_HY_LV = []
-
-        self.partstree = None
-        self.clicked_module = []
-        self.button_inspect_clicked.configure(text=f"INSPECT CLICKED MODULE")
-        self.button_inspect_clicked.configure(state="disabled")
-        self.button_delete_clicked.configure(text=f"UNLOAD CLICKED MODULE")
-        self.button_delete_clicked.configure(state="disabled")
-
-        # Detector Assembly / Loading
-        self.par_type = None
-        self.combobox_par_type.set("- Select -")
-        self.chi_type = None
-        self.combobox_chi_type.set("- Select -")
-        self.child_conn = None
-        self.optionmenu_child_conn.set("All children")
-        self.ft_conn = None
-        self.optionmenu_ft_conn.set("All FTs")
-        self.child_manu = None
-        self.combobox_child_manu.set("All manufacturers")
-
-        # Module Assembly
-        self.MA_mod_par_manu = None
-        self.combobox_MA_mod_par_manu.set("All manufacturers")
-        self.MA_mod_par_loc = None
-        self.combobox_MA_mod_par_loc.set("All locations")
-        self.module_flex_child_loc = None
-        self.combobox_MA_MF_child_loc.set("All locations")
-        self.HY_HV_child_loc = None
-        self.combobox_MA_HY_HV_child_loc.set("All locations")
-        self.HY_LV_child_loc = None
-        self.combobox_MA_HY_LV_child_loc.set("All locations")
-
-        self.MA_mod_par_conn = None
-        self.optionmenu_MA_mod_par_conn.set("No filter")
-        self.MF_child_conn = None
-        self.optionmenu_MA_child_MF_conn.set("All children")
-        self.HY_HV_child_conn = None
-        self.optionmenu_MA_child_HY_HV_conn.set("All children")
-        self.HY_LV_child_conn = None
-        self.optionmenu_MA_child_HY_LV_conn.set("All children")
-
-        self.button_delete_child_MF.configure(state="disabled")
-        self.button_delete_child_HY_HV.configure(state="disabled")
-        self.button_delete_child_HY_LV.configure(state="disabled")
-
-        self.progressbar.set(0)
-        self.label_info.configure(text=" ")
-        self.canvas.delete("all")
+        self._reset_runtime_state()
+        self._apply_layout()
         if self.operation_mode == "Module Assembly":
-            self.frame_ma.grid()
-            self.frame_combobox.grid_remove()
-            self.label_canvas.grid_remove()
-            self.canvas.grid_remove()
-            self.label_info.grid()
-            self.frame_ft_rel.grid_remove()
-
-            self.combobox_MA_mod_par.set("- Select -")
-            self.combobox_MA_MF_chi.set("- Select -")
-            self.combobox_MA_HY_HV_chi.set("- Select -")
-            self.combobox_MA_HY_LV_chi.set("- Select -")
-
             self.wrap_data_ui_fetch_MA_p_c()
 
         elif self.operation_mode == "Module Loading":
-            self.frame_ma.grid_remove()
-            self.frame_combobox.grid()
-            self.label_canvas.grid()
-            self.canvas.grid()
-            self.label_info.grid()
-            self.frame_ft_rel.grid_remove()
-
-            self.possible_par_types_chunked = DATA_CONSTANTS.DU_types_chunked
+            self.possible_par_types_chunked = DU_TYPES_CHUNKED
             self._set_pagination(
                 "DA-par-type",
                 chunks=self.possible_par_types_chunked,
@@ -2884,18 +2880,11 @@ class App(customtkinter.CTk):
             self.position_entry.configure(state="disabled")
             self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module")
         elif self.operation_mode == "Detector Assembly (CERN): DU":
-            self.frame_ma.grid_remove()
-            self.frame_combobox.grid()
-            self.label_canvas.grid()
-            self.canvas.grid()
-            self.label_info.grid()
-            self.frame_ft_rel.grid_remove()
-
             self._show_paged_combobox("DA-par-type", visible=False)
 
             self.combobox_child_manu.grid_remove()
 
-            self.possible_chi_types_chunked = DATA_CONSTANTS.DU_types_chunked
+            self.possible_chi_types_chunked = DU_TYPES_CHUNKED
             self._set_pagination(
                 "DA-chi-type",
                 chunks=self.possible_chi_types_chunked,
@@ -2915,18 +2904,11 @@ class App(customtkinter.CTk):
             self.position_entry.configure(state="normal")
             self._run_with_progress(self.fetch_p_c, "Detector", "Detector Unit")
         elif self.operation_mode == "Detector Assembly (CERN): PEB":
-            self.frame_ma.grid_remove()
-            self.frame_combobox.grid()
-            self.label_canvas.grid_remove()
-            self.canvas.grid_remove()
-            self.label_info.grid()
-            self.frame_ft_rel.grid_remove()
-
             self._show_paged_combobox("DA-par-type", visible=False)
 
             self.combobox_child_manu.grid_remove()
 
-            self.possible_chi_types_chunked = DATA_CONSTANTS.PEB_types_chunked
+            self.possible_chi_types_chunked = PEB_TYPES_CHUNKED
             self._set_pagination(
                 "DA-chi-type",
                 chunks=self.possible_chi_types_chunked,
@@ -2946,13 +2928,6 @@ class App(customtkinter.CTk):
             self.position_entry.configure(state="normal")
             self._run_with_progress(self.fetch_p_c, "Detector", "PEB")
         elif self.operation_mode == "Detector Assembly (CERN): FT":
-            self.frame_ma.grid_remove()
-            self.frame_combobox.grid_remove()
-            self.label_canvas.grid_remove()
-            self.canvas.grid_remove()
-            self.label_info.grid()
-            self.frame_ft_rel.grid()
-
             self.optionmenu_slot_vessel.set("Vessel: 1")
             self.optionmenu_slot_layer.set("Layer: 0")
             self.optionmenu_slot_quadrant.set("Quadrant: 0")
@@ -3197,78 +3172,32 @@ class App(customtkinter.CTk):
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         customtkinter.set_widget_scaling(new_scaling_float)
-        # these operations are needed because widget scaling impacts grid
-        if self.operation_mode == "Module Assembly":
-            self.frame_ma.grid()
-            self.frame_combobox.grid_remove()
-            self.label_canvas.grid_remove()
-            self.canvas.grid_remove()
-            self.label_info.grid()
-            self.frame_ft_rel.grid_remove()
-        elif self.operation_mode == "Module Loading":
-            self.frame_ma.grid_remove()
-            self.frame_combobox.grid()
-            self.label_canvas.grid()
-            self.canvas.grid()
-            self.label_info.grid()
-            self.frame_ft_rel.grid_remove()
-        elif self.operation_mode == "Detector Assembly (CERN): DU":
-            self.frame_ma.grid_remove()
-            self.frame_combobox.grid()
-            self.label_canvas.grid()
-            self.canvas.grid()
-            self.label_info.grid()
-            self.frame_ft_rel.grid_remove()
-        elif self.operation_mode == "Detector Assembly (CERN): PEB":
-            self.frame_ma.grid_remove()
-            self.frame_combobox.grid()
-            self.label_canvas.grid_remove()
-            self.canvas.grid_remove()
-            self.label_info.grid()
-            self.frame_ft_rel.grid_remove()
-        elif self.operation_mode == "Detector Assembly (CERN): FT":
-            self.frame_ma.grid_remove()
-            self.frame_combobox.grid_remove()
-            self.label_canvas.grid_remove()
-            self.canvas.grid_remove()
-            self.label_info.grid()
-            self.frame_ft_rel.grid()
+        # widget scaling affects grid geometry, so re-apply the current mode's layout
+        self._apply_layout()
 
     def change_ft_conn_event(self, ft_conn):
         self.ft_conn = self.optionmenu_ft_conn.get()
-        self.combobox_ft.set("- Select -")
-
         self._run_with_progress(self.fetch_ft)
 
     def change_MA_parent_Mod_filter_event(self, foo):
         self.MA_mod_par_loc = self.combobox_MA_mod_par_loc.get()
         self.MA_mod_par_manu = self.combobox_MA_mod_par_manu.get()
         self.MA_mod_par_conn = self.optionmenu_MA_mod_par_conn.get()
-        self.combobox_MA_mod_par.set("- Select -")
-
         self._run_with_progress(self.wrap_data_ui_fetch_MA_p_c, "Module")
 
     def change_MA_child_MF_filter_event(self, foo):
         self.module_flex_child_loc = self.combobox_MA_MF_child_loc.get()
         self.MF_child_conn = self.optionmenu_MA_child_MF_conn.get()
-        self.combobox_MA_MF_chi.set("- Select -")
-
         self._run_with_progress(self.wrap_data_ui_fetch_MA_p_c, "Module Flex")
 
     def change_MA_child_HY_HV_filter_event(self, foo):
         self.HY_HV_child_loc = self.combobox_MA_HY_HV_child_loc.get()
         self.HY_HV_child_conn = self.optionmenu_MA_child_HY_HV_conn.get()
-        # let user know when trying to add a relation between non-matching HYs
-        self.combobox_MA_HY_HV_chi.set("- Select -")
-
         self._run_with_progress(self.wrap_data_ui_fetch_MA_p_c, "HY_HV")
 
     def change_MA_child_HY_LV_filter_event(self, foo):
         self.HY_LV_child_loc = self.combobox_MA_HY_LV_child_loc.get()
         self.HY_LV_child_conn = self.optionmenu_MA_child_HY_LV_conn.get()
-        # let user know when trying to add a relation between non-matching HYs
-        self.combobox_MA_HY_LV_chi.set("- Select -")
-
         self._run_with_progress(self.wrap_data_ui_fetch_MA_p_c, "HY_LV")
 
     def change_child_conn_event(self, child_conn):
@@ -3715,10 +3644,8 @@ class App(customtkinter.CTk):
         )
         self.possible_ft_SNs = [entry[0] for entry in self.possible_ft_SNs_and_partIDs]
         self.possible_ft_SNs_chunked = [
-            self.possible_ft_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
-            for i in range(
-                0, len(self.possible_ft_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
-            )
+            self.possible_ft_SNs[i : i + _N_ITEMS_PER_CBX_PAGE]
+            for i in range(0, len(self.possible_ft_SNs), _N_ITEMS_PER_CBX_PAGE)
         ]
         self.possible_ft_partIDs = [
             entry[1] for entry in self.possible_ft_SNs_and_partIDs
@@ -3953,11 +3880,11 @@ class App(customtkinter.CTk):
             entry[0] for entry in self.possible_MA_mod_par_SNs_and_partIDs
         ]
         self.possible_MA_mod_par_SNs_chunked = [
-            self.possible_MA_mod_par_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
+            self.possible_MA_mod_par_SNs[i : i + _N_ITEMS_PER_CBX_PAGE]
             for i in range(
                 0,
                 len(self.possible_MA_mod_par_SNs),
-                DATA_CONSTANTS.n_items_to_show_in_cbx,
+                _N_ITEMS_PER_CBX_PAGE,
             )
         ]
         self.possible_MA_mod_par_partIDs = [
@@ -3972,10 +3899,8 @@ class App(customtkinter.CTk):
         )
         self.possible_MF_SNs = [entry[0] for entry in self.possible_MF_SNs_and_partIDs]
         self.possible_MF_SNs_chunked = [
-            self.possible_MF_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
-            for i in range(
-                0, len(self.possible_MF_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
-            )
+            self.possible_MF_SNs[i : i + _N_ITEMS_PER_CBX_PAGE]
+            for i in range(0, len(self.possible_MF_SNs), _N_ITEMS_PER_CBX_PAGE)
         ]
         self.possible_MF_partIDs = [
             entry[1] for entry in self.possible_MF_SNs_and_partIDs
@@ -3991,10 +3916,8 @@ class App(customtkinter.CTk):
             entry[0] for entry in self.possible_HY_HV_SNs_and_partIDs
         ]
         self.possible_HY_HV_SNs_chunked = [
-            self.possible_HY_HV_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
-            for i in range(
-                0, len(self.possible_HY_HV_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
-            )
+            self.possible_HY_HV_SNs[i : i + _N_ITEMS_PER_CBX_PAGE]
+            for i in range(0, len(self.possible_HY_HV_SNs), _N_ITEMS_PER_CBX_PAGE)
         ]
         self.possible_HY_HV_partIDs = [
             entry[1] for entry in self.possible_HY_HV_SNs_and_partIDs
@@ -4010,10 +3933,8 @@ class App(customtkinter.CTk):
             entry[0] for entry in self.possible_HY_LV_SNs_and_partIDs
         ]
         self.possible_HY_LV_SNs_chunked = [
-            self.possible_HY_LV_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
-            for i in range(
-                0, len(self.possible_HY_LV_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
-            )
+            self.possible_HY_LV_SNs[i : i + _N_ITEMS_PER_CBX_PAGE]
+            for i in range(0, len(self.possible_HY_LV_SNs), _N_ITEMS_PER_CBX_PAGE)
         ]
         self.possible_HY_LV_partIDs = [
             entry[1] for entry in self.possible_HY_LV_SNs_and_partIDs
@@ -4288,20 +4209,18 @@ class App(customtkinter.CTk):
             entry[0] for entry in self.possible_parents_SNs_and_partIDs
         ]
         self.possible_parents_SNs_chunked = [
-            self.possible_parents_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
-            for i in range(
-                0, len(self.possible_parents_SNs), DATA_CONSTANTS.n_items_to_show_in_cbx
-            )
+            self.possible_parents_SNs[i : i + _N_ITEMS_PER_CBX_PAGE]
+            for i in range(0, len(self.possible_parents_SNs), _N_ITEMS_PER_CBX_PAGE)
         ]
         self.possible_children_SNs = [
             entry[0] for entry in self.possible_children_SNs_and_partIDs
         ]
         self.possible_children_SNs_chunked = [
-            self.possible_children_SNs[i : i + DATA_CONSTANTS.n_items_to_show_in_cbx]
+            self.possible_children_SNs[i : i + _N_ITEMS_PER_CBX_PAGE]
             for i in range(
                 0,
                 len(self.possible_children_SNs),
-                DATA_CONSTANTS.n_items_to_show_in_cbx,
+                _N_ITEMS_PER_CBX_PAGE,
             )
         ]
         self.possible_parents_partIDs = [
