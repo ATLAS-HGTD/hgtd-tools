@@ -121,11 +121,13 @@ _REQUEST_EXCEPTIONS = (
 SELECTION_PLACEHOLDERS = {"- Select -", "", "- automatic -", "VxLyQz"}
 
 
-def _chunk(seq, n):
+_N_ITEMS_PER_CBX_PAGE = 16
+
+
+def _chunk(seq, n=_N_ITEMS_PER_CBX_PAGE):
     return [seq[i : i + n] for i in range(0, len(seq), n)]
 
 
-_N_ITEMS_PER_CBX_PAGE = 16
 _DU_TYPES_INCLUDING_ALL = ["All DU types"] + data.allDUkeysList
 _PEB_TYPES_INCLUDING_ALL = ["All PEB types"] + data.allPEBs
 DU_TYPES_CHUNKED = _chunk(_DU_TYPES_INCLUDING_ALL, _N_ITEMS_PER_CBX_PAGE)
@@ -3643,10 +3645,7 @@ class App(customtkinter.CTk):
             self.possible_ft
         )
         self.possible_ft_SNs = [entry[0] for entry in self.possible_ft_SNs_and_partIDs]
-        self.possible_ft_SNs_chunked = [
-            self.possible_ft_SNs[i : i + _N_ITEMS_PER_CBX_PAGE]
-            for i in range(0, len(self.possible_ft_SNs), _N_ITEMS_PER_CBX_PAGE)
-        ]
+        self.possible_ft_SNs_chunked = _chunk(self.possible_ft_SNs)
         self.possible_ft_partIDs = [
             entry[1] for entry in self.possible_ft_SNs_and_partIDs
         ]
@@ -3879,14 +3878,7 @@ class App(customtkinter.CTk):
         self.possible_MA_mod_par_SNs = [
             entry[0] for entry in self.possible_MA_mod_par_SNs_and_partIDs
         ]
-        self.possible_MA_mod_par_SNs_chunked = [
-            self.possible_MA_mod_par_SNs[i : i + _N_ITEMS_PER_CBX_PAGE]
-            for i in range(
-                0,
-                len(self.possible_MA_mod_par_SNs),
-                _N_ITEMS_PER_CBX_PAGE,
-            )
-        ]
+        self.possible_MA_mod_par_SNs_chunked = _chunk(self.possible_MA_mod_par_SNs)
         self.possible_MA_mod_par_partIDs = [
             entry[1] for entry in self.possible_MA_mod_par_SNs_and_partIDs
         ]
@@ -3898,10 +3890,7 @@ class App(customtkinter.CTk):
             self.possible_MF
         )
         self.possible_MF_SNs = [entry[0] for entry in self.possible_MF_SNs_and_partIDs]
-        self.possible_MF_SNs_chunked = [
-            self.possible_MF_SNs[i : i + _N_ITEMS_PER_CBX_PAGE]
-            for i in range(0, len(self.possible_MF_SNs), _N_ITEMS_PER_CBX_PAGE)
-        ]
+        self.possible_MF_SNs_chunked = _chunk(self.possible_MF_SNs)
         self.possible_MF_partIDs = [
             entry[1] for entry in self.possible_MF_SNs_and_partIDs
         ]
@@ -3915,10 +3904,7 @@ class App(customtkinter.CTk):
         self.possible_HY_HV_SNs = [
             entry[0] for entry in self.possible_HY_HV_SNs_and_partIDs
         ]
-        self.possible_HY_HV_SNs_chunked = [
-            self.possible_HY_HV_SNs[i : i + _N_ITEMS_PER_CBX_PAGE]
-            for i in range(0, len(self.possible_HY_HV_SNs), _N_ITEMS_PER_CBX_PAGE)
-        ]
+        self.possible_HY_HV_SNs_chunked = _chunk(self.possible_HY_HV_SNs)
         self.possible_HY_HV_partIDs = [
             entry[1] for entry in self.possible_HY_HV_SNs_and_partIDs
         ]
@@ -3932,10 +3918,7 @@ class App(customtkinter.CTk):
         self.possible_HY_LV_SNs = [
             entry[0] for entry in self.possible_HY_LV_SNs_and_partIDs
         ]
-        self.possible_HY_LV_SNs_chunked = [
-            self.possible_HY_LV_SNs[i : i + _N_ITEMS_PER_CBX_PAGE]
-            for i in range(0, len(self.possible_HY_LV_SNs), _N_ITEMS_PER_CBX_PAGE)
-        ]
+        self.possible_HY_LV_SNs_chunked = _chunk(self.possible_HY_LV_SNs)
         self.possible_HY_LV_partIDs = [
             entry[1] for entry in self.possible_HY_LV_SNs_and_partIDs
         ]
@@ -4208,21 +4191,11 @@ class App(customtkinter.CTk):
         self.possible_parents_SNs = [
             entry[0] for entry in self.possible_parents_SNs_and_partIDs
         ]
-        self.possible_parents_SNs_chunked = [
-            self.possible_parents_SNs[i : i + _N_ITEMS_PER_CBX_PAGE]
-            for i in range(0, len(self.possible_parents_SNs), _N_ITEMS_PER_CBX_PAGE)
-        ]
+        self.possible_parents_SNs_chunked = _chunk(self.possible_parents_SNs)
         self.possible_children_SNs = [
             entry[0] for entry in self.possible_children_SNs_and_partIDs
         ]
-        self.possible_children_SNs_chunked = [
-            self.possible_children_SNs[i : i + _N_ITEMS_PER_CBX_PAGE]
-            for i in range(
-                0,
-                len(self.possible_children_SNs),
-                _N_ITEMS_PER_CBX_PAGE,
-            )
-        ]
+        self.possible_children_SNs_chunked = _chunk(self.possible_children_SNs)
         self.possible_parents_partIDs = [
             entry[1] for entry in self.possible_parents_SNs_and_partIDs
         ]
