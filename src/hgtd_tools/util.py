@@ -221,6 +221,8 @@ def select_parts(
     manu_name=None,
     manu_id=None,
     sn_does_include=None,
+    sn_does_include_any=None,
+    sn_chars_9_to_10_eq=None,
     name_label_does_include=None,  # case-insensitive
     name_label_does_not_include=None,  # case-insensitive
     check_valid_SN_latest_spec=False,
@@ -231,6 +233,13 @@ def select_parts(
     has_parents_ofKind=None,
     has_children_ofKind=None,
 ):
+    if location_name in (None, "", "All locations"):
+        location_name = None
+    if manu_name in (None, "", "All manufacturers"):
+        manu_name = None
+    if sn_does_include == "":
+        sn_does_include = None
+
     if location_shortname != None:
         parts = [
             iP
@@ -267,8 +276,20 @@ def select_parts(
             for iP in parts
             if str(iP["manufacturer"]["manufacturer_id"]) == str(manu_id)
         ]
+    if sn_does_include_any != None:
+        alts = sn_does_include_any.split()
+        parts = [
+            iP for iP in parts if any(alt in str(iP["serial_number"]) for alt in alts)
+        ]
     if sn_does_include != None:
         parts = [iP for iP in parts if str(sn_does_include) in str(iP["serial_number"])]
+    if sn_chars_9_to_10_eq != None:
+        parts = [
+            iP
+            for iP in parts
+            if len(str(iP["serial_number"])) >= 11
+            and int(str(iP["serial_number"])[9:11]) == int(sn_chars_9_to_10_eq)
+        ]
     if name_label_does_include != None:  # case-insensitive
         parts = [
             iP

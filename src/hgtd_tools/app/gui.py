@@ -747,8 +747,8 @@ class App(customtkinter.CTk):
         state = self.paged_comboboxes[key]
         state["chunks"] = list(chunks)
         state["n_pages"] = n_pages
-        state["shown_page"] = shown_page
-        state["page_label"].configure(text=f"page {shown_page}/{n_pages}")
+        state["shown_page"] = 0 if n_pages == 0 else shown_page
+        state["page_label"].configure(text=f"page {state["shown_page"]}/{n_pages}")
 
         cb = state["combobox"]
         if n_pages > 0:
@@ -3614,33 +3614,23 @@ class App(customtkinter.CTk):
         if not ok:
             return
 
-        if self.ft_filter != "":
-            gen = self.ft_filter.split("+")[0].split("/")  # multiple generations
-            cat = self.ft_filter[-2:]  # the last two chars make the category
-
-            self.possible_ft = [
-                pft
-                for pft in self.possible_ft
-                if any(gen_ in pft["serial_number"] for gen_ in gen)
-                and int(pft["serial_number"][9:11]) == int(cat)
-            ]
-
-        # HY_LV child SN filter input
         self.childFT_SN_filter = self.entry_childFT_SN_filter.get()
-        if self.childFT_SN_filter != "":
-            self.possible_ft = [
-                pft
-                for pft in self.possible_ft
-                if self.childFT_SN_filter in str(pft["serial_number"])
-            ]
-        # do the most expensive part last (when easy filters on existing data have already been applied)
-        # expensive meaning need to make calls to the API for each part in the list that survived the previous cuts
-        if self.ft_conn != None and self.ft_conn != "All FTs":
-            self.possible_ft = [
-                pp
-                for pp in self.possible_ft
-                if (len(util.get_parents(pp["part_id"], ofKind="Slot")[0])) == 0
-            ]
+        # Parse the "FT filter" combo (generation(s) + category)
+        sn_substrings, cat = [], None
+        if self.ft_filter != "":
+            gen = self.ft_filter.split("+")[0].split("/")
+            cat = int(self.ft_filter[-2:])
+            sn_substrings = list(gen)
+
+        self.possible_ft = util.select_parts(
+            self.possible_ft,
+            sn_does_include_any=" ".join(sn_substrings) or None,
+            sn_does_include=self.childFT_SN_filter,
+            sn_chars_9_to_10_eq=cat,
+            no_parents_ofKind=(
+                "Slot" if self.ft_conn == "Not yet connected FTs" else None
+            ),
+        )
         self.possible_ft_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
             self.possible_ft
         )
@@ -4133,55 +4123,23 @@ class App(customtkinter.CTk):
             self.possible_children = []
             return
 
-        if p == "Detector Unit" and c == "Module":
-            if self.par_type != None and self.par_type != "All DU types":
-                self.possible_parents = [
-                    pp
-                    for pp in self.possible_parents
-                    if self.par_type in pp["serial_number"]
-                ]
-            if self.child_manu != None and self.child_manu != "All manufacturers":
-                self.possible_children = [
-                    pp
-                    for pp in self.possible_children
-                    if self.child_manu == str(pp["manufacturer"]["manufacturer_name"])
-                ]
-
-        elif p == "Detector" and c == "Detector Unit":
-            if self.chi_type != None and self.chi_type != "All DU types":
-                self.possible_children = [
-                    pc
-                    for pc in self.possible_children
-                    if self.chi_type in pc["serial_number"]
-                ]
-
-        elif p == "Detector" and c == "PEB":
-            if self.chi_type != None and self.chi_type != "All PEB types":
-                self.possible_children = [
-                    pc
-                    for pc in self.possible_children
-                    if self.chi_type in pc["serial_number"]
-                ]
-
-        # child SN filter input
         self.child_SN_filter = self.entry_child_SN_filter.get()
-        if self.child_SN_filter != "":
-            self.possible_children = [
-                pc
-                for pc in self.possible_children
-                if self.child_SN_filter in str(pc["serial_number"])
-            ]
-
-        # do the most expensive part last (when easy filters on existing data have already been applied)
-        # expensive meaning need to make calls to the API for each part in the list that survived the previous cuts
-        # multiple KoP possible
-        if self.child_conn != None and self.child_conn != "All children":
-            self.possible_children = [
-                pp
-                for pp in self.possible_children
-                if (len(util.get_parents(pp["part_id"])[0])) == 0
-            ]
-
+        par_kwargs = {}
+        chi_kwargs = {}
+        if p == "Detector Unit" and c == "Module":
+            par_kwargs["sn_does_include"] = self.par_type
+            chi_kwargs["manu_name"] = self.child_manu
+        elif p == "Detector" and c == "Detector Unit":
+            chi_kwargs["sn_does_include"] = self.chi_type
+        elif p == "Detector" and c == "PEB":
+            chi_kwargs["sn_does_include"] = self.chi_type
+        if self.child_SN_filter:
+            chi_kwargs["sn_does_include"] = self.child_SN_filter
+        chi_kwargs["no_parents_ofKind"] = (
+            "all" if self.child_conn == "Not yet connected children" else None
+        )
+        self.possible_parents = util.select_parts(self.possible_parents, **par_kwargs)
+        self.possible_children = util.select_parts(self.possible_children, **chi_kwargs)
         self.possible_parents_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
             self.possible_parents
         )
