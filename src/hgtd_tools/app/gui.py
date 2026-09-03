@@ -1,6 +1,7 @@
 import threading
 import time
 import tkinter
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from dataclasses import field
 from importlib import metadata
@@ -134,6 +135,20 @@ DU_TYPES_CHUNKED = _chunk(_DU_TYPES_INCLUDING_ALL, _N_ITEMS_PER_CBX_PAGE)
 PEB_TYPES_CHUNKED = _chunk(_PEB_TYPES_INCLUDING_ALL, _N_ITEMS_PER_CBX_PAGE)
 
 
+def _parallel_keeps(parts, predicate, max_workers=8):
+    """Apply `predicate(part_id)` to each part concurrently.
+
+    Returns the subset of `parts` whose predicate returns truthy,
+    preserving the original order.
+    """
+    if not parts:
+        return parts
+    part_ids = [p["part_id"] for p in parts]
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        results = list(ex.map(predicate, part_ids))
+    return [p for p, keep in zip(parts, results) if keep]
+
+
 class ToplevelWindow(customtkinter.CTkToplevel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -254,6 +269,12 @@ class App(customtkinter.CTk):
         """
         msg = self.last_responseText if exception is None else str(exception)
         info_text = wrapped_text.fill(f"Error: {prefix}\n{msg}")
+        print(f">>> {info_text}")
+        self.label_info.configure(text=info_text)
+
+    def _show_warning(self, prefix):
+        """Show a warning message on the info label and stdout."""
+        info_text = wrapped_text.fill(f"Warning: {prefix}")
         print(f">>> {info_text}")
         self.label_info.configure(text=info_text)
 
@@ -3061,9 +3082,8 @@ class App(customtkinter.CTk):
                     > 0
                 ):
                     self.position_variable.set("- automatic -")
-                    info_text = "Warning: Your selected child is already connected to some parent.\nSelect a different one, or disconnect the parents of this module by inspecting the Module.\nThere you can delete existing relations with the red trash button."
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
+                    info_text = "Your selected child is already connected to some parent.\nSelect a different one, or disconnect the parents of this module by inspecting the Module.\nThere you can delete existing relations with the red trash button."
+                    self._show_warning(info_text)
                 if not mouseInSomeMod:
                     self.position_variable.set("- automatic -")
                     info_text = (
@@ -3641,6 +3661,77 @@ class App(customtkinter.CTk):
             shown_page=self.cbx_ft_shown_page,
         )
 
+    def _MA_preflight_will_be_slow(self, update):
+        """Return True iff any branch in `update` will run with conn-only filters.
+
+        Pure CPU — no API calls, safe to call on the Tk main thread.
+        Reads live values from self.*_manu, self.*_loc, self.entry_*_SN_filter.get().
+        """
+        branches = (
+            ["Module", "Module Flex", "HY_HV", "HY_LV"] if update == "all" else [update]
+        )
+
+        for branch in branches:
+            # Cheap-filter inputs (None / "" / sentinel = "not active")
+            if branch == "Module":
+                active_cheap = any(
+                    [
+                        self.MA_mod_par_manu not in (None, "", "All manufacturers"),
+                        self.MA_mod_par_loc not in (None, "", "All locations"),
+                        (self.entry_module_parent_SN_filter.get() or "") != "",
+                    ]
+                )
+                conn_active = (
+                    self.MA_mod_par_conn is not None
+                    and self.MA_mod_par_conn != "No filter"
+                )
+                if conn_active and not active_cheap:
+                    return True
+
+            elif branch == "Module Flex":
+                active_cheap = any(
+                    [
+                        self.module_flex_child_loc not in (None, "", "All locations"),
+                        (self.entry_child0_SN_filter.get() or "") != "",
+                    ]
+                )
+                conn_active = (
+                    self.MF_child_conn is not None
+                    and self.MF_child_conn != "All children"
+                )
+                if conn_active and not active_cheap:
+                    return True
+
+            elif branch == "HY_HV":
+                active_cheap = any(
+                    [
+                        self.HY_HV_child_loc not in (None, "", "All locations"),
+                        (self.entry_child1_SN_filter.get() or "") != "",
+                    ]
+                )
+                conn_active = (
+                    self.HY_HV_child_conn is not None
+                    and self.HY_HV_child_conn != "All children"
+                )
+                if conn_active and not active_cheap:
+                    return True
+
+            elif branch == "HY_LV":
+                active_cheap = any(
+                    [
+                        self.HY_LV_child_loc not in (None, "", "All locations"),
+                        (self.entry_child2_SN_filter.get() or "") != "",
+                    ]
+                )
+                conn_active = (
+                    self.HY_LV_child_conn is not None
+                    and self.HY_LV_child_conn != "All children"
+                )
+                if conn_active and not active_cheap:
+                    return True
+
+        return False
+
     def fetch_MA_p_c_data(self, update="all"):
         """Data-only worker for the Module Assembly operation mode.
 
@@ -3740,15 +3831,13 @@ class App(customtkinter.CTk):
             if self.MA_mod_par_conn is not None and self.MA_mod_par_conn != "No filter":
                 if no_filters_except_conn:
                     self._pending_conn_only_warning = True
-                self.possible_MA_mod_par = [
-                    pp
-                    for pp in self.possible_MA_mod_par
-                    if (
-                        (len(util.get_children(pp["part_id"], ofKind="Module Flex")[0]))
-                        == 0
-                    )
-                    or ((len(util.get_children(pp["part_id"], ofKind="Hybrid")[0])) < 2)
-                ]
+                self.possible_MA_mod_par = _parallel_keeps(
+                    self.possible_MA_mod_par,
+                    lambda pid: (
+                        len(util.get_children(pid, ofKind="Module Flex")[0]) == 0
+                        or len(util.get_children(pid, ofKind="Hybrid")[0]) < 2
+                    ),
+                )
 
         # ---------- Module Flex: filters ----------
         if update == "all" or update == "Module Flex":
@@ -3777,11 +3866,10 @@ class App(customtkinter.CTk):
             if self.MF_child_conn is not None and self.MF_child_conn != "All children":
                 if no_filters_except_conn:
                     self._pending_conn_only_warning = True
-                self.possible_MF = [
-                    pp
-                    for pp in self.possible_MF
-                    if (len(util.get_parents(pp["part_id"], ofKind="Module")[0])) == 0
-                ]
+                self.possible_MF = _parallel_keeps(
+                    self.possible_MF,
+                    lambda pid: len(util.get_parents(pid, ofKind="Module")[0]) == 0,
+                )
 
         # ---------- HY_HV: filters ----------
         if update == "all" or update == "HY_HV":
@@ -3812,11 +3900,10 @@ class App(customtkinter.CTk):
             ):
                 if no_filters_except_conn:
                     self._pending_conn_only_warning = True
-                self.possible_HY_HV = [
-                    pp
-                    for pp in self.possible_HY_HV
-                    if (len(util.get_parents(pp["part_id"], ofKind="Module")[0])) == 0
-                ]
+                self.possible_HY_HV = _parallel_keeps(
+                    self.possible_HY_HV,
+                    lambda pid: len(util.get_parents(pid, ofKind="Module")[0]) == 0,
+                )
 
         # ---------- HY_LV: filters ----------
         if update == "all" or update == "HY_LV":
@@ -3847,11 +3934,10 @@ class App(customtkinter.CTk):
             ):
                 if no_filters_except_conn:
                     self._pending_conn_only_warning = True
-                self.possible_HY_LV = [
-                    pp
-                    for pp in self.possible_HY_LV
-                    if (len(util.get_parents(pp["part_id"], ofKind="Module")[0])) == 0
-                ]
+                self.possible_HY_LV = _parallel_keeps(
+                    self.possible_HY_LV,
+                    lambda pid: len(util.get_parents(pid, ofKind="Module")[0]) == 0,
+                )
 
         # ---------- Pagination + SN/ID lookups for all four lists ----------
         # Module
@@ -3921,14 +4007,14 @@ class App(customtkinter.CTk):
 
         if not api_ok:
             self._show_error("Parents / Children could not be loaded from ProdDB API.")
+            self._pending_conn_only_warning = False
             return
 
         if getattr(self, "_pending_conn_only_warning", False):
-            info_text = wrapped_text.fill(
-                f"Warning: You did not preselect any parts other than via their connection status,\nthis DB query can take a significant amount of time to finish.\n(Please consider quitting the application and build a new query, only using connection status as the last filter criterion.)"
-            )
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
+            # The worker finished — append a "done" line so the user knows
+            # the slow query is over and the lists are now populated.
+            info_text = "Slow query finished."
+            self._show_info(info_text)
             self._pending_conn_only_warning = False
 
         if update == "all" or update == "Module":
@@ -3966,7 +4052,24 @@ class App(customtkinter.CTk):
         Runs the data fetch on a worker thread (with progressbar), then
         updates the UI on the Tk main thread.
         """
+        # ---------- Pre-flight: warn the user BEFORE the slow query starts ----------
+        if self._MA_preflight_will_be_slow(update):
+            info_text = (
+                "You did not preselect any parts other than via their "
+                "connection status,\nthis DB query can take a significant amount "
+                "of time to finish.\n(Please consider quitting the application and "
+                "build a new query, only using connection status as the last filter "
+                "criterion.)"
+            )
+            self._show_warning(info_text)
+            # Set the worker-side flag too, so apply_MA_p_c_to_ui knows not to
+            # overwrite the warning if it fires again on the worker side.
+            self._pending_conn_only_warning = True
+        else:
+            self.label_info.configure(text=" ")
+            self._pending_conn_only_warning = False
 
+        # ---------- Spawn worker ----------
         def _worker():
             ok = self.fetch_MA_p_c_data(update)
             # Bounce back to the Tk main thread for all widget work.
