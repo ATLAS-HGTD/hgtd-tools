@@ -3568,7 +3568,6 @@ class App(customtkinter.CTk):
             return
 
         if ft_par != []:
-            # this FT is already connected to some slot!!
             for r in ft_par:
                 info_text = f"This FT is already connected to a slot: {r['part_parent']['serial_number']}."
                 self._show_info(info_text)
@@ -3580,31 +3579,25 @@ class App(customtkinter.CTk):
         PEB_partID = self.possible_children_partIDs[
             self.possible_children_SNs.index(PEB_SN)
         ]
-        for key in data.allPEBs:
-            if key in PEB_SN:
-                self.displayed_PEB_type = key
-                self.label_info.configure(text=" ")
-
-                # find out if this PEB is already placed somewhere
-                info_text = " "
-                self.label_info.configure(text=info_text)
-                detector, ok = self._fetch_relations(
-                    lambda: util.get_parents(PEB_partID, ofKind="Detector"),
-                    error_msg="PEB relations could not be loaded from ProdDB API.",
-                )
-                if not ok:
-                    break
-
-                if detector != []:
-                    # this PEB was already placed somewhere in the detector!!
-                    for r in detector:
-                        info_text = f"This PEB is already mounted to the parent detector, at {r['position']}."
-                        self._show_info(info_text)
-                break
-        else:
+        self.label_info.configure(text=" ")
+        matched_key = next((p for p in data.allPEBs if p in PEB_SN), None)
+        if matched_key is None:
             info_text = "Warning: PEB type could not be retrieved from PEB SN."
             print(f">>> {info_text}")
             self.label_info.configure(text=info_text)
+            return
+        self.displayed_PEB_type = matched_key
+        detector, ok = self._fetch_relations(
+            lambda: util.get_parents(PEB_partID, ofKind="Detector"),
+            error_msg="PEB relations could not be loaded from ProdDB API.",
+        )
+        if not ok:
+            return
+
+        if detector:
+            for r in detector:
+                info_text = f"This PEB is already mounted to the parent detector, at {r['position']}."
+                self._show_info(info_text)
 
     def fetch_ft(self):
         self.possible_ft, ok = self._fetch_relevant_parts(
@@ -4032,7 +4025,7 @@ class App(customtkinter.CTk):
                     == str(r["part"]["kind_of_part"]["kind_of_part_id"])
                 ) and (str(r["position"]) == ""):
                     self.this_MOD_relations_HY_unknownPosition.append(r)
-                    add_info_text = f"\n\nExisting HY relation, at unknown position within module: {r['part']['serial_number']}.\nPlease consider adding the child again with this tool to record a valid position."
+                    add_info_text = f"\n\nExisting HY relation, at unknown empty position within module: {r['part']['serial_number']}.\nPlease consider adding the child again with this tool to record a valid position."
                     print(f"{add_info_text}")
                     info_text += add_info_text
                 elif (
@@ -4182,10 +4175,9 @@ class App(customtkinter.CTk):
             self.slots = None
 
     def help(self):
+        # create window if its None or destroyed
         if self.help_window is None or not self.help_window.winfo_exists():
-            self.help_window = ToplevelWindow(
-                self
-            )  # create window if its None or destroyed
+            self.help_window = ToplevelWindow(self)
         else:
             self.help_window.focus()  # if window exists focus it
 
