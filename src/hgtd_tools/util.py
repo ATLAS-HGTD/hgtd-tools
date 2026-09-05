@@ -2,6 +2,7 @@ import json
 import re
 import textwrap
 import webbrowser
+from concurrent.futures import ThreadPoolExecutor
 
 import hgtd_tools.api as api
 import hgtd_tools.data as data
@@ -212,6 +213,20 @@ def get_SN_of_parts(parts):
     return [part["serial_number"] for part in parts]
 
 
+def parallel_keeps(parts, predicate, max_workers=4):
+    """Apply `predicate(part_id)` to each part concurrently.
+
+    Returns the subset of `parts` whose predicate returns truthy,
+    preserving the original order.
+    """
+    if not parts:
+        return parts
+    part_ids = [p["part_id"] for p in parts]
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        results = list(ex.map(predicate, part_ids))
+    return [p for p, keep in zip(parts, results) if keep]
+
+
 def select_parts(
     parts,
     location_shortname=None,
@@ -317,29 +332,25 @@ def select_parts(
     if check_fake_SN == True:
         parts = [iP for iP in parts if (str(iP["serial_number"])[:3] != "20W")]
     if no_parents_ofKind != None:
-        parts = [
-            iP
-            for iP in parts
-            if get_parents(iP["part_id"], ofKind=no_parents_ofKind)[0] == []
-        ]
+        parts = parallel_keeps(
+            parts,
+            lambda pid: get_parents(pid, ofKind=no_parents_ofKind)[0] == [],
+        )
     if no_children_ofKind != None:
-        parts = [
-            iP
-            for iP in parts
-            if get_children(iP["part_id"], ofKind=no_children_ofKind)[0] == []
-        ]
+        parts = parallel_keeps(
+            parts,
+            lambda pid: get_children(pid, ofKind=no_children_ofKind)[0] == [],
+        )
     if has_parents_ofKind != None:
-        parts = [
-            iP
-            for iP in parts
-            if len(get_parents(iP["part_id"], ofKind=has_parents_ofKind)[0]) > 0
-        ]
+        parts = parallel_keeps(
+            parts,
+            lambda pid: len(get_parents(pid, ofKind=has_parents_ofKind)[0]) > 0,
+        )
     if has_children_ofKind != None:
-        parts = [
-            iP
-            for iP in parts
-            if len(get_children(iP["part_id"], ofKind=has_children_ofKind)[0]) > 0
-        ]
+        parts = parallel_keeps(
+            parts,
+            lambda pid: len(get_children(pid, ofKind=has_children_ofKind)[0]) > 0,
+        )
     return parts
 
 

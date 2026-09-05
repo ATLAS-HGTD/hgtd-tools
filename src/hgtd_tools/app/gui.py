@@ -1,7 +1,6 @@
 import threading
 import time
 import tkinter
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from dataclasses import field
 from importlib import metadata
@@ -133,20 +132,6 @@ _DU_TYPES_INCLUDING_ALL = ["All DU types"] + data.allDUkeysList
 _PEB_TYPES_INCLUDING_ALL = ["All PEB types"] + data.allPEBs
 DU_TYPES_CHUNKED = _chunk(_DU_TYPES_INCLUDING_ALL, _N_ITEMS_PER_CBX_PAGE)
 PEB_TYPES_CHUNKED = _chunk(_PEB_TYPES_INCLUDING_ALL, _N_ITEMS_PER_CBX_PAGE)
-
-
-def _parallel_keeps(parts, predicate, max_workers=8):
-    """Apply `predicate(part_id)` to each part concurrently.
-
-    Returns the subset of `parts` whose predicate returns truthy,
-    preserving the original order.
-    """
-    if not parts:
-        return parts
-    part_ids = [p["part_id"] for p in parts]
-    with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        results = list(ex.map(predicate, part_ids))
-    return [p for p, keep in zip(parts, results) if keep]
 
 
 class ToplevelWindow(customtkinter.CTkToplevel):
@@ -3831,7 +3816,7 @@ class App(customtkinter.CTk):
             if self.MA_mod_par_conn is not None and self.MA_mod_par_conn != "No filter":
                 if no_filters_except_conn:
                     self._pending_conn_only_warning = True
-                self.possible_MA_mod_par = _parallel_keeps(
+                self.possible_MA_mod_par = util.parallel_keeps(
                     self.possible_MA_mod_par,
                     lambda pid: (
                         len(util.get_children(pid, ofKind="Module Flex")[0]) == 0
@@ -3866,7 +3851,7 @@ class App(customtkinter.CTk):
             if self.MF_child_conn is not None and self.MF_child_conn != "All children":
                 if no_filters_except_conn:
                     self._pending_conn_only_warning = True
-                self.possible_MF = _parallel_keeps(
+                self.possible_MF = util.parallel_keeps(
                     self.possible_MF,
                     lambda pid: len(util.get_parents(pid, ofKind="Module")[0]) == 0,
                 )
@@ -3900,7 +3885,7 @@ class App(customtkinter.CTk):
             ):
                 if no_filters_except_conn:
                     self._pending_conn_only_warning = True
-                self.possible_HY_HV = _parallel_keeps(
+                self.possible_HY_HV = util.parallel_keeps(
                     self.possible_HY_HV,
                     lambda pid: len(util.get_parents(pid, ofKind="Module")[0]) == 0,
                 )
@@ -3934,7 +3919,7 @@ class App(customtkinter.CTk):
             ):
                 if no_filters_except_conn:
                     self._pending_conn_only_warning = True
-                self.possible_HY_LV = _parallel_keeps(
+                self.possible_HY_LV = util.parallel_keeps(
                     self.possible_HY_LV,
                     lambda pid: len(util.get_parents(pid, ofKind="Module")[0]) == 0,
                 )
