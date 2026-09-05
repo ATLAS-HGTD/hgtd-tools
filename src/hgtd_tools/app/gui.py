@@ -3778,151 +3778,100 @@ class App(customtkinter.CTk):
         if not self._report_api_status(expected_prefix="200"):
             return False
 
-        # ---------- Module: SN/ID lookups + filters ----------
+        # ---------- Module ----------
         if update == "all" or update == "Module":
-            no_filters_except_conn = True
-            if (
-                self.MA_mod_par_manu is not None
-                and self.MA_mod_par_manu != "All manufacturers"
-            ):
-                no_filters_except_conn = False
-                self.possible_MA_mod_par = [
-                    pp
-                    for pp in self.possible_MA_mod_par
-                    if self.MA_mod_par_manu
-                    == str(pp["manufacturer"]["manufacturer_name"])
+            sn_filter = self.entry_module_parent_SN_filter.get() or ""
+            conn_active = (
+                self.MA_mod_par_conn is not None and self.MA_mod_par_conn != "No filter"
+            )
+            has_cheap = any(
+                [
+                    self.MA_mod_par_manu not in (None, "", "All manufacturers"),
+                    self.MA_mod_par_loc not in (None, "", "All locations"),
+                    sn_filter != "",
                 ]
-
-            if (
-                self.MA_mod_par_loc is not None
-                and self.MA_mod_par_loc != "All locations"
-            ):
-                no_filters_except_conn = False
-                self.possible_MA_mod_par = [
-                    pp
-                    for pp in self.possible_MA_mod_par
-                    if self.MA_mod_par_loc == str(pp["location"]["location_name"])
-                ]
-
-            self.par_mod_SN_filter = self.entry_module_parent_SN_filter.get()
-            if self.par_mod_SN_filter != "":
-                no_filters_except_conn = False
-                self.possible_MA_mod_par = [
-                    pp
-                    for pp in self.possible_MA_mod_par
-                    if self.par_mod_SN_filter in str(pp["serial_number"])
-                ]
-
-            if self.MA_mod_par_conn is not None and self.MA_mod_par_conn != "No filter":
-                if no_filters_except_conn:
-                    self._pending_conn_only_warning = True
-                self.possible_MA_mod_par = util.parallel_keeps(
-                    self.possible_MA_mod_par,
-                    lambda pid: (
-                        len(util.get_children(pid, ofKind="Module Flex")[0]) == 0
-                        or len(util.get_children(pid, ofKind="Hybrid")[0]) < 2
-                    ),
+            )
+            if conn_active and not has_cheap:
+                self._pending_conn_only_warning = True
+            if conn_active:
+                conn_pred = lambda pid: (
+                    len(util.get_children(pid, ofKind="Module Flex")[0]) == 0
+                    or len(util.get_children(pid, ofKind="Hybrid")[0]) < 2
                 )
+            else:
+                conn_pred = None
+            self.possible_MA_mod_par = util.select_parts(
+                self.possible_MA_mod_par,
+                location_name=self.MA_mod_par_loc,
+                manu_name=self.MA_mod_par_manu,
+                sn_does_include=sn_filter,
+                connection_predicate=conn_pred,
+            )
 
-        # ---------- Module Flex: filters ----------
+        # ---------- Module Flex ----------
         if update == "all" or update == "Module Flex":
-            no_filters_except_conn = True
-            if (
-                self.module_flex_child_loc is not None
-                and self.module_flex_child_loc != "All locations"
-            ):
-                no_filters_except_conn = False
-                self.possible_MF = [
-                    pp
-                    for pp in self.possible_MF
-                    if self.module_flex_child_loc
-                    == str(pp["location"]["location_name"])
+            sn_filter = self.entry_child0_SN_filter.get() or ""
+            conn_active = (
+                self.MF_child_conn is not None and self.MF_child_conn != "All children"
+            )
+            has_cheap = any(
+                [
+                    self.module_flex_child_loc not in (None, "", "All locations"),
+                    sn_filter != "",
                 ]
+            )
+            if conn_active and not has_cheap:
+                self._pending_conn_only_warning = True
+            self.possible_MF = util.select_parts(
+                self.possible_MF,
+                location_name=self.module_flex_child_loc,
+                sn_does_include=sn_filter,
+                no_parents_ofKind="Module" if conn_active else None,
+            )
 
-            self.child0_SN_filter = self.entry_child0_SN_filter.get()
-            if self.child0_SN_filter != "":
-                no_filters_except_conn = False
-                self.possible_MF = [
-                    pc
-                    for pc in self.possible_MF
-                    if self.child0_SN_filter in str(pc["serial_number"])
-                ]
-
-            if self.MF_child_conn is not None and self.MF_child_conn != "All children":
-                if no_filters_except_conn:
-                    self._pending_conn_only_warning = True
-                self.possible_MF = util.parallel_keeps(
-                    self.possible_MF,
-                    lambda pid: len(util.get_parents(pid, ofKind="Module")[0]) == 0,
-                )
-
-        # ---------- HY_HV: filters ----------
+        # ---------- HY_HV ----------
         if update == "all" or update == "HY_HV":
-            no_filters_except_conn = True
-            if (
-                self.HY_HV_child_loc is not None
-                and self.HY_HV_child_loc != "All locations"
-            ):
-                no_filters_except_conn = False
-                self.possible_HY_HV = [
-                    pp
-                    for pp in self.possible_HY_HV
-                    if self.HY_HV_child_loc == str(pp["location"]["location_name"])
-                ]
-
-            self.child1_SN_filter = self.entry_child1_SN_filter.get()
-            if self.child1_SN_filter != "":
-                no_filters_except_conn = False
-                self.possible_HY_HV = [
-                    pc
-                    for pc in self.possible_HY_HV
-                    if self.child1_SN_filter in str(pc["serial_number"])
-                ]
-
-            if (
+            sn_filter = self.entry_child1_SN_filter.get() or ""
+            conn_active = (
                 self.HY_HV_child_conn is not None
                 and self.HY_HV_child_conn != "All children"
-            ):
-                if no_filters_except_conn:
-                    self._pending_conn_only_warning = True
-                self.possible_HY_HV = util.parallel_keeps(
-                    self.possible_HY_HV,
-                    lambda pid: len(util.get_parents(pid, ofKind="Module")[0]) == 0,
-                )
+            )
+            has_cheap = any(
+                [
+                    self.HY_HV_child_loc not in (None, "", "All locations"),
+                    sn_filter != "",
+                ]
+            )
+            if conn_active and not has_cheap:
+                self._pending_conn_only_warning = True
+            self.possible_HY_HV = util.select_parts(
+                self.possible_HY_HV,
+                location_name=self.HY_HV_child_loc,
+                sn_does_include=sn_filter,
+                no_parents_ofKind="Module" if conn_active else None,
+            )
 
-        # ---------- HY_LV: filters ----------
+        # ---------- HY_LV ----------
         if update == "all" or update == "HY_LV":
-            no_filters_except_conn = True
-            if (
-                self.HY_LV_child_loc is not None
-                and self.HY_LV_child_loc != "All locations"
-            ):
-                no_filters_except_conn = False
-                self.possible_HY_LV = [
-                    pp
-                    for pp in self.possible_HY_LV
-                    if self.HY_LV_child_loc == str(pp["location"]["location_name"])
-                ]
-
-            self.child2_SN_filter = self.entry_child2_SN_filter.get()
-            if self.child2_SN_filter != "":
-                no_filters_except_conn = False
-                self.possible_HY_LV = [
-                    pc
-                    for pc in self.possible_HY_LV
-                    if self.child2_SN_filter in str(pc["serial_number"])
-                ]
-
-            if (
+            sn_filter = self.entry_child2_SN_filter.get() or ""
+            conn_active = (
                 self.HY_LV_child_conn is not None
                 and self.HY_LV_child_conn != "All children"
-            ):
-                if no_filters_except_conn:
-                    self._pending_conn_only_warning = True
-                self.possible_HY_LV = util.parallel_keeps(
-                    self.possible_HY_LV,
-                    lambda pid: len(util.get_parents(pid, ofKind="Module")[0]) == 0,
-                )
+            )
+            has_cheap = any(
+                [
+                    self.HY_LV_child_loc not in (None, "", "All locations"),
+                    sn_filter != "",
+                ]
+            )
+            if conn_active and not has_cheap:
+                self._pending_conn_only_warning = True
+            self.possible_HY_LV = util.select_parts(
+                self.possible_HY_LV,
+                location_name=self.HY_LV_child_loc,
+                sn_does_include=sn_filter,
+                no_parents_ofKind="Module" if conn_active else None,
+            )
 
         # ---------- Pagination + SN/ID lookups for all four lists ----------
         # Module

@@ -247,6 +247,7 @@ def select_parts(
     no_children_ofKind=None,
     has_parents_ofKind=None,
     has_children_ofKind=None,
+    connection_predicate=None,
 ):
     if location_name in (None, "", "All locations"):
         location_name = None
@@ -351,6 +352,9 @@ def select_parts(
             parts,
             lambda pid: len(get_children(pid, ofKind=has_children_ofKind)[0]) > 0,
         )
+    if connection_predicate is not None:
+        parts = parallel_keeps(parts, connection_predicate)
+
     return parts
 
 
