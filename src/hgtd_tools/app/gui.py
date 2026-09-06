@@ -275,9 +275,7 @@ class App(customtkinter.CTk):
         Configures self.label_info (space on success, else `warning_msg`).
         """
         if any(v in SELECTION_PLACEHOLDERS for v in required_values):
-            info = warning_msg
-            print(f">>> {info}")
-            self.label_info.configure(text=info)
+            self._show_warning(warning_msg)
             return False
         self.label_info.configure(text=" ")
         return True
@@ -1914,7 +1912,7 @@ class App(customtkinter.CTk):
         par = self.combobox_MA_mod_par.get()
         if not self._selected_non_placeholders(
             [chi, par],
-            "Warning: Select a Module Flex & Module from the respective lists to proceed.",
+            "Select a Module Flex & Module from the respective lists to proceed.",
         ):
             return
         if not self._logged_in():
@@ -2093,7 +2091,7 @@ class App(customtkinter.CTk):
         par = self.combobox_MA_mod_par.get()
         if not self._selected_non_placeholders(
             [chi, par],
-            "Warning: Select a HY HV-side & Module from the respective lists to proceed.",
+            "Select a HY HV-side & Module from the respective lists to proceed.",
         ):
             return
         if not self._logged_in():
@@ -2114,7 +2112,7 @@ class App(customtkinter.CTk):
         par = self.combobox_MA_mod_par.get()
         if not self._selected_non_placeholders(
             [chi, par],
-            "Warning: Select a HY LV-side & Module from the respective lists to proceed.",
+            "Select a HY LV-side & Module from the respective lists to proceed.",
         ):
             return
         if not self._logged_in():
@@ -2135,7 +2133,7 @@ class App(customtkinter.CTk):
         par = self.combined_slot
         if not self._selected_non_placeholders(
             [chi, par],
-            "Warning: Select a FT & Slot from the respective lists to proceed.",
+            "Select a FT & Slot from the respective lists to proceed.",
         ):
             return
         if not self._logged_in():
@@ -2295,7 +2293,7 @@ class App(customtkinter.CTk):
         pos = self.position_entry.get()
         if not self._selected_non_placeholders(
             [chi, par, pos],
-            "Warning: Select a child & parent from the respective lists "
+            "Select a child & parent from the respective lists "
             "and a position to proceed.",
         ):
             return
@@ -2946,183 +2944,42 @@ class App(customtkinter.CTk):
             self.slot_glob_mod_variable.set("")
             self._run_with_progress(self.fetch_ft)
 
-    def canvas_event_click(self, event):
-        self.clicked_module = []
-        self.button_inspect_clicked.configure(text=f"INSPECT CLICKED MODULE")
-        self.button_inspect_clicked.configure(state="disabled")
-        self.button_delete_clicked.configure(text=f"UNLOAD CLICKED MODULE")
-        self.button_delete_clicked.configure(state="disabled")
-        info_text = " "
-        if self.operation_mode == "Module Loading":
-            if self.displayedDUtype != "None":
-                arrayOfModulesInDU = data.allDUs[self.displayedDUtype]
-                alreadyConnectedModules = (
-                    self.this_DU_relations_MODULE
-                )  # list of relations, as in partstree
-                alreadyUsedSlots = [
-                    entry["position"] for entry in alreadyConnectedModules
-                ]
+    def _handle_canvas_click(
+        self, event, slots, already_used, relations, *, active_on_hover=True
+    ):
+        """Hit-test a canvas click and update slot visuals + clicked-module state.
 
-                alreadyConnectedDUsForModule = self.this_MODULE_relations_DU
-                alreadyConnectedSLOTsForModule = self.this_MODULE_relations_SLOT
+        `active_on_hover` controls whether an unoccupied slot under the mouse
+        is repainted yellow. Module Loading uses this for "you can drop here";
+        Detector Assembly (CERN): DU suppresses it because clicks only matter
+        for already-loaded modules there.
 
-                mouseInSomeMod = False
-                mouseX = self.canvas.canvasx(event.x)
-                mouseY = self.canvas.canvasy(event.y)
-                for slot in arrayOfModulesInDU:
-                    if self._isInSlot(slot, mouseX, mouseY):
-                        mouseInSomeMod = True
-                        possible_slot = slot["slot"]
-                        notAllowedSlot = False
-                        if slot["slot"] in alreadyUsedSlots:
-                            self.clicked_module = alreadyConnectedModules[
-                                alreadyUsedSlots.index(slot["slot"])
-                            ]
-                            self.button_inspect_clicked.configure(
-                                text=f"INSPECT CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}"
-                            )
-                            self.button_inspect_clicked.configure(state="normal")
-                            self.button_delete_clicked.configure(
-                                text=f"UNLOAD CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}"
-                            )
-                            self.button_delete_clicked.configure(state="normal")
-                            notAllowedSlot = True
-                            if str(slot["slot"]) in self.interlockSlots:
-                                self.canvas_place_rounded_rectangle(
-                                    slot["x"],
-                                    slot["y"],
-                                    slot["w"],
-                                    slot["h"],
-                                    fill=GUI_CONFIG.fillColor_AlreadyLoadedSlot,
-                                    outline=GUI_CONFIG.fillColor_InterlockSlot,
-                                    width=10,
-                                )
-                            else:
-                                self.canvas_place_rounded_rectangle(
-                                    slot["x"],
-                                    slot["y"],
-                                    slot["w"],
-                                    slot["h"],
-                                    fill=GUI_CONFIG.fillColor_AlreadyLoadedSlot,
-                                )
-                        else:
-                            if str(slot["slot"]) in self.interlockSlots:
-                                self.canvas_place_rounded_rectangle(
-                                    slot["x"],
-                                    slot["y"],
-                                    slot["w"],
-                                    slot["h"],
-                                    fill=GUI_CONFIG.fillColor_ActiveSlot,
-                                    outline=GUI_CONFIG.fillColor_InterlockSlot,
-                                    width=10,
-                                )
-                            else:
-                                self.canvas_place_rounded_rectangle(
-                                    slot["x"],
-                                    slot["y"],
-                                    slot["w"],
-                                    slot["h"],
-                                    fill=GUI_CONFIG.fillColor_ActiveSlot,
-                                )
-                    else:
-                        if slot["slot"] in alreadyUsedSlots:
-                            if str(slot["slot"]) in self.interlockSlots:
-                                self.canvas_place_rounded_rectangle(
-                                    slot["x"],
-                                    slot["y"],
-                                    slot["w"],
-                                    slot["h"],
-                                    fill=GUI_CONFIG.fillColor_AlreadyLoadedSlot,
-                                    outline=GUI_CONFIG.fillColor_InterlockSlot,
-                                    width=10,
-                                )
-                            else:
-                                self.canvas_place_rounded_rectangle(
-                                    slot["x"],
-                                    slot["y"],
-                                    slot["w"],
-                                    slot["h"],
-                                    fill=GUI_CONFIG.fillColor_AlreadyLoadedSlot,
-                                )
-                        else:
-                            if str(slot["slot"]) in self.interlockSlots:
-                                self.canvas_place_rounded_rectangle(
-                                    slot["x"],
-                                    slot["y"],
-                                    slot["w"],
-                                    slot["h"],
-                                    fill=GUI_CONFIG.fillColor_InterlockSlot,
-                                )
-                            else:
-                                self.canvas_place_rounded_rectangle(
-                                    slot["x"],
-                                    slot["y"],
-                                    slot["w"],
-                                    slot["h"],
-                                    fill=GUI_CONFIG.fillColor_Slot,
-                                )
-                if (
-                    len(alreadyConnectedDUsForModule)
-                    + len(alreadyConnectedSLOTsForModule)
-                    > 0
-                ):
-                    self.position_variable.set("- automatic -")
-                    info_text = "Your selected child is already connected to some parent.\nSelect a different one, or disconnect the parents of this module by inspecting the Module.\nThere you can delete existing relations with the red trash button."
-                    self._show_warning(info_text)
-                if not mouseInSomeMod:
-                    self.position_variable.set("- automatic -")
-                    info_text = (
-                        info_text + "\n\nWarning: Place mouse in some module slot."
-                        if info_text != " "
-                        else "Warning: Place mouse in some module slot."
-                    )
-                    print(f">>> {info_text}")
-                    self.label_info.configure(text=info_text)
-                else:
-                    if notAllowedSlot:
-                        self.position_variable.set("- automatic -")
-                        info_text = (
-                            info_text
-                            + "\n\nWarning: This slot is already in use.\nSelect a different one, or disconnect the already loaded module.\nFor unloading, use the red button."
-                            if info_text != " "
-                            else "Warning: This slot is already in use.\nSelect a different one, or disconnect the already loaded module.\nFor unloading, use the red button."
-                        )
-                        print(f">>> {info_text}")
-                        self.label_info.configure(text=info_text)
-                    else:
-                        if info_text == " ":
-                            self.position_variable.set(possible_slot)
-                            self.label_info.configure(text=" ")
-        elif self.operation_mode == "Detector Assembly (CERN): DU":
-            if self.displayedDUtype != "None":
-                arrayOfModulesInDU = data.allDUs[self.displayedDUtype]
-                alreadyConnectedModules = (
-                    self.this_DU_relations_MODULE
-                )  # list of relations, as in partstree
-                alreadyUsedSlots = [
-                    entry["position"] for entry in alreadyConnectedModules
-                ]
-                mouseInSomeMod = False
-                mouseX = self.canvas.canvasx(event.x)
-                mouseY = self.canvas.canvasy(event.y)
-                for slot in arrayOfModulesInDU:
-                    if self._isInSlot(slot, mouseX, mouseY):
-                        mouseInSomeMod = True
-                        if slot["slot"] in alreadyUsedSlots:
-                            self.clicked_module = alreadyConnectedModules[
-                                alreadyUsedSlots.index(slot["slot"])
-                            ]
-                            self.button_inspect_clicked.configure(
-                                text=f"INSPECT CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}"
-                            )
-                            self.button_inspect_clicked.configure(state="normal")
-                            self.button_delete_clicked.configure(
-                                text=f"UNLOAD CLICKED MODULE\n{self.clicked_module['part']['serial_number']}\n at {slot['slot']}"
-                            )
-                            self.button_delete_clicked.configure(state="normal")
+        Returns (mouse_in_slot, occupied, possible_slot).
+        """
+        mouseX = self.canvas.canvasx(event.x)
+        mouseY = self.canvas.canvasy(event.y)
+        mouse_in_slot = False
+        occupied = False
+        possible_slot = None
+        for slot in slots:
+            under_mouse = self._isInSlot(slot, mouseX, mouseY)
+            is_occupied = slot["slot"] in already_used
+            self._redraw_slot(
+                slot,
+                occupied=is_occupied,
+                under_mouse=under_mouse and active_on_hover,
+            )
+            if under_mouse:
+                mouse_in_slot = True
+                possible_slot = slot["slot"]
+                if is_occupied:
+                    relation = relations[already_used.index(slot["slot"])]
+                    self._activate_clicked_module(relation, slot)
+                    occupied = True
+        return mouse_in_slot, occupied, possible_slot
 
     # https://stackoverflow.com/a/44100075
-    def canvas_place_rounded_rectangle(
+    def _canvas_place_rounded_rectangle(
         self, x1, y1, width_rect, height, radius=25, **kwargs
     ):
         x2 = x1 + width_rect
@@ -3172,6 +3029,124 @@ class App(customtkinter.CTk):
         ]
 
         self.canvas.create_polygon(points, **kwargs, smooth=True)
+
+    def _redraw_slot(self, slot, *, occupied, under_mouse):
+        """Render one DU slot given its (occupied, under_mouse, interlock) state.
+
+        Single source of truth for the slot color/outline matrix that was
+        previously duplicated across canvas_event_click (twice) and
+        fetch_loaded_DU_and_display (twice).
+        """
+        is_interlock = str(slot["slot"]) in self.interlockSlots
+        if occupied:
+            fill = GUI_CONFIG.fillColor_AlreadyLoadedSlot
+        elif under_mouse:
+            fill = GUI_CONFIG.fillColor_ActiveSlot
+        elif is_interlock:
+            fill = GUI_CONFIG.fillColor_InterlockSlot
+        else:
+            fill = GUI_CONFIG.fillColor_Slot
+        kwargs = {"fill": fill}
+        if (occupied or under_mouse) and is_interlock:
+            kwargs["outline"] = GUI_CONFIG.fillColor_InterlockSlot
+            kwargs["width"] = 10
+        self._canvas_place_rounded_rectangle(
+            slot["x"], slot["y"], slot["w"], slot["h"], **kwargs
+        )
+
+    def _activate_clicked_module(self, relation, slot):
+        """Store the clicked module relation and enable inspect/unload buttons."""
+        self.clicked_module = relation
+        label = f"\n{relation['part']['serial_number']}\n at {slot['slot']}"
+        self.button_inspect_clicked.configure(
+            text=f"INSPECT CLICKED MODULE{label}", state="normal"
+        )
+        self.button_delete_clicked.configure(
+            text=f"UNLOAD CLICKED MODULE{label}", state="normal"
+        )
+
+    def _reset_clicked_module(self):
+        """Clear clicked-module state and disable inspect/unload buttons."""
+        self.clicked_module = []
+        self.button_inspect_clicked.configure(
+            text="INSPECT CLICKED MODULE", state="disabled"
+        )
+        self.button_delete_clicked.configure(
+            text="UNLOAD CLICKED MODULE", state="disabled"
+        )
+
+    def canvas_event_click(self, event):
+        self._reset_clicked_module()
+        info_text = " "
+        if self.operation_mode == "Module Loading":
+            if self.displayedDUtype != "None":
+                arrayOfModulesInDU = data.allDUs[self.displayedDUtype]
+                alreadyConnectedModules = self.this_DU_relations_MODULE
+                alreadyUsedSlots = [
+                    entry["position"] for entry in alreadyConnectedModules
+                ]
+                alreadyConnectedDUsForModule = self.this_MODULE_relations_DU
+                alreadyConnectedSLOTsForModule = self.this_MODULE_relations_SLOT
+                mouseInSomeMod, notAllowedSlot, possible_slot = (
+                    self._handle_canvas_click(
+                        event,
+                        arrayOfModulesInDU,
+                        alreadyUsedSlots,
+                        alreadyConnectedModules,
+                    )
+                )
+                if (
+                    len(alreadyConnectedDUsForModule)
+                    + len(alreadyConnectedSLOTsForModule)
+                    > 0
+                ):
+                    self.position_variable.set("- automatic -")
+                    info_text = (
+                        "Your selected child is already connected to some parent.\n"
+                        "Select a different one, or disconnect the parents of this "
+                        "module by inspecting the Module.\nThere you can delete "
+                        "existing relations with the red trash button."
+                    )
+                    self._show_warning(info_text)
+                if not mouseInSomeMod:
+                    self.position_variable.set("- automatic -")
+                    info_text = (
+                        info_text + "\n\nPlace mouse in some module slot."
+                        if info_text != " "
+                        else "Place mouse in some module slot."
+                    )
+                    self._show_warning(info_text)
+                else:
+                    if notAllowedSlot:
+                        self.position_variable.set("- automatic -")
+                        info_text = (
+                            info_text + "\n\nThis slot is already in use.\n"
+                            "Select a different one, or disconnect the already "
+                            "loaded module.\nFor unloading, use the red button."
+                            if info_text != " "
+                            else "This slot is already in use.\n"
+                            "Select a different one, or disconnect the already "
+                            "loaded module.\nFor unloading, use the red button."
+                        )
+                        self._show_warning(info_text)
+                    else:
+                        if info_text == " ":
+                            self.position_variable.set(possible_slot)
+                            self.label_info.configure(text=" ")
+        elif self.operation_mode == "Detector Assembly (CERN): DU":
+            if self.displayedDUtype != "None":
+                arrayOfModulesInDU = data.allDUs[self.displayedDUtype]
+                alreadyConnectedModules = self.this_DU_relations_MODULE
+                alreadyUsedSlots = [
+                    entry["position"] for entry in alreadyConnectedModules
+                ]
+                mouseInSomeMod, _, _ = self._handle_canvas_click(
+                    event,
+                    arrayOfModulesInDU,
+                    alreadyUsedSlots,
+                    alreadyConnectedModules,
+                    active_on_hover=False,
+                )
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
@@ -3433,22 +3408,7 @@ class App(customtkinter.CTk):
                     40, 40, 360, 540, fill=GUI_CONFIG.fillColor_SU
                 )
                 for mod in data.allDUs[self.displayedDUtype]:
-                    if str(mod["slot"]) in self.interlockSlots:
-                        self.canvas_place_rounded_rectangle(
-                            mod["x"],
-                            mod["y"],
-                            mod["w"],
-                            mod["h"],
-                            fill=GUI_CONFIG.fillColor_InterlockSlot,
-                        )
-                    else:
-                        self.canvas_place_rounded_rectangle(
-                            mod["x"],
-                            mod["y"],
-                            mod["w"],
-                            mod["h"],
-                            fill=GUI_CONFIG.fillColor_Slot,
-                        )
+                    self._redraw_slot(mod, occupied=False, under_mouse=False)
                 self.canvas.create_text(
                     140,
                     475,
@@ -3515,24 +3475,9 @@ class App(customtkinter.CTk):
                             # make the corresponding slot blue if already in use, white if not used
                             for mod in data.allDUs[self.displayedDUtype]:
                                 if str(mod["slot"]) == str(r["position"]):
-                                    if str(mod["slot"]) in self.interlockSlots:
-                                        self.canvas_place_rounded_rectangle(
-                                            mod["x"],
-                                            mod["y"],
-                                            mod["w"],
-                                            mod["h"],
-                                            fill=GUI_CONFIG.fillColor_AlreadyLoadedSlot,
-                                            outline=GUI_CONFIG.fillColor_InterlockSlot,
-                                            width=10,
-                                        )
-                                    else:
-                                        self.canvas_place_rounded_rectangle(
-                                            mod["x"],
-                                            mod["y"],
-                                            mod["w"],
-                                            mod["h"],
-                                            fill=GUI_CONFIG.fillColor_AlreadyLoadedSlot,
-                                        )
+                                    self._redraw_slot(
+                                        mod, occupied=True, under_mouse=False
+                                    )
                                     self.clicked_module = r["part"]
                 if len(self.this_DU_relations_MODULE) == len(
                     data.allDUs[self.displayedDUtype]
@@ -3556,9 +3501,8 @@ class App(customtkinter.CTk):
                         )
                 break
         else:
-            info_text = "Warning: Detector Unit type could not be retrieved from DU SN."
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
+            info_text = "Detector Unit type could not be retrieved from DU SN."
+            self._show_warning(info_text)
 
     def fetch_loaded_FT(self, ftSNIn):
         FT_partID = self.possible_ft_partIDs[self.possible_ft_SNs.index(ftSNIn)]
@@ -3587,9 +3531,8 @@ class App(customtkinter.CTk):
         self.label_info.configure(text=" ")
         matched_key = next((p for p in data.allPEBs if p in PEB_SN), None)
         if matched_key is None:
-            info_text = "Warning: PEB type could not be retrieved from PEB SN."
-            print(f">>> {info_text}")
-            self.label_info.configure(text=info_text)
+            info_text = "PEB type could not be retrieved from PEB SN."
+            self._show_warning(info_text)
             return
         self.displayed_PEB_type = matched_key
         detector, ok = self._fetch_relations(
