@@ -125,6 +125,7 @@ _N_ITEMS_PER_CBX_PAGE = 16
 
 
 def _chunk(seq, n=_N_ITEMS_PER_CBX_PAGE):
+    """Takes list and length of chunk, returns chunked list of lists."""
     return [seq[i : i + n] for i in range(0, len(seq), n)]
 
 
@@ -356,6 +357,7 @@ class App(customtkinter.CTk):
         return thread
 
     def _update_progressbar(self, thread):
+        """Continously move progressbar, and update its color."""
         if thread.is_alive():
             # update progressbar
             self.progressbar.step()
@@ -445,6 +447,7 @@ class App(customtkinter.CTk):
             self.operation_mode_buttons[short_id] = btn
 
     def _update_sidebar_operation_modes(self, value):
+        """Change which operation mode displays as (in-)active."""
         active_short = _MODE_TO_SHORT[value]
         for short_id, btn in self.operation_mode_buttons.items():
             btn.configure(**self._button_colors(short_id == active_short))
@@ -526,6 +529,7 @@ class App(customtkinter.CTk):
         self._build_ui_scaling(row=10)
 
     def _build_user_selector(self, row):
+        """Label and user selection menu."""
         label = customtkinter.CTkLabel(
             self.frame_sidebar_left, text="User:", anchor="e"
         )
@@ -542,6 +546,7 @@ class App(customtkinter.CTk):
         self.user_window = None  # lazily-created login window
 
     def _build_appearance_mode(self, row):
+        """Label and appearance mode menu."""
         label = customtkinter.CTkLabel(
             self.frame_sidebar_left, text="Theme:", anchor="e"
         )
@@ -557,6 +562,7 @@ class App(customtkinter.CTk):
         self.optionmenu_appearance_mode.set("System")
 
     def _build_ui_scaling(self, row):
+        """Label and UI scaling menu."""
         label = customtkinter.CTkLabel(
             self.frame_sidebar_left, text="UI Scaling:", anchor="e"
         )
@@ -702,9 +708,7 @@ class App(customtkinter.CTk):
             frame,
             text="<",
             width=30,
-            command=lambda k=key: self.button_combobox_paginationButton_click_refactored(
-                k, "L"
-            ),
+            command=lambda k=key: self.button_combobox_paginationButton_click(k, "L"),
         )
         btn_left.grid(row=0, column=1, padx=5, pady=5)
 
@@ -722,9 +726,7 @@ class App(customtkinter.CTk):
             frame,
             text=">",
             width=30,
-            command=lambda k=key: self.button_combobox_paginationButton_click_refactored(
-                k, "R"
-            ),
+            command=lambda k=key: self.button_combobox_paginationButton_click(k, "R"),
         )
         btn_right.grid(row=0, column=3, padx=5, pady=5)
 
@@ -837,6 +839,7 @@ class App(customtkinter.CTk):
         return parts, ok
 
     def _isInSlot(self, rect, x, y):
+        """Returns if clicked coordinates are inside of rectangle (boolean)."""
         isInSlot = False
         left = rect["x"]
         right = rect["x"] + rect["w"]
@@ -847,6 +850,7 @@ class App(customtkinter.CTk):
         return isInSlot
 
     def __init__(self):
+        """Initialize GUI window, in Module Assembly mode, default variables."""
         super().__init__()
 
         # === window-level configuration ===
@@ -1883,6 +1887,7 @@ class App(customtkinter.CTk):
         self.select_operation_mode_reload(GUI_CONFIG.default_operation_mode)
 
     def authenticate_return_function(self, result, response):
+        """Finalize login attempt, update UI"""
         self.last_responseText = response
         if not self._report_api_status(expected_prefix="20"):
             self._show_error("New user could not be authenticated.")
@@ -1899,7 +1904,7 @@ class App(customtkinter.CTk):
         self.optionmenu_user.set(result)
 
     def authenticate_user(self):
-        # open a tiny window with extra inputs, return new_authenticated_user
+        """Open a tiny window with extra inputs, return new_authenticated_user"""
         if self.user_window is None or not self.user_window.winfo_exists():
             self.user_window = LoginDialog(
                 self.authenticate_return_function
@@ -1907,7 +1912,24 @@ class App(customtkinter.CTk):
         else:
             self.user_window.focus()  # if window exists focus it
 
+    def change_user_event(self, selected_user: str):
+        """Handle selection of user name, including new authentication."""
+        if selected_user == "None":
+            self.user = None
+        elif selected_user == "new...":
+            # authenticate as user
+            try:
+                self.authenticate_user()
+            except _REQUEST_EXCEPTIONS as e:
+                self.last_responseText = str(e)
+            if not self._report_api_status(expected_prefix="200"):
+                self._show_error("New user could not be authenticated.")
+                return
+        else:
+            self.user = selected_user
+
     def button_add_child_module_flex_event_click(self):
+        """MA: Connection of a MF to MO."""
         chi = self.combobox_MA_MF_chi.get()
         par = self.combobox_MA_mod_par.get()
         if not self._selected_non_placeholders(
@@ -2001,7 +2023,7 @@ class App(customtkinter.CTk):
         comboboxes and looked up the part IDs. Position semantics:
           * `position` = the side we are attaching TO
           * `occupied_position_to_skip` = the OTHER side, whose existing HY is harmless
-            and must NOT be deleted (old MO↔HY relations had no enforced position;
+            and must NOT be deleted (old MO <-> HY relations had no enforced position;
             the only safe assumption is that a HY on the opposite side does not
             interfere with our attach).
         """
@@ -2087,6 +2109,7 @@ class App(customtkinter.CTk):
             )
 
     def button_add_child_HY_HV_event_click(self):
+        """MA: Connection of a HY-HV to MO."""
         chi = self.combobox_MA_HY_HV_chi.get()
         par = self.combobox_MA_mod_par.get()
         if not self._selected_non_placeholders(
@@ -2108,6 +2131,7 @@ class App(customtkinter.CTk):
         )
 
     def button_add_child_HY_LV_event_click(self):
+        """MA: Connection of a HY-LV to MO."""
         chi = self.combobox_MA_HY_LV_chi.get()
         par = self.combobox_MA_mod_par.get()
         if not self._selected_non_placeholders(
@@ -2129,6 +2153,7 @@ class App(customtkinter.CTk):
         )
 
     def button_add_ft_event_click(self):
+        """DA-FT: Connection of a FT to Slot."""
         chi = self.combobox_ft.get()
         par = self.combined_slot
         if not self._selected_non_placeholders(
@@ -2288,6 +2313,7 @@ class App(customtkinter.CTk):
         self._run_with_progress(self.fetch_ft)
 
     def button_add_event_click(self):
+        """ML/MA-DU/-PEB: Connection of a child to parent at a position."""
         chi = self.combobox_child.get()
         par = self.combobox_parent.get()
         pos = self.position_entry.get()
@@ -2546,9 +2572,7 @@ class App(customtkinter.CTk):
             )
 
     # Combobox page selection by pressing a button to go left or right (previous page / next page)
-    def button_combobox_paginationButton_click_refactored(
-        self, key: str, direction: str
-    ):
+    def button_combobox_paginationButton_click(self, key: str, direction: str):
         """Advance the paginated combobox identified by `key` by one page.
 
         All per-combobox state lives in self.paged_comboboxes[key], so this
@@ -2616,6 +2640,7 @@ class App(customtkinter.CTk):
         self.button_delete_connected_ft.configure(state="disabled")
 
     def button_delete_clicked_event_click(self):
+        """Deletes all parents (any kind) of the selected MO, reload UI."""
         if len(self.clicked_module) == 0:
             return
         if not self._delete_single_part_parents(
@@ -2626,7 +2651,6 @@ class App(customtkinter.CTk):
             ),
         ):
             return
-
         # reload DU etc.
         self.displayedDUtype = "None"
         self.interlockSlots = []
@@ -2641,12 +2665,12 @@ class App(customtkinter.CTk):
         self.button_inspect_clicked.configure(state="disabled")
         self.button_delete_clicked.configure(text="UNLOAD CLICKED MODULE")
         self.button_delete_clicked.configure(state="disabled")
-
         parentSNIn = self.combobox_parent.get()
         childSNIn = self.combobox_child.get()
         self._run_with_progress(self.fetch_loaded_DU_and_display, childSNIn, parentSNIn)
 
     def button_delete_child_module_flex_event_click(self):
+        """Disconnect MF from its parent MO."""
         if len(self.this_MF_relations_MOD) == 0:
             return
         if not self._delete_single_part_parents(
@@ -2662,6 +2686,7 @@ class App(customtkinter.CTk):
         self.button_delete_child_MF.configure(state="disabled")
 
     def button_delete_child_HY_HV_event_click(self):
+        """Disconnect HY-HV from its parent MO."""
         if len(self.this_HY_HV_relations_MOD) == 0:
             return
         if not self._delete_single_part_parents(
@@ -2677,6 +2702,7 @@ class App(customtkinter.CTk):
         self.button_delete_child_HY_HV.configure(state="disabled")
 
     def button_delete_child_HY_LV_event_click(self):
+        """Disconnect HY-LV from its parent MO."""
         if len(self.this_HY_LV_relations_MOD) == 0:
             return
         if not self._delete_single_part_parents(
@@ -2692,6 +2718,7 @@ class App(customtkinter.CTk):
         self.button_delete_child_HY_LV.configure(state="disabled")
 
     def button_onclick_event_filter_child_SN(self, childIdentifier="Module Flex"):
+        """Load possible parts after hitting child SN filter."""
         if self.operation_mode == "Module Assembly":
             if childIdentifier == "Module Flex":
                 self.combobox_MA_MF_chi.set("- Select -")
@@ -2713,11 +2740,13 @@ class App(customtkinter.CTk):
                 self._run_with_progress(self.fetch_p_c, "Detector", "PEB")
 
     def button_onclick_event_filter_parent_SN(self, parentIdentifier="Module"):
+        """Load possible parts after hitting parent SN filter."""
         if self.operation_mode == "Module Assembly":
             self.combobox_MA_mod_par.set("- Select -")
             self._run_with_progress(self.wrap_data_ui_fetch_MA_p_c, parentIdentifier)
 
     def button_find_slot_event_click(self):
+        """Find slot & load possible matching FTs given the filter."""
         self.label_info.configure(text=" ")
         v = self.optionmenu_slot_vessel.get()[-1]
         l = self.optionmenu_slot_layer.get()[-1]
@@ -2780,6 +2809,7 @@ class App(customtkinter.CTk):
             self._show_error(info_text, exception="")
 
     def button_inspect_child_event_click(self):
+        """Load part page of selected child in browser."""
         childSNIn = self.combobox_child.get()
         if childSNIn != "- Select -":
             chi_partID = self.possible_children_partIDs[
@@ -2788,12 +2818,14 @@ class App(customtkinter.CTk):
             util.open_webbrowser_with_url(f"/viewparts/{chi_partID}")
 
     def button_inspect_clicked_event_click(self):
+        """Load part page of clicked module in browser."""
         if len(self.clicked_module) > 0:
             util.open_webbrowser_with_url(
                 f"/viewparts/{self.clicked_module['part']['part_id']}"
             )
 
     def button_inspect_parent_event_click(self):
+        """Load part page of selected parent in browser."""
         parentSNIn = self.combobox_parent.get()
         if parentSNIn != "- Select -":
             par_partID = self.possible_parents_partIDs[
@@ -2802,6 +2834,7 @@ class App(customtkinter.CTk):
             util.open_webbrowser_with_url(f"/viewparts/{par_partID}")
 
     def button_inspect_slot_event_click(self):
+        """Load part page of selected slot in browser."""
         if len(self.combined_slot) > 0:
             self.label_info.configure(text=" ")
             for s in self.slots:
@@ -2814,12 +2847,14 @@ class App(customtkinter.CTk):
             self._show_error(info_text, exception="")
 
     def button_inspect_ft_event_click(self):
+        """Load part page of selected FT in browser."""
         childSNIn = self.combobox_ft.get()
         if childSNIn != "- Select -":
             chi_partID = self.possible_ft_partIDs[self.possible_ft_SNs.index(childSNIn)]
             util.open_webbrowser_with_url(f"/viewparts/{chi_partID}")
 
     def button_inspect_parent_module_event_click(self):
+        """Load part page of selected MA MO in browser."""
         parentSNIn = self.combobox_MA_mod_par.get()
         if parentSNIn != "- Select -":
             par_partID = self.possible_MA_mod_par_partIDs[
@@ -2828,12 +2863,14 @@ class App(customtkinter.CTk):
             util.open_webbrowser_with_url(f"/viewparts/{par_partID}")
 
     def button_inspect_child_module_flex_event_click(self):
+        """Load part page of selected MA MF in browser."""
         childSNIn = self.combobox_MA_MF_chi.get()
         if childSNIn != "- Select -":
             chi_partID = self.possible_MF_partIDs[self.possible_MF_SNs.index(childSNIn)]
             util.open_webbrowser_with_url(f"/viewparts/{chi_partID}")
 
     def button_inspect_child_HY_HV_event_click(self):
+        """Load part page of selected MA HY-HV in browser."""
         childSNIn = self.combobox_MA_HY_HV_chi.get()
         if childSNIn != "- Select -":
             chi_partID = self.possible_HY_HV_partIDs[
@@ -2842,6 +2879,7 @@ class App(customtkinter.CTk):
             util.open_webbrowser_with_url(f"/viewparts/{chi_partID}")
 
     def button_inspect_child_HY_LV_event_click(self):
+        """Load part page of selected MA HY-LV in browser."""
         childSNIn = self.combobox_MA_HY_LV_chi.get()
         if childSNIn != "- Select -":
             chi_partID = self.possible_HY_LV_partIDs[
@@ -2851,6 +2889,7 @@ class App(customtkinter.CTk):
 
     # https://stackoverflow.com/a/23944658
     def select_operation_mode_reload(self, value):
+        """Load part information and refresh UI of given operation mode."""
         self.operation_mode = value
         self._update_sidebar_operation_modes(value)
         self._reset_runtime_state()
@@ -2982,6 +3021,7 @@ class App(customtkinter.CTk):
     def _canvas_place_rounded_rectangle(
         self, x1, y1, width_rect, height, radius=25, **kwargs
     ):
+        """Draw a rounded rectangle on canvas, passing its geo & style as arguments."""
         x2 = x1 + width_rect
         y2 = y1 + height
 
@@ -3076,6 +3116,7 @@ class App(customtkinter.CTk):
         )
 
     def canvas_event_click(self, event):
+        """Dispatch user click into canvas (ML or DA-DU)."""
         self._reset_clicked_module()
         info_text = " "
         if self.operation_mode == "Module Loading":
@@ -3149,40 +3190,48 @@ class App(customtkinter.CTk):
                 )
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
+        """Change appearance mode (into: new_appearance_mode)."""
         customtkinter.set_appearance_mode(new_appearance_mode)
 
     def change_scaling_event(self, new_scaling: str):
+        """Change UI scaling (into: new_scaling)."""
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         customtkinter.set_widget_scaling(new_scaling_float)
         # widget scaling affects grid geometry, so re-apply the current mode's layout
         self._apply_layout()
 
     def change_ft_conn_event(self, ft_conn):
+        """Reload possible FTs given their connectivity status."""
         self.ft_conn = self.optionmenu_ft_conn.get()
         self._run_with_progress(self.fetch_ft)
 
     def change_MA_parent_Mod_filter_event(self, foo):
+        """MA: Reload possible parent MO given their user selections."""
         self.MA_mod_par_loc = self.combobox_MA_mod_par_loc.get()
         self.MA_mod_par_manu = self.combobox_MA_mod_par_manu.get()
         self.MA_mod_par_conn = self.optionmenu_MA_mod_par_conn.get()
         self._run_with_progress(self.wrap_data_ui_fetch_MA_p_c, "Module")
 
     def change_MA_child_MF_filter_event(self, foo):
+        """MA: Reload possible children MF given their user selections."""
         self.module_flex_child_loc = self.combobox_MA_MF_child_loc.get()
         self.MF_child_conn = self.optionmenu_MA_child_MF_conn.get()
         self._run_with_progress(self.wrap_data_ui_fetch_MA_p_c, "Module Flex")
 
     def change_MA_child_HY_HV_filter_event(self, foo):
+        """MA: Reload possible children HY-HV given their user selections."""
         self.HY_HV_child_loc = self.combobox_MA_HY_HV_child_loc.get()
         self.HY_HV_child_conn = self.optionmenu_MA_child_HY_HV_conn.get()
         self._run_with_progress(self.wrap_data_ui_fetch_MA_p_c, "HY_HV")
 
     def change_MA_child_HY_LV_filter_event(self, foo):
+        """MA: Reload possible children HY-LV given their user selections."""
         self.HY_LV_child_loc = self.combobox_MA_HY_LV_child_loc.get()
         self.HY_LV_child_conn = self.optionmenu_MA_child_HY_LV_conn.get()
         self._run_with_progress(self.wrap_data_ui_fetch_MA_p_c, "HY_LV")
 
     def change_child_conn_event(self, child_conn):
+        """ML/DA-DU/-PEB: Reload possible children given their connectivity status."""
         self.child_conn = self.optionmenu_child_conn.get()
         self.combobox_child.set("- Select -")
 
@@ -3193,37 +3242,29 @@ class App(customtkinter.CTk):
         elif self.operation_mode == "Detector Assembly (CERN): PEB":
             self._run_with_progress(self.fetch_p_c, "Detector", "PEB")
 
-    def change_user_event(self, selected_user: str):
-        if selected_user == "None":
-            self.user = None
-        elif selected_user == "new...":
-            # authenticate as user
-            try:
-                self.authenticate_user()
-            except _REQUEST_EXCEPTIONS as e:
-                self.last_responseText = str(e)
-            if not self._report_api_status(expected_prefix="200"):
-                self._show_error("New user could not be authenticated.")
-                return
-        else:
-            self.user = selected_user
-
     def combobox_child_manu_event(self, child_manu):
+        """ML: Reload possible children given their manufacturer."""
         self.child_manu = self.combobox_child_manu.get()
         self.combobox_child.set("- Select -")
 
         self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module")
 
     def combobox_par_type_event_select(self, par_type):
+        """ML: Refresh possible parents and UI given selected type.
+
+        Select those that have the type in their SN.
+        """
         self.par_type = self.combobox_par_type.get()
         self.combobox_parent.set("- Select -")
 
         self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module")
 
     def combobox_chi_type_event_select(self, chi_type):
-        # this is relevant for child = DU or PEB, and you want to specify
-        # which DU type shall be shown
-        # from the children, select those that have the type in their SN
+        """DA-DU/-PEB: Refresh possible children and UI given selected type.
+
+        This is relevant for child = DU or PEB, specify which type shall be shown
+        from the children, select those that have the type in their SN.
+        """
         self.chi_type = self.combobox_chi_type.get()
         self.combobox_child.set("- Select -")
 
@@ -3233,12 +3274,14 @@ class App(customtkinter.CTk):
             self._run_with_progress(self.fetch_p_c, "Detector", "PEB")
 
     def combobox_ft_event_select(self, unused_var_to_please_python):
+        """DA-FT: Refresh selected FT info and UI."""
         self.this_FT_relations_SLOT = []
         ftSNIn = self.combobox_ft.get()
         if ftSNIn != "- Select -":
             self._run_with_progress(self.fetch_loaded_FT, ftSNIn)
 
     def combobox_MA_mod_event_select(self, unused_var_to_please_python):
+        """MA: Refresh selected MO info and UI."""
         self.this_MOD_relations_MF = []
         self.this_MOD_relations_HY_HV = []
         self.this_MOD_relations_HY_LV = []
@@ -3249,24 +3292,28 @@ class App(customtkinter.CTk):
             self._run_with_progress(self.fetch_MA_mod, SNIn)
 
     def combobox_MA_MF_event_select(self, unused_var_to_please_python):
+        """MA: Refresh selected MF info and UI."""
         self.this_MF_relations_MOD = []
         SNIn = self.combobox_MA_MF_chi.get()
         if SNIn != "- Select -":
             self._run_with_progress(self.fetch_MA_MF, SNIn)
 
     def combobox_MA_HY_HV_event_select(self, unused_var_to_please_python):
+        """MA: Refresh selected HY-HV info and UI."""
         self.this_HY_HV_relations_MOD = []
         SNIn = self.combobox_MA_HY_HV_chi.get()
         if SNIn != "- Select -":
             self._run_with_progress(self.fetch_MA_HY_HV, SNIn)
 
     def combobox_MA_HY_LV_event_select(self, unused_var_to_please_python):
+        """MA: Refresh selected HY-LV info and UI."""
         self.this_HY_LV_relations_MOD = []
         SNIn = self.combobox_MA_HY_LV_chi.get()
         if SNIn != "- Select -":
             self._run_with_progress(self.fetch_MA_HY_LV, SNIn)
 
     def combobox_p_c_event_select(self, unused_var_to_please_python):
+        """ML/DA-DU/-PEB: Refresh selected part info and UI."""
         self.displayedDUtype = "None"
         self.interlockSlots = []
         self.displayed_PEB_type = "None"
@@ -3306,6 +3353,7 @@ class App(customtkinter.CTk):
                 self._run_with_progress(self.fetch_loaded_PEB, childSNIn, parentSNIn)
 
     def delete_old_and_post_new_slots_for_loaded_modules(self, V, L, Q):
+        """Delete existing relations to slot and replace with new."""
         if not self._logged_in():
             return
         for entry in self.this_DU_relations_MODULE:
@@ -3360,6 +3408,7 @@ class App(customtkinter.CTk):
                             return
 
     def fetch_loaded_DU_and_display(self, childSNIn, parentSNIn):
+        """Fetch selected DU information and update UI (incl. canvas)."""
         if self.operation_mode == "Module Loading":
             DU_SN = parentSNIn
             parentDU_partID = self.possible_parents_partIDs[
@@ -3505,6 +3554,7 @@ class App(customtkinter.CTk):
             self._show_warning(info_text)
 
     def fetch_loaded_FT(self, ftSNIn):
+        """DA-FT: Fetch selected FT information and update UI."""
         FT_partID = self.possible_ft_partIDs[self.possible_ft_SNs.index(ftSNIn)]
         self.label_info.configure(text=" ")
         self.button_delete_connected_ft.configure(state="disabled")
@@ -3524,6 +3574,7 @@ class App(customtkinter.CTk):
             self.button_delete_connected_ft.configure(state="normal")
 
     def fetch_loaded_PEB(self, childSNIn, parentSNIn):
+        """DA-PEB: Fetch selected PEB information and update UI."""
         PEB_SN = childSNIn
         PEB_partID = self.possible_children_partIDs[
             self.possible_children_SNs.index(PEB_SN)
@@ -3548,6 +3599,7 @@ class App(customtkinter.CTk):
                 self._show_info(info_text)
 
     def fetch_ft(self):
+        """DA-FT: Fetch possible FTs and fill associated GUI elements."""
         self.possible_ft, ok = self._fetch_relevant_parts(
             "Flex Tail",
             error_msg="Slots / FT could not be loaded from ProdDB API.",
@@ -3955,6 +4007,7 @@ class App(customtkinter.CTk):
         self._run_with_progress(_worker)
 
     def fetch_MA_mod(self, SN):
+        """Module Assembly: Fetch selected Module information and update UI."""
         partID = self.possible_MA_mod_par_partIDs[
             self.possible_MA_mod_par_SNs.index(SN)
         ]
@@ -4023,6 +4076,7 @@ class App(customtkinter.CTk):
                 self.label_info.configure(text=info_text)
 
     def fetch_MA_MF(self, SN):
+        """Module Assembly: Fetch selected Module Flex information and update UI."""
         partID = self.possible_MF_partIDs[self.possible_MF_SNs.index(SN)]
         self.label_info.configure(text=" ")
         self.button_delete_child_MF.configure(state="disabled")
@@ -4043,6 +4097,7 @@ class App(customtkinter.CTk):
                 self.button_delete_child_MF.configure(state="normal")
 
     def fetch_MA_HY_HV(self, SN):
+        """Module Assembly: Fetch selected Hybrid HV information and update UI."""
         partID = self.possible_HY_HV_partIDs[self.possible_HY_HV_SNs.index(SN)]
         self.label_info.configure(text=" ")
         self.button_delete_child_HY_HV.configure(state="disabled")
@@ -4063,6 +4118,7 @@ class App(customtkinter.CTk):
                 self.button_delete_child_HY_HV.configure(state="normal")
 
     def fetch_MA_HY_LV(self, SN):
+        """Module Assembly: Fetch selected Hybrid LV information and update UI."""
         partID = self.possible_HY_LV_partIDs[self.possible_HY_LV_SNs.index(SN)]
         self.label_info.configure(text=" ")
         self.button_delete_child_HY_LV.configure(state="disabled")
@@ -4083,6 +4139,7 @@ class App(customtkinter.CTk):
                 self.button_delete_child_HY_LV.configure(state="normal")
 
     def fetch_p_c(self, p, c):
+        """ML/DA-DU/-PEB: Fetch parents, children and fill associated GUI elements."""
         self.possible_parents, ok_p = self._fetch_relevant_parts(
             p,
             error_msg="Parents / Children could not be loaded from ProdDB API.",
@@ -4145,6 +4202,7 @@ class App(customtkinter.CTk):
         )
 
     def fetch_slots(self):
+        """Load static slot table from assets."""
         self.slots, ok = self._fetch_relevant_parts(
             "Slot",
             error_msg="Slots could not be loaded from ProdDB API.",
@@ -4155,17 +4213,19 @@ class App(customtkinter.CTk):
             self.slots = None
 
     def help(self):
-        # create window if its None or destroyed
+        """Create help window if it's None or destroyed, focus it."""
         if self.help_window is None or not self.help_window.winfo_exists():
             self.help_window = ToplevelWindow(self)
         else:
             self.help_window.focus()  # if window exists focus it
 
     def exit(self):
+        """Closes the GUI application."""
         self.destroy()
 
 
 def run_gui():
+    """Starts the GUI application in main thread."""
     app = App()
     app.mainloop()
 
