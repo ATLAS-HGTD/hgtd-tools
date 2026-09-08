@@ -383,7 +383,7 @@ class App(customtkinter.CTk):
 
         self.my_version = __version__
         self.version_full_text = (
-            f"v{self.my_version} - August 2026\nAnnika Stein (JGU Mainz)"
+            f"v{self.my_version} - September 2026\nAnnika Stein (JGU Mainz)"
         )
         self.label_credits = customtkinter.CTkLabel(
             self.frame_sidebar_left, text=self.version_full_text
