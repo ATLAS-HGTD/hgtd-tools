@@ -14,7 +14,7 @@ This section will show you how to install all requirements to use `hgtd-tools`, 
 
 With the help of our growing user base, we can announce that the tools have been tested on the following platforms:
 
-=== "Linux"
+=== ":fontawesome-brands-linux: Linux"
 
     1. (If not already installed): install miniconda: go to [anaconda docs](https://www.anaconda.com/docs/getting-started/miniconda/install/linux-install#wget){target="_blank"} and follow the instructions there.
     2. Download the conda environment YAML from the root of the [gitlab repository](https://gitlab.cern.ch/anstein/hgtd-tools){target="_blank"}: [`env-312-withTk-linux.yml`](https://gitlab.cern.ch/anstein/hgtd-tools/-/raw/master/env-312-withTk-linux.yml){target="_blank"} (recommended if you want to use the GUI, because it ships Tk) — or `env-312.yml` if you don't need the GUI.
@@ -27,7 +27,7 @@ With the help of our growing user base, we can announce that the tools have been
 
         The home location takes precedence if both exist. Restrict the permissions afterwards: `chmod 600 ~/.hgtd_tools/config_api`. This file is shared with the proddb-users-egroup only! Do not distribute it anywhere. If you cannot access the file, you are not in the egroup. An error message will tell you if the file is missing and where to put it in your use case.
 
-=== "MacOS"
+=== ":fontawesome-brands-apple: MacOS"
 
     === "Not using homebrew"
 
@@ -55,7 +55,7 @@ With the help of our growing user base, we can announce that the tools have been
 
             The home location takes precedence if both exist. Restrict the permissions afterwards: `chmod 600 ~/.hgtd_tools/config_api`. This file is shared with the proddb-users-egroup only! Do not distribute it anywhere. If you cannot access the file, you are not in the egroup. An error message will tell you if the file is missing and where to put it in your use case.
 
-=== "Windows"
+=== ":fontawesome-brands-windows: Windows"
 
     1. (If not already installed): install miniconda: go to [anaconda docs](https://www.anaconda.com/docs/getting-started/miniconda/install/windows-cli-install){target="_blank"} and follow the instructions there.
     2. Download the conda environment YAML from the root of the [gitlab repository](https://gitlab.cern.ch/anstein/hgtd-tools){target="_blank"}: [`env-312.yml`](https://gitlab.cern.ch/anstein/hgtd-tools/-/raw/master/env-312.yml){target="_blank"}.
