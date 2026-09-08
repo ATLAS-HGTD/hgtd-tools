@@ -2733,11 +2733,15 @@ class App(customtkinter.CTk):
         else:
             self.combobox_child.set("- Select -")
             if self.operation_mode == "Module Loading":
-                self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module")
+                self._run_with_progress(
+                    self.fetch_p_c, "Detector Unit", "Module", "child_only"
+                )
             elif self.operation_mode == "Detector Assembly (CERN): DU":
-                self._run_with_progress(self.fetch_p_c, "Detector", "Detector Unit")
+                self._run_with_progress(
+                    self.fetch_p_c, "Detector", "Detector Unit", "child_only"
+                )
             elif self.operation_mode == "Detector Assembly (CERN): PEB":
-                self._run_with_progress(self.fetch_p_c, "Detector", "PEB")
+                self._run_with_progress(self.fetch_p_c, "Detector", "PEB", "child_only")
 
     def button_onclick_event_filter_parent_SN(self, parentIdentifier="Module"):
         """Load possible parts after hitting parent SN filter."""
@@ -3236,18 +3240,22 @@ class App(customtkinter.CTk):
         self.combobox_child.set("- Select -")
 
         if self.operation_mode == "Module Loading":
-            self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module")
+            self._run_with_progress(
+                self.fetch_p_c, "Detector Unit", "Module", "child_only"
+            )
         elif self.operation_mode == "Detector Assembly (CERN): DU":
-            self._run_with_progress(self.fetch_p_c, "Detector", "Detector Unit")
+            self._run_with_progress(
+                self.fetch_p_c, "Detector", "Detector Unit", "child_only"
+            )
         elif self.operation_mode == "Detector Assembly (CERN): PEB":
-            self._run_with_progress(self.fetch_p_c, "Detector", "PEB")
+            self._run_with_progress(self.fetch_p_c, "Detector", "PEB", "child_only")
 
     def combobox_child_manu_event(self, child_manu):
         """ML: Reload possible children given their manufacturer."""
         self.child_manu = self.combobox_child_manu.get()
         self.combobox_child.set("- Select -")
 
-        self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module")
+        self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module", "child_only")
 
     def combobox_par_type_event_select(self, par_type):
         """ML: Refresh possible parents and UI given selected type.
@@ -3257,7 +3265,9 @@ class App(customtkinter.CTk):
         self.par_type = self.combobox_par_type.get()
         self.combobox_parent.set("- Select -")
 
-        self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module")
+        self._run_with_progress(
+            self.fetch_p_c, "Detector Unit", "Module", "parent_only"
+        )
 
     def combobox_chi_type_event_select(self, chi_type):
         """DA-DU/-PEB: Refresh possible children and UI given selected type.
@@ -3269,9 +3279,11 @@ class App(customtkinter.CTk):
         self.combobox_child.set("- Select -")
 
         if self.operation_mode == "Detector Assembly (CERN): DU":
-            self._run_with_progress(self.fetch_p_c, "Detector", "Detector Unit")
+            self._run_with_progress(
+                self.fetch_p_c, "Detector", "Detector Unit", "child_only"
+            )
         elif self.operation_mode == "Detector Assembly (CERN): PEB":
-            self._run_with_progress(self.fetch_p_c, "Detector", "PEB")
+            self._run_with_progress(self.fetch_p_c, "Detector", "PEB", "child_only")
 
     def combobox_ft_event_select(self, unused_var_to_please_python):
         """DA-FT: Refresh selected FT info and UI."""
@@ -4023,7 +4035,6 @@ class App(customtkinter.CTk):
             self.this_MOD_relations_HY_unknownPosition = []
             self.this_MOD_relations_HY_invalidPosition = []
             return
-
         if par != []:
             info_text = f"This Module is already connected to some children."
             self._show_info(info_text)
@@ -4088,7 +4099,6 @@ class App(customtkinter.CTk):
         if not ok:
             self.this_MF_relations_MOD = []
             return
-
         if par != []:
             for r in par:
                 info_text = f"This MF is already connected to a module: {r['part_parent']['serial_number']}."
@@ -4109,7 +4119,6 @@ class App(customtkinter.CTk):
         if not ok:
             self.this_HY_HV_relations_MOD = []
             return
-
         if par != []:
             for r in par:
                 info_text = f"This HY HV-side is already connected to a module: {r['part_parent']['serial_number']}."
@@ -4130,7 +4139,6 @@ class App(customtkinter.CTk):
         if not ok:
             self.this_HY_LV_relations_MOD = []
             return
-
         if par != []:
             for r in par:
                 info_text = f"This HY LV-side is already connected to a module: {r['part_parent']['serial_number']}."
@@ -4138,68 +4146,82 @@ class App(customtkinter.CTk):
                 self.this_HY_LV_relations_MOD.append(r)
                 self.button_delete_child_HY_LV.configure(state="normal")
 
-    def fetch_p_c(self, p, c):
+    def fetch_p_c(self, p, c, which_components="both"):
         """ML/DA-DU/-PEB: Fetch parents, children and fill associated GUI elements."""
-        self.possible_parents, ok_p = self._fetch_relevant_parts(
-            p,
-            error_msg="Parents / Children could not be loaded from ProdDB API.",
-        )
-        self.possible_children, ok_c = self._fetch_relevant_parts(
-            c,
-            error_msg="Parents / Children could not be loaded from ProdDB API.",
-        )
-        if not (ok_p and ok_c):
-            self.possible_parents = []
-            self.possible_children = []
-            return
-
-        self.child_SN_filter = self.entry_child_SN_filter.get()
-        par_kwargs = {}
-        chi_kwargs = {}
-        if p == "Detector Unit" and c == "Module":
-            par_kwargs["sn_does_include"] = self.par_type
-            chi_kwargs["manu_name"] = self.child_manu
-        elif p == "Detector" and c == "Detector Unit":
-            chi_kwargs["sn_does_include"] = self.chi_type
-        elif p == "Detector" and c == "PEB":
-            chi_kwargs["sn_does_include"] = self.chi_type
-        if self.child_SN_filter:
-            chi_kwargs["sn_does_include"] = self.child_SN_filter
-        chi_kwargs["no_parents_ofKind"] = (
-            "all" if self.child_conn == "Not yet connected children" else None
-        )
-        self.possible_parents = util.select_parts(self.possible_parents, **par_kwargs)
-        self.possible_children = util.select_parts(self.possible_children, **chi_kwargs)
-        self.possible_parents_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-            self.possible_parents
-        )
-        self.possible_children_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-            self.possible_children
-        )
-        self.possible_parents_SNs = [
-            entry[0] for entry in self.possible_parents_SNs_and_partIDs
-        ]
-        self.possible_parents_SNs_chunked = _chunk(self.possible_parents_SNs)
-        self.possible_children_SNs = [
-            entry[0] for entry in self.possible_children_SNs_and_partIDs
-        ]
-        self.possible_children_SNs_chunked = _chunk(self.possible_children_SNs)
-        self.possible_parents_partIDs = [
-            entry[1] for entry in self.possible_parents_SNs_and_partIDs
-        ]
-        self.possible_children_partIDs = [
-            entry[1] for entry in self.possible_children_SNs_and_partIDs
-        ]
-        self._set_pagination(
-            "DA-par-SN",
-            chunks=self.possible_parents_SNs_chunked,
-            n_pages=len(self.possible_parents_SNs_chunked),
-        )
-        self._set_pagination(
-            "DA-chi-SN",
-            chunks=self.possible_children_SNs_chunked,
-            n_pages=len(self.possible_children_SNs_chunked),
-        )
+        if which_components in ("both", "parent_only"):
+            self.possible_parents, ok_p = self._fetch_relevant_parts(
+                p,
+                error_msg="Parents / Children could not be loaded from ProdDB API.",
+            )
+            if not ok_p:
+                self.possible_parents = []
+                return
+            par_kwargs = {}
+            if p == "Detector Unit" and c == "Module":
+                par_kwargs["sn_does_include"] = self.par_type
+            self.possible_parents = util.select_parts(
+                self.possible_parents, **par_kwargs
+            )
+            self.possible_parents_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
+                self.possible_parents
+            )
+            self.possible_parents_SNs = [
+                entry[0] for entry in self.possible_parents_SNs_and_partIDs
+            ]
+            self.possible_parents_SNs_chunked = _chunk(self.possible_parents_SNs)
+            self.possible_parents_partIDs = [
+                entry[1] for entry in self.possible_parents_SNs_and_partIDs
+            ]
+            self._set_pagination(
+                "DA-par-SN",
+                chunks=self.possible_parents_SNs_chunked,
+                n_pages=len(self.possible_parents_SNs_chunked),
+            )
+            if p == "Detector Unit" and c == "Module":
+                self.combobox_p_c_event_select("dummy")
+        if which_components in ("both", "child_only"):
+            self.possible_children, ok_c = self._fetch_relevant_parts(
+                c,
+                error_msg="Parents / Children could not be loaded from ProdDB API.",
+            )
+            if not ok_c:
+                self.possible_children = []
+                return
+            chi_kwargs = {}
+            self.child_SN_filter = self.entry_child_SN_filter.get()
+            if p == "Detector Unit" and c == "Module":
+                chi_kwargs["manu_name"] = self.child_manu
+            elif p == "Detector" and c == "Detector Unit":
+                chi_kwargs["sn_does_include"] = self.chi_type
+            elif p == "Detector" and c == "PEB":
+                chi_kwargs["sn_does_include"] = self.chi_type
+            if self.child_SN_filter:
+                chi_kwargs["sn_does_include"] = self.child_SN_filter
+            chi_kwargs["no_parents_ofKind"] = (
+                "all" if self.child_conn == "Not yet connected children" else None
+            )
+            self.possible_children = util.select_parts(
+                self.possible_children, **chi_kwargs
+            )
+            self.possible_children_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
+                self.possible_children
+            )
+            self.possible_children_SNs = [
+                entry[0] for entry in self.possible_children_SNs_and_partIDs
+            ]
+            self.possible_children_SNs_chunked = _chunk(self.possible_children_SNs)
+            self.possible_children_partIDs = [
+                entry[1] for entry in self.possible_children_SNs_and_partIDs
+            ]
+            self._set_pagination(
+                "DA-chi-SN",
+                chunks=self.possible_children_SNs_chunked,
+                n_pages=len(self.possible_children_SNs_chunked),
+            )
+            if p == "Detector Unit" and c == "Module":
+                self.combobox_p_c_event_select("dummy")
+            elif p == "Detector" and c == "Detector Unit":
+                self.combobox_p_c_event_select("dummy")
 
     def fetch_slots(self):
         """Load static slot table from assets."""
