@@ -15,7 +15,13 @@ def main():
         dest="mode_alias",
         help="Validation mode alias. (Default: %(default)s)",
         default="all",
-        choices=["Module Assembly", "Sensor_Parents", "Hybridization", "all"],
+        choices=[
+            "Module Loading",
+            "Module Assembly",
+            "Sensor_Parents",
+            "Hybridization",
+            "all",
+        ],
     )
     parser.add_argument(
         "--single-manufacturer",
@@ -58,7 +64,12 @@ def main():
 
     if mode_alias == "all":
         # need to run multiple validations in this script
-        mode_aliases = ["Module Assembly", "Hybridization", "Sensor_Parents"]
+        mode_aliases = [
+            "Module Loading",
+            "Module Assembly",
+            "Hybridization",
+            "Sensor_Parents",
+        ]
     else:
         mode_aliases = [mode_alias]
 
@@ -97,7 +108,7 @@ def main():
         fake_parts = util.select_parts(parts_subset, check_fake_SN=True)
         ## Count and prepare dict for relation validation
         # if the relation validation is of nature parent -> check its children, do not allow unconnected
-        if mode_alias in ["Module Assembly", "Hybridization"]:
+        if mode_alias in ["Module Loading", "Module Assembly", "Hybridization"]:
             validation_subset = {
                 "n_valid_parts": len(valid_parts),
                 "n_invalid_parts": len(invalid_parts),
@@ -122,7 +133,9 @@ def main():
         for p in valid_parts:
             this_part_id = p["part_id"]
             this_part_SN = p["serial_number"]
-            if mode_alias == "Module Assembly":
+            if mode_alias == "Module Loading":
+                individual_part_results = relation_validation.validate_DU(this_part_id)
+            elif mode_alias == "Module Assembly":
                 individual_part_results = relation_validation.validate_module(
                     this_part_id
                 )
@@ -214,7 +227,26 @@ def main():
 \t\tDetailed failure reason:\n
 """
                     # note down the reason(s) individually
-                    if mode_alias == "Module Assembly":
+                    if mode_alias == "Module Loading":
+                        if (
+                            individual_part_results["validation_result_DU_chi_MO"]
+                            == False
+                        ):
+                            validation_subset["relations_template_bad"] += (
+                                "\t\t"
+                                + individual_part_results["validation_reason_DU_chi_MO"]
+                                + "\n\n"
+                            )
+                        if (
+                            individual_part_results["validation_result_DU_chi_SU"]
+                            == False
+                        ):
+                            validation_subset["relations_template_bad"] += (
+                                "\t\t"
+                                + individual_part_results["validation_reason_DU_chi_SU"]
+                                + "\n\n"
+                            )
+                    elif mode_alias == "Module Assembly":
                         if (
                             individual_part_results["validation_result_MO_chi_MF"]
                             == False
@@ -258,8 +290,17 @@ def main():
 
     def prepare_validation_per_mode(mode_alias, manufacturers=None):
         validation_all = {}
-        if mode_alias in ["Module Assembly", "Hybridization", "Sensor_Parents"]:
-            if mode_alias == "Module Assembly":
+        if mode_alias in [
+            "Module Loading",
+            "Module Assembly",
+            "Hybridization",
+            "Sensor_Parents",
+        ]:
+            if mode_alias == "Module Loading":
+                category = "Detector Unit"
+                filename_postfix_mode_alias = "ML"
+                extra_text_mode_alias = "Module Loading: Detector Units"
+            elif mode_alias == "Module Assembly":
                 category = "Module"
                 filename_postfix_mode_alias = "MA"
                 extra_text_mode_alias = "Module Assembly: Modules"
@@ -340,6 +381,9 @@ def main():
     # fill in report into template
     if merge:
         validation_template = templates.validation_header()
+        with open("validation_ML.md", "r") as pre_computed:
+            for line in pre_computed:
+                validation_template += line
         with open("validation_MA.md", "r") as pre_computed:
             for line in pre_computed:
                 validation_template += line
@@ -355,7 +399,9 @@ def main():
         validation_template = templates.validation_header()
 
         for mode_alias in mode_aliases:
-            if mode_alias == "Module Assembly":
+            if mode_alias == "Module Loading":
+                manufacturers = data.ML_sites_to_monitor
+            elif mode_alias == "Module Assembly":
                 manufacturers = data.MA_sites_to_monitor
             elif mode_alias == "Hybridization":
                 manufacturers = data.HY_sites_to_monitor
@@ -366,7 +412,42 @@ def main():
             if single_manufacturer != None:
                 manufacturers = [single_manufacturer]
             validation_all = prepare_validation_per_mode(mode_alias, manufacturers)
-            if mode_alias == "Module Assembly":
+            if mode_alias == "Module Loading":
+                ML_intro = templates.module_loading_intro()
+                validation_template += ML_intro
+                if len(mode_aliases) == 1:
+                    validation_ML = ML_intro
+                ML_all = templates.module_loading_all(
+                    manufacturers,
+                    validation_all["all"]["n_valid_parts"],
+                    validation_all["all"]["n_valid_connected_parts"],
+                    validation_all["all"]["n_invalid_parts"],
+                    validation_all["all"]["n_fake_parts"],
+                )
+                validation_template += ML_all
+                if len(mode_aliases) == 1:
+                    validation_ML += ML_all
+                for m in manufacturers:
+                    ML_m = f"""??? note "{m}"
+
+    Valid Detector Units (using latest SN spec): {validation_all[m]["n_valid_parts"]}, of which correctly connected with children (Modules at the expected DU positions): {validation_all[m]["n_valid_connected_parts"]}
+
+    Invalid Detector Units (not using latest SN spec): {validation_all[m]["n_invalid_parts"]}
+
+    Fake Detector Units: {validation_all[m]["n_fake_parts"]}
+
+    Details:
+
+{validation_all[m]["relations_template_good"]}
+{validation_all[m]["relations_template_bad"]}
+"""
+                    validation_template += ML_m
+                    if len(mode_aliases) == 1:
+                        validation_ML += ML_m
+                if len(mode_aliases) == 1:
+                    with open("validation_ML.md", "w") as f:
+                        f.write(validation_ML)
+            elif mode_alias == "Module Assembly":
                 MA_intro = templates.module_assembly_intro()
                 validation_template += MA_intro
                 if len(mode_aliases) == 1:

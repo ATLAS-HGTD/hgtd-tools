@@ -79,6 +79,7 @@ relevant_manufacturer_IDs_by_shortname = {
     "ifae": 1003,
     "ihep": 1004,
     "ijclab": 1061,
+    "lpnhe": 1301,
     "mainz": 1141,
     "mascir": 1241,
     "ustc": 1261,
@@ -97,6 +98,7 @@ MO_site_id = {
     "ustc": "U",
     "test": "T",
 }
+ML_sites_to_monitor = ["ifae", "ihep", "lpnhe", "mainz", "mascir"]
 MA_sites_to_monitor = ["ifae", "ihep", "ijclab", "mainz", "mascir"]
 HY_sites_to_monitor = ["ifae", "ihep"]
 S_W_manus_to_monitor = ["IHEP-IME", "USTC-IME"]

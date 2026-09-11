@@ -17,6 +17,51 @@ icon: lucide/link
 """
 
 
+def module_loading_intro():
+    return f"""### Module Loading
+
+| Parent KoP | Child KoP | Position |
+| ---------- | --------- | -------- |
+| Detector Unit | Support Unit | empty |
+| Detector Unit | Module | one of the expected local slots within the DU (depending on DU type), `RxMy` |
+
+"""
+
+
+def module_loading_all(
+    all_manus,
+    n_valid_parts_all,
+    n_valid_connected_parts_all,
+    n_invalid_parts_all,
+    n_fake_parts_all,
+):
+    return f"""???+ tip "All validated sites"
+
+    Selected sites: {', '.join(all_manus)}.
+
+    Valid Detector Units (using latest SN spec): {n_valid_parts_all}, of which correctly connected with children (Modules at the expected positions **and** a matching Support Unit): {n_valid_connected_parts_all}
+
+    Invalid Detector Units (not using latest SN spec): {n_invalid_parts_all}
+
+    Fake Detector Units: {n_fake_parts_all}
+
+    ???+ info "Overview: valid Detector Units by loading sites (in terms of serial number only)"
+
+        [.png :material-image-search-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_ML_valid_all.png){{ .md-button }}
+        [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_ML_valid_all.pdf){{ .md-button }}
+
+        ![pie_chart_ML_valid_all.png](../generated/pie_chart_ML_valid_all.png)
+
+    ???+ info "Overview: valid & correctly connected Detector Units by loading sites"
+
+        [.png :material-image-search-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_ML_valid_connected_all.png){{ .md-button }}
+        [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_ML_valid_connected_all.pdf){{ .md-button }}
+
+        ![pie_chart_ML_valid_connected_all.png](../generated/pie_chart_ML_valid_connected_all.png)
+
+"""
+
+
 def module_assembly_intro():
     return f"""### Module Assembly
 
@@ -45,7 +90,7 @@ def module_assembly_all(
 
     Fake Modules: {n_fake_parts_all}
 
-    ???+ info "Overview: valid Modules by assembly sites"
+    ???+ info "Overview: valid Modules by assembly sites (in terms of serial number only)"
 
         [.png :material-image-search-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_MA_valid_all.png){{ .md-button }}
         [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_MA_valid_all.pdf){{ .md-button }}
@@ -90,7 +135,7 @@ def hybridization_all(
 
     Fake Hybrids: {n_fake_parts_all}
 
-    ???+ info "Overview: valid Hybrids by hybridization sites"
+    ???+ info "Overview: valid Hybrids by hybridization sites (in terms of serial number only)"
 
         [.png :material-image-search-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_HY_valid_all.png){{ .md-button }}
         [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_HY_valid_all.pdf){{ .md-button }}
@@ -136,7 +181,7 @@ def sensor_par_all(
 
     Fake Sensors: {n_fake_parts_all}
 
-    ???+ info "Overview: valid Sensors by manufacturer"
+    ???+ info "Overview: valid Sensors by manufacturer (in terms of serial number only)"
 
         [.png :material-image-search-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_S_valid_all.png){{ .md-button }}
         [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_S_valid_all.pdf){{ .md-button }}
