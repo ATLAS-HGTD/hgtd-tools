@@ -6,13 +6,26 @@
 ```bash
 rm -drf dist
 python -m build
-tar -tzf dist/hgtd_tools-3.0.0rc1.tar.gz
-unzip -l dist/hgtd_tools-3.0.0rc1-py3-none-any.whl
+tar -tzf dist/hgtd_tools-3.0.0rc3.tar.gz
+unzip -l dist/hgtd_tools-3.0.0rc3-py3-none-any.whl
 twine upload --repository testpypi dist/*
 ```
+
+or upload to the main pypi
+
+```bash
+twine upload dist/*
+```
+
 4. test the new package via (again, using testpypi as a reference inside active env):
 ```bash
-pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "hgtd-tools[dev,gui]==3.0.0rc1"
+pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "hgtd-tools[dev,gui]==3.0.0rc3"
+```
+
+or from the main pypi
+
+```bash
+pip install "hgtd-tools[dev,gui]==3.0.0rc3"
 ```
 5. tag the new version (at vX.Y.Z)
 6. push tag
