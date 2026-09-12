@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "hgtd-tools"
-version = "3.0.0rc3"
+version = "3.0.0"
 description = "Tools for the HGTD production database"
 readme = "README.md"
 keywords = [ "atlas", "cern", "database", "hgtd", "physics" ]
@@ -35,7 +35,7 @@ email = "annika.stein@cern.ch"
 [project.optional-dependencies]
 dev = [ "jupyterlab>=4.4", "pre-commit>=4.3" ]
 dev-extra = [ "build", "twine" ]
-docs = [ "zensical>=0.0.59" ]
+docs = [ "zensical>=0.0.61" ]
 gui = [ "customtkinter>=5.2.2", "pillow>=10" ]
 [project.urls]
 Documentation = "https://hgtd-tools.docs.cern.ch/"

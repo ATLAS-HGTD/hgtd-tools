@@ -19,9 +19,9 @@ Please check the [install](getting_started/install.md) guide for installing hgtd
 The following overview lists the implemented features of `hgtd-tools` and links to more detailed documentation on specific aspects.
 
 ??? success "API (GET / POST / DELETE)"
-    - See the API in action inside the GUI with dynamic progress bar (API request status)
+    - See the API in action inside the GUI with dynamic, colored progress bar (API request status)
     - Efficient lookup of information in local files (e.g. static Slot table) and fetching of dynamic information via ProdDB API
-    - Allows standalone usage of API client (used e.g. in [FADAPro](https://gitlab.cern.ch/atlas-hgtd/Electronics/fadapro/-/merge_requests/9){target="_blank"}, documented in [FADAPro docs on `DB_interface.py`](https://hgtd-fadapro.docs.cern.ch/commandlist/#upload-to-database){target="_blank"})
+    - Allows standalone usage of API client. It is used e.g. in [FADAPro](https://gitlab.cern.ch/atlas-hgtd/Electronics/fadapro/-/merge_requests/9){target="_blank"}, documented in the [FADAPro docs on `DB_interface.py`](https://hgtd-fadapro.docs.cern.ch/commandlist/#upload-to-database){target="_blank"}. Its DB implementation is part of the [analysis module](https://gitlab.cern.ch/atlas-hgtd/Electronics/fadapro/-/tree/master/analysis?ref_type=heads){target="_blank"}.
 
 ??? success "GUI (Linux / Mac / Windows)"
 

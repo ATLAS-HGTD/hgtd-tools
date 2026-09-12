@@ -1,4 +1,8 @@
 # Developer overview
+## Install/Update
+
+Follow the [first time install](../getting_started/install.md) or [upgrade guidelines](../getting_started/update.md), especially the `Developer` sections therein. This places you in an editable environment to actually start developing and testing code yourself.
+
 ## Reusing the included API module
 The `api.py` module can be used standalone as well to make API requests to the HGTD Production Database. Note that the included functions also return the response `status_code` and `reason` and handle a variety of possible errors.
 

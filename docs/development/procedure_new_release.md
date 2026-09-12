@@ -1,8 +1,9 @@
 # Procedure for new release
 
 1. commit with planned version already embedded in `pyproject.toml`
-2. push to master
-3. prepare the package for pypi, for reference, this is an example for a pre-release on testpypi:
+2. test local install, with upgrade: `pip install -e ".[dev,dev-extra,docs,gui]" --upgrade`
+3. push to master
+4. prepare the package for pypi, for reference, this is an example for a pre-release on testpypi:
 ```bash
 rm -drf dist
 python -m build
@@ -10,9 +11,7 @@ tar -tzf dist/hgtd_tools-3.0.0rc3.tar.gz
 unzip -l dist/hgtd_tools-3.0.0rc3-py3-none-any.whl
 twine upload --repository testpypi dist/*
 ```
-
 or upload to the main pypi
-
 ```bash
 twine upload dist/*
 ```
@@ -21,12 +20,11 @@ twine upload dist/*
 ```bash
 pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple "hgtd-tools[dev,gui]==3.0.0rc3"
 ```
-
 or from the main pypi
-
 ```bash
 pip install "hgtd-tools[dev,gui]==3.0.0rc3"
 ```
+
 5. tag the new version (at vX.Y.Z)
 6. push tag
 7. ON GITLAB: create new release X.Y.Z from tag vX.Y.Z
