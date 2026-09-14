@@ -213,6 +213,29 @@ def get_SN_of_parts(parts):
     return [part["serial_number"] for part in parts]
 
 
+def parallel_partition(parts, fn, max_workers=4):
+    """Apply `fn(part)` to each part concurrently.
+
+    `fn` must return `(keep_bool, output)` for each part.
+    Returns `(kept_outputs, ignored_outputs)` as two lists, each
+    preserving the original order of `parts`.
+
+    Generalizes `parallel_keeps` for cases where you also need the
+    output payload (e.g. a reason string) for *both* kept and ignored
+    parts.
+
+    Note: assumes `fn` and any I/O it performs are thread-safe.
+    """
+    if not parts:
+        return [], []
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        results = list(ex.map(fn, parts))
+    kept, ignored = [], []
+    for keep, out in results:
+        (kept if keep else ignored).append(out)
+    return kept, ignored
+
+
 def parallel_keeps(parts, predicate, max_workers=4):
     """Apply `predicate(part_id)` to each part concurrently.
 
