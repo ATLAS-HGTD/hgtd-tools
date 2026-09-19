@@ -6,8 +6,8 @@ workflow:
 
 stages:
   - build
-  - test
   - deploy_docs
+  - test
   - deploy_zenodo
 
 pre-commit:
@@ -20,6 +20,23 @@ pre-commit:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+
+.job-script: &job-script
+  - pip install -e ".[docs]"
+  - zensical build --clean
+
+pages:
+  stage: deploy_docs
+  image: registry.cern.ch/docker.io/library/python:latest
+  script: [*job-script, "if [[ -f _redirects ]]; then cp _redirects public; fi;"]
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 hour
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: never
 
 api_report:
@@ -50,23 +67,6 @@ api_test:
     UPSTREAM_COMMIT_BRANCH: $CI_COMMIT_BRANCH
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-
-.job-script: &job-script
-  - pip install -e ".[docs]"
-  - zensical build --clean
-
-pages:
-  stage: deploy_docs
-  image: registry.cern.ch/docker.io/library/python:latest
-  script: [*job-script, "if [[ -f _redirects ]]; then cp _redirects public; fi;"]
-  artifacts:
-    paths:
-      - public
-    expire_in: 1 hour
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: never
 
 prepare_zenodo:
   stage: deploy_zenodo
