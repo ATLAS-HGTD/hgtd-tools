@@ -57,3 +57,5 @@ Typical GUI elements and the associated actions, use these as examples to model 
         self.update_progressbar(self.loading_wheel)
 
 ```
+
+*Last updated: {{ last_updated }}*

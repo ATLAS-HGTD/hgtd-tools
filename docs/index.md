@@ -145,3 +145,5 @@ HGTD Tools is now on Zenodo, with a persistent [Zenodo DOI identifier](https://d
   url          = {https://doi.org/10.5281/zenodo.20774012},
 }
 ```
+
+*Last updated: {{ last_updated }}*

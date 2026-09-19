@@ -85,3 +85,5 @@ The example above installs all optional dependencies, but the command depends on
 - `gui`: every user wishing to open the GUI, not only developers, should add this dependency. It is by default included in the user-facing docs above. In settings where the GUI is not needed (e.g. potentially a headless operation of FADAPro uploads, or when using it for the command-line scripts only), this dependency can also be dropped and the command would just be `pip install hgtd-tools`.
 
 For contributing back to the central repo, the [contributing instructions](../development/dev.md#contributing) apply.
+
+*Last updated: {{ last_updated }}*

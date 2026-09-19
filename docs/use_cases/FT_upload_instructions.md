@@ -55,3 +55,5 @@ To break this down:
 * `--dryrun` defines a test running until the last very step, but does not perform upload
 
 More options for the command line argument parsing are defined in `upload_FlexTail_measurement.py`.
+
+*Last updated: {{ last_updated }}*

@@ -35,7 +35,7 @@ email = "annika.stein@cern.ch"
 [project.optional-dependencies]
 dev = [ "jupyterlab>=4.4", "pre-commit>=4.3" ]
 dev-extra = [ "build", "twine" ]
-docs = [ "zensical>=0.0.61" ]
+docs = [ "markdown>=3", "zensical>=0.0.63" ]
 gui = [ "customtkinter>=5.2.2", "pillow>=10" ]
 [project.urls]
 Documentation = "https://hgtd-tools.docs.cern.ch/"
@@ -51,6 +51,8 @@ order = "hgtd_tools.app.scripts.order:main"
 report-stats = "hgtd_tools.app.scripts.report_stats:main"
 SN-reservation = "hgtd_tools.app.scripts.SN_reservation:main"
 upload-FlexTail-measurement = "hgtd_tools.app.scripts.upload_FlexTail_measurement:main"
+[project.entry-points."markdown.extensions"]
+zensical_git_dates = "hgtd_tools.zensical_git_dates.extension:GitDatesExtension"
 
 [tool.hatch.build]
 exclude = [

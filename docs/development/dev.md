@@ -64,3 +64,5 @@ The procedure for tagging new versions of this software is outlined in [procedur
 
 ## Dockerization (discontinued)
 A deployment of this app to CERN OKD using docker was attempted, but discontinued because of difficulties getting the graphical part running and deploying the same, while now practically all users are comfortable using the tools standalone on their device. Local docker containers were running well on test platforms (e.g. lxplus with `ssh -XY`), however, due to security measures, buttons that bring you to a special URL in your system's browser were blocked. The instructions for docker development are therefore archived under [docker](docker.md) and will not be continued.
+
+*Last updated: {{ last_updated }}*

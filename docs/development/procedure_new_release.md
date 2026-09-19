@@ -45,3 +45,5 @@ v0.Y.Z: early R&D of the tools
 roughly one new planned release X.Y each month, patches in between
 
 v3.1.0: Production
+
+*Last updated: {{ last_updated }}*

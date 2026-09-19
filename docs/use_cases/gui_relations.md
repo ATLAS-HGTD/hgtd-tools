@@ -376,3 +376,5 @@ contains the actual user input and buttons to perform the parts tree operations.
 ## Demonstrator extras
 
 At the demonstrator, many steps should have been done by assembly or loading sites already, but weren't at that time. That is why you might need to look up specifically which module has which serial number in the DB when you want to fill the demonstrator parts tree into the DB. We have a separate page for hints on the [Parts List](https://hgtd-database.docs.cern.ch/content/user/view_part_list/){target="_blank"}.
+
+*Last updated: {{ last_updated }}*

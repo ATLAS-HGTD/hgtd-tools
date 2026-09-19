@@ -12,3 +12,5 @@ Execute the following (using either Anaconda Prompt or your preferred shell with
 conda activate hgtd # or another method with which you activate your environment, such as: source hgtd/bin/activate
 SN-reservation --user-name <your-user-name> --site <some-site> --prod <some-prod> --batch <some-batchNr> --n-reserve <how-many-SNs-to-reserve> (--dryrun True)
 ```
+
+*Last updated: {{ last_updated }}*

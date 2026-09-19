@@ -108,3 +108,5 @@ A markdown report is also written next to the script, using the pattern `pairing
 
 - If the candidate pool is empty after filtering, the pairing step is skipped and a clear explanation is printed (candidates seen, filtered out by `--manual_ignore_hybrid_sns`, filtered out by the matching algorithm, survivors). The markdown logbook is still produced.
 - If a per-part lookup raises an unhandled exception, it is converted into an `Ignored parts` entry with reason `Unhandled exception during scoring: <ExceptionType>: <message>`, so a single bad row does not abort the whole run.
+
+*Last updated: {{ last_updated }}*

@@ -57,3 +57,5 @@ docker push registry.cern.ch/hgtd/hgtd-tools:latest
 docker push registry.cern.ch/hgtd/hgtd-tools:x86_64_1.4.2
 
 ```
+
+*Last updated: {{ last_updated }}*

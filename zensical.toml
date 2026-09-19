@@ -370,3 +370,8 @@ alternate_style = true
 [project.markdown_extensions.pymdownx.tasklist]
 custom_checkbox = true
 [project.markdown_extensions.pymdownx.tilde]
+[project.markdown_extensions.zensical_git_dates]
+placeholder = "{{ last_updated }}"
+date_format = "%B %d, %Y"
+fallback_to_mtime = false
+use_utc = true

@@ -71,3 +71,5 @@ pip install -e ".[dev,dev-extra,docs,gui]" --upgrade
 ```
 
 This will upgrade all available optional dependencies (also those for development, documentation building and of course the GUI) and allow you to work on the code yourself.
+
+*Last updated: {{ last_updated }}*

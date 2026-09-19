@@ -49,3 +49,5 @@ options:
   --output_postfix OUTPUT_POSTFIX
                         Postfix to append to filename.
 ```
+
+*Last updated: {{ last_updated }}*
