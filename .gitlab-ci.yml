@@ -52,7 +52,7 @@ api_test:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 .job-script: &job-script
-  - pip install zensical
+  - pip install -e ".[docs]"
   - zensical build --clean
 
 pages:
