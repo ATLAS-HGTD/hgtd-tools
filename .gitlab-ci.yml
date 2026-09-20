@@ -29,6 +29,8 @@ pre-commit:
 pages:
   stage: deploy_docs
   image: registry.cern.ch/docker.io/library/python:latest
+  variables:
+    GIT_DEPTH: "0"
   script: [*job-script, "if [[ -f _redirects ]]; then cp _redirects public; fi;"]
   artifacts:
     paths:
