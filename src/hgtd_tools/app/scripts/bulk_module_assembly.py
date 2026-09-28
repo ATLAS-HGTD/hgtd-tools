@@ -1,4 +1,3 @@
-# reorder-python-imports: skip-file
 """
 Bulk module assembly.
 
@@ -16,6 +15,7 @@ Rules:
 Usage:
     python bulk_module_assembly.py -i module_children.csv
 """
+
 from __future__ import annotations
 
 import argparse

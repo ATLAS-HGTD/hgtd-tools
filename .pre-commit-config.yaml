@@ -3,14 +3,10 @@ repos:
     rev: v6.0.0
     hooks:
     -   id: check-yaml
-        exclude: local
     -   id: detect-private-key
     -   id: end-of-file-fixer
-        exclude: local
     -   id: fix-byte-order-marker
-        exclude: local
     -   id: trailing-whitespace
-        exclude: local
         args: [--markdown-linebreak-ext=md]
     -   id: requirements-txt-fixer
 -   repo: https://github.com/tox-dev/pyproject-fmt
@@ -18,12 +14,9 @@ repos:
     hooks:
     -   id: pyproject-fmt
         args: ["--table-format=long"]
--   repo: https://github.com/asottile/reorder-python-imports
-    rev: v3.15.0
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
     hooks:
-    -   id: reorder-python-imports
--   repo: https://github.com/psf/black
-    rev: 25.9.0
-    hooks:
-    -   id: black
-        exclude: local
+    -   id: ruff
+        args: [--fix]
+    -   id: ruff-format
