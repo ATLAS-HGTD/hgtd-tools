@@ -160,7 +160,6 @@ def main():
             c: {f: dict() for f in interesting_features} for c in categories
         }
         multi_count_dict_valid = {c: {f: dict() for f in interesting_features} for c in categories}
-        multi_count_dict_valid = {c: {f: dict() for f in interesting_features} for c in categories}
         multi_count_dict_fakes = {c: {f: dict() for f in interesting_features} for c in categories}
         for c in categories:
             for f in interesting_features:

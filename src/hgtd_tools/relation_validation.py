@@ -200,10 +200,7 @@ def validate_DU(DU_part_id):
     children = util.get_children(DU_part_id)[0]
     (
         (validation_result_DU_chi_MO, validation_reason_DU_chi_MO),
-        (
-            validation_result_DU_chi_SU,
-            validation_reason_DU_chi_SU,
-        ),
+        (validation_result_DU_chi_SU, validation_reason_DU_chi_SU),
     ) = validate_DU_children(children)
     validation_result = {
         "validation_result_DU_chi_MO": validation_result_DU_chi_MO,
@@ -357,10 +354,7 @@ def validate_module(MO_part_id):
     children = util.get_children(MO_part_id)[0]
     (
         (validation_result_MO_chi_MF, validation_reason_MO_chi_MF),
-        (
-            validation_result_MO_chi_HY,
-            validation_reason_MO_chi_HY,
-        ),
+        (validation_result_MO_chi_HY, validation_reason_MO_chi_HY),
     ) = validate_MO_children(children)
     validation_result = {
         "validation_result_MO_chi_MF": validation_result_MO_chi_MF,
@@ -546,10 +540,7 @@ def validate_sensor(S_part_id):
     parents = util.get_parents(S_part_id)[0]
     (
         (validation_result_S_par_HY, validation_reason_S_par_HY),
-        (
-            validation_result_S_par_W,
-            validation_reason_S_par_W,
-        ),
+        (validation_result_S_par_W, validation_reason_S_par_W),
     ) = validate_S_parents(parents)
     if validation_result_S_par_HY != "new":
         # if it's not new, then use the same boolean result for overall
