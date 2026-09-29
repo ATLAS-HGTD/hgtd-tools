@@ -23,9 +23,7 @@ with open("stylesheets/_generated_fromZensicalGoogle_extra.css", "r") as cssFont
     for line in lines:
         # now we get all relevant urls to serve the fonts from our own server
         if "url(https" in line:
-            download_file(
-                "https" + line.split("https")[1].split(".woff2")[0] + ".woff2"
-            )
+            download_file("https" + line.split("https")[1].split(".woff2")[0] + ".woff2")
             if debug:
                 all_links_for_download += (
                     "https" + line.split("https")[1].split(".woff2")[0] + ".woff2\n"

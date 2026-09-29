@@ -37,7 +37,7 @@ def module_loading_all(
 ):
     return f"""???+ tip "All validated sites"
 
-    Selected sites: {', '.join(all_manus)}.
+    Selected sites: {", ".join(all_manus)}.
 
     Valid Detector Units (using latest SN spec): {n_valid_parts_all}, of which correctly connected with children (Modules at the expected positions **and** a matching Support Unit): {n_valid_connected_parts_all}
 
@@ -82,7 +82,7 @@ def module_assembly_all(
 ):
     return f"""???+ tip "All validated sites"
 
-    Selected sites: {', '.join(all_manus)}.
+    Selected sites: {", ".join(all_manus)}.
 
     Valid Modules (using latest SN spec, excludes Digital Modules marked with _Digital in Name Label): {n_valid_parts_all}, of which correctly connected with children (MF, HY): {n_valid_connected_parts_all}
 
@@ -127,7 +127,7 @@ def hybridization_all(
 ):
     return f"""???+ tip "All validated sites"
 
-    Selected sites: {', '.join(all_manus)}.
+    Selected sites: {", ".join(all_manus)}.
 
     Valid Hybrids (using latest SN spec): {n_valid_parts_all}, of which correctly connected with children (currently checking only S): {n_valid_connected_parts_all}
 
@@ -173,7 +173,7 @@ def sensor_par_all(
 ):
     return f"""???+ tip "All validated manufacturers"
 
-    Selected manufacturers: {', '.join(all_manus)}.
+    Selected manufacturers: {", ".join(all_manus)}.
 
     Valid Sensors (using latest SN spec): {n_valid_parts_all}, of which correctly connected with parent HY + W: {n_valid_connected_parts_all}; or of which correctly connected with parent W, but not yet to H: {n_valid_new_parts_all}
 
