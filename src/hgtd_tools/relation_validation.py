@@ -1,5 +1,4 @@
-import hgtd_tools.data as data
-import hgtd_tools.util as util
+from hgtd_tools import data, util
 
 # =============================================================================
 # This file contains validation functions to make sure relations are in order
@@ -89,22 +88,20 @@ def validate_DU_chi_MO(children_MO):
                 )
                 > 1
             ):
-                non_uniquely_connected_modules.append(
-                    actual_child_MO["part"]["serial_number"]
-                )
+                non_uniquely_connected_modules.append(actual_child_MO["part"]["serial_number"])
         # Build the combined reason_string:
         reason_string = ""
         if non_filled_but_expected_positions != []:
-            reason_string += (
-                f"There are expected positions to which no Module connects to.\n"
-            )
+            reason_string += "There are expected positions to which no Module connects to.\n"
             reason_string += ", ".join(non_filled_but_expected_positions) + "\n"
         if non_uniquely_filled_positions != {}:
-            reason_string += f"There are expected positions to which more than one Module connects to.\n"
+            reason_string += (
+                "There are expected positions to which more than one Module connects to.\n"
+            )
             for key, value in non_uniquely_filled_positions.items():
                 reason_string += f"{key}: " + ", ".join(value) + "\n"
         if non_uniquely_connected_modules != []:
-            reason_string += f"There are modules connected to this DU under investigation which have more than one relation to a DU parent.\n"
+            reason_string += "There are modules connected to this DU under investigation which have more than one relation to a DU parent.\n"
             reason_string += ", ".join(non_uniquely_connected_modules) + "\n"
         if reason_string != "":
             return False, reason_string
@@ -135,7 +132,7 @@ def validate_DU_chi_SU(children_SU):
         if str(children_SU[0]["position"]) != "":
             return (
                 False,
-                f"Exactly one SU connected, but at wrong position {str(children_SU[0]["position"])}, where it should have been empty position.",
+                f"Exactly one SU connected, but at wrong position {children_SU[0]['position']!s}, where it should have been empty position.",
             )
         DU_SN = str(children_SU[0]["part_parent"]["serial_number"])
         for key in data.allDUs.keys():
@@ -184,8 +181,7 @@ def validate_DU_children(children):
     children_MO = [
         c
         for c in children
-        if c["part"]["kind_of_part"]["kind_of_part_id"]
-        == data.KoPID_from_partKoPName["Module"]
+        if c["part"]["kind_of_part"]["kind_of_part_id"] == data.KoPID_from_partKoPName["Module"]
     ]
     children_SU = [
         c
@@ -202,17 +198,19 @@ def validate_DU(DU_part_id):
     Validate a single detector unit, given its part_id.
     """
     children = util.get_children(DU_part_id)[0]
-    (validation_result_DU_chi_MO, validation_reason_DU_chi_MO), (
-        validation_result_DU_chi_SU,
-        validation_reason_DU_chi_SU,
+    (
+        (validation_result_DU_chi_MO, validation_reason_DU_chi_MO),
+        (
+            validation_result_DU_chi_SU,
+            validation_reason_DU_chi_SU,
+        ),
     ) = validate_DU_children(children)
     validation_result = {
         "validation_result_DU_chi_MO": validation_result_DU_chi_MO,
         "validation_reason_DU_chi_MO": validation_reason_DU_chi_MO,
         "validation_result_DU_chi_SU": validation_result_DU_chi_SU,
         "validation_reason_DU_chi_SU": validation_reason_DU_chi_SU,
-        "validation_result_overall": validation_result_DU_chi_MO
-        and validation_result_DU_chi_SU,
+        "validation_result_overall": validation_result_DU_chi_MO and validation_result_DU_chi_SU,
     }
     return validation_result
 
@@ -346,8 +344,7 @@ def validate_MO_children(children):
     children_HY = [
         c
         for c in children
-        if c["part"]["kind_of_part"]["kind_of_part_id"]
-        == data.KoPID_from_partKoPName["Hybrid"]
+        if c["part"]["kind_of_part"]["kind_of_part_id"] == data.KoPID_from_partKoPName["Hybrid"]
     ]
 
     return validate_MO_chi_MF(children_MF), validate_MO_chi_HY(children_HY)
@@ -358,17 +355,19 @@ def validate_module(MO_part_id):
     Validate a single module, given its part_id.
     """
     children = util.get_children(MO_part_id)[0]
-    (validation_result_MO_chi_MF, validation_reason_MO_chi_MF), (
-        validation_result_MO_chi_HY,
-        validation_reason_MO_chi_HY,
+    (
+        (validation_result_MO_chi_MF, validation_reason_MO_chi_MF),
+        (
+            validation_result_MO_chi_HY,
+            validation_reason_MO_chi_HY,
+        ),
     ) = validate_MO_children(children)
     validation_result = {
         "validation_result_MO_chi_MF": validation_result_MO_chi_MF,
         "validation_reason_MO_chi_MF": validation_reason_MO_chi_MF,
         "validation_result_MO_chi_HY": validation_result_MO_chi_HY,
         "validation_reason_MO_chi_HY": validation_reason_MO_chi_HY,
-        "validation_result_overall": validation_result_MO_chi_MF
-        and validation_result_MO_chi_HY,
+        "validation_result_overall": validation_result_MO_chi_MF and validation_result_MO_chi_HY,
     }
     return validation_result
 
@@ -423,8 +422,7 @@ def validate_HY_children(children):
     children_S = [
         c
         for c in children
-        if c["part"]["kind_of_part"]["kind_of_part_id"]
-        == data.KoPID_from_partKoPName["Sensor"]
+        if c["part"]["kind_of_part"]["kind_of_part_id"] == data.KoPID_from_partKoPName["Sensor"]
     ]
 
     return validate_HY_chi_S(children_S)
@@ -435,9 +433,7 @@ def validate_hybrid(HY_part_id):
     Validate a single hybrid, given its part_id.
     """
     children = util.get_children(HY_part_id)[0]
-    validation_result_HY_chi_S, validation_reason_HY_chi_S = validate_HY_children(
-        children
-    )
+    validation_result_HY_chi_S, validation_reason_HY_chi_S = validate_HY_children(children)
     validation_result = {
         "validation_result_HY_chi_S": validation_result_HY_chi_S,
         "validation_reason_HY_chi_S": validation_reason_HY_chi_S,
@@ -548,9 +544,12 @@ def validate_sensor(S_part_id):
     Validate a single sensor, given its part_id.
     """
     parents = util.get_parents(S_part_id)[0]
-    (validation_result_S_par_HY, validation_reason_S_par_HY), (
-        validation_result_S_par_W,
-        validation_reason_S_par_W,
+    (
+        (validation_result_S_par_HY, validation_reason_S_par_HY),
+        (
+            validation_result_S_par_W,
+            validation_reason_S_par_W,
+        ),
     ) = validate_S_parents(parents)
     if validation_result_S_par_HY != "new":
         # if it's not new, then use the same boolean result for overall

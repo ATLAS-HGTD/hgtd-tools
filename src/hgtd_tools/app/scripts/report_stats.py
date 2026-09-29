@@ -4,11 +4,10 @@ import os
 from argparse import ArgumentParser
 from collections import Counter
 
-import hgtd_tools.data as data
-import hgtd_tools.plotter as plotter
-import hgtd_tools.util as util
 import numpy as np
 import pandas as pd
+
+from hgtd_tools import data, plotter, util
 
 
 def main():
@@ -46,7 +45,7 @@ def main():
     )
     args = parser.parse_args()
 
-    if args.categories == None:
+    if args.categories is None:
         categories = data.all_cats
     elif args.categories == "public":
         categories = data.public_cats
@@ -55,7 +54,7 @@ def main():
 
     skip_data_prep = util.str2bool(args.skipDataPrep)
     subtitle = util.str2bool(args.subtitle)
-    exp_text = args.customText if args.customText != None else "Production Database"
+    exp_text = args.customText if args.customText is not None else "Production Database"
     log_axis = util.str2bool(args.logAxis)
 
     interesting_features = [
@@ -97,14 +96,14 @@ def main():
                             )
                         if "Uploaded in YYYY-MM" in interesting_features:
                             time = p["record_insertion_time"]
-                            if time == None:
-                                interesting_data_per_c_valid[
-                                    "Uploaded in YYYY-MM"
-                                ].append("Unknown")
+                            if time is None:
+                                interesting_data_per_c_valid["Uploaded in YYYY-MM"].append(
+                                    "Unknown"
+                                )
                             else:
-                                interesting_data_per_c_valid[
-                                    "Uploaded in YYYY-MM"
-                                ].append(p["record_insertion_time"][:7])
+                                interesting_data_per_c_valid["Uploaded in YYYY-MM"].append(
+                                    p["record_insertion_time"][:7]
+                                )
                     else:
                         if "Location" in interesting_features:
                             interesting_data_per_c_invalid["Location"].append(
@@ -120,20 +119,17 @@ def main():
                             )
                         if "Uploaded in YYYY-MM" in interesting_features:
                             time = p["record_insertion_time"]
-                            if time == None:
-                                interesting_data_per_c_invalid[
-                                    "Uploaded in YYYY-MM"
-                                ].append("Unknown")
+                            if time is None:
+                                interesting_data_per_c_invalid["Uploaded in YYYY-MM"].append(
+                                    "Unknown"
+                                )
                             else:
-                                interesting_data_per_c_invalid[
-                                    "Uploaded in YYYY-MM"
-                                ].append(p["record_insertion_time"][:7])
+                                interesting_data_per_c_invalid["Uploaded in YYYY-MM"].append(
+                                    p["record_insertion_time"][:7]
+                                )
                         with open("output_invalid.txt", "a") as invalid_txt:
                             invalid_txt.write(
-                                str(p["serial_number"][:])
-                                + ": "
-                                + check_SN_message
-                                + "\n"
+                                str(p["serial_number"][:]) + ": " + check_SN_message + "\n"
                             )
                 else:
                     if "Location" in interesting_features:
@@ -150,10 +146,8 @@ def main():
                         )
                     if "Uploaded in YYYY-MM" in interesting_features:
                         time = p["record_insertion_time"]
-                        if time == None:
-                            interesting_data_per_c_fakes["Uploaded in YYYY-MM"].append(
-                                "Unknown"
-                            )
+                        if time is None:
+                            interesting_data_per_c_fakes["Uploaded in YYYY-MM"].append("Unknown")
                         else:
                             interesting_data_per_c_fakes["Uploaded in YYYY-MM"].append(
                                 p["record_insertion_time"][:7]
@@ -165,15 +159,9 @@ def main():
         multi_count_dict_invalid = {
             c: {f: dict() for f in interesting_features} for c in categories
         }
-        multi_count_dict_valid = {
-            c: {f: dict() for f in interesting_features} for c in categories
-        }
-        multi_count_dict_valid = {
-            c: {f: dict() for f in interesting_features} for c in categories
-        }
-        multi_count_dict_fakes = {
-            c: {f: dict() for f in interesting_features} for c in categories
-        }
+        multi_count_dict_valid = {c: {f: dict() for f in interesting_features} for c in categories}
+        multi_count_dict_valid = {c: {f: dict() for f in interesting_features} for c in categories}
+        multi_count_dict_fakes = {c: {f: dict() for f in interesting_features} for c in categories}
         for c in categories:
             for f in interesting_features:
                 multi_count_dict_invalid[c][f] = dict(
@@ -221,10 +209,7 @@ def main():
                 list(
                     set(
                         util.flatten(
-                            [
-                                list(input_dict[c][feature_legend_title].keys())
-                                for c in categories
-                            ]
+                            [list(input_dict[c][feature_legend_title].keys()) for c in categories]
                         )
                     )
                 )
@@ -239,9 +224,7 @@ def main():
                 fractions_list_this_c = []
                 for sc in all_legend_entries:
                     if sc in input_dict[c][feature_legend_title].keys():
-                        values_list_this_c.append(
-                            input_dict[c][feature_legend_title][sc]
-                        )
+                        values_list_this_c.append(input_dict[c][feature_legend_title][sc])
                         fractions_list_this_c.append(
                             input_dict[c][feature_legend_title][sc]
                             / sum(input_dict[c][feature_legend_title].values())
@@ -283,17 +266,13 @@ def main():
                 # set of sorted months
                 if all_legend_entries[-1] == "Unknown":
                     consecutive_months = (
-                        pd.date_range(
-                            all_legend_entries[0], all_legend_entries[-2], freq="MS"
-                        )
+                        pd.date_range(all_legend_entries[0], all_legend_entries[-2], freq="MS")
                         .strftime("%Y-%m")
                         .tolist()
                     )
                 else:
                     consecutive_months = (
-                        pd.date_range(
-                            all_legend_entries[0], all_legend_entries[-1], freq="MS"
-                        )
+                        pd.date_range(all_legend_entries[0], all_legend_entries[-1], freq="MS")
                         .strftime("%Y-%m")
                         .tolist()
                     )
@@ -323,8 +302,7 @@ def main():
                                 input_dict[c]["Uploaded in YYYY-MM"][sc]
                             )
                             cumulative_counts_list_this_c.append(
-                                cumulative_counts_list_this_c[-1]
-                                + newly_uploaded_list_this_c[-1]
+                                cumulative_counts_list_this_c[-1] + newly_uploaded_list_this_c[-1]
                             )
                     x_values.append(x_values_list_this_c)
                     newly_uploaded.append(newly_uploaded_list_this_c)

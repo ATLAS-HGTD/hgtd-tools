@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Sequence
 from importlib import metadata
-from typing import Sequence
 
 __version__ = metadata.version("hgtd_tools")
 
@@ -18,12 +18,10 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command")
 
     # gui (default)
-    gui = sub.add_parser("gui", help="Launch the graphical interface (default).")
+    _ = sub.add_parser("gui", help="Launch the graphical interface (default).")
 
     # check
-    check = sub.add_parser(
-        "check", help="Verify ProdDB API connectivity and tool version."
-    )
+    _ = sub.add_parser("check", help="Verify ProdDB API connectivity and tool version.")
 
     return p
 
@@ -44,8 +42,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "check":
-        import hgtd_tools.api as api
-        import hgtd_tools.util as util
+        from hgtd_tools import api, util
 
         try:
             upstream, txt = api.get_version()

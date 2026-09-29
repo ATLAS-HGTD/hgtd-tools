@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
-import os.path
-import shutil
 import tarfile
-import time
 from argparse import ArgumentParser
 from pathlib import Path
 from pprint import pprint
 
-import hgtd_tools.api as api
-import hgtd_tools.data as data
-import hgtd_tools.util as util
-import requests
+from hgtd_tools import api, data, util
 
 
 def main():
@@ -47,7 +41,7 @@ def main():
     parser.add_argument(
         "--run_type",
         dest="runType",
-        help="Set a custom run type specifying the " "flex tail measurement.",
+        help="Set a custom run type specifying the flex tail measurement.",
         default=None,
     )
     parser.add_argument(
@@ -70,9 +64,7 @@ def main():
         default=None,
         required=True,
     )
-    parser.add_argument(
-        "--comment", dest="comment", help="[Optional] Set a comment.", default=None
-    )
+    parser.add_argument("--comment", dest="comment", help="[Optional] Set a comment.", default=None)
     parser.add_argument(
         "--dryrun",
         dest="dryrun",
@@ -85,8 +77,7 @@ def main():
         for ft in existing_flextails:
             if str(ft["serial_number"]) == str(sn):
                 return True
-        else:
-            return False
+        return False
 
     def prep_tar(analysisInputFolder):
         archive_path = analysisInputFolder.with_suffix(".tar")
@@ -158,7 +149,7 @@ def main():
         if missing:
             print(
                 ERROR
-                + f"The analysis folder you want to upload is not complete for upload. "
+                + "The analysis folder you want to upload is not complete for upload. "
                 + "Missing: "
                 + ", ".join(missing)
                 + "."
@@ -201,11 +192,6 @@ def main():
 
     # check if the serial number(s) already exist(s) in the DB
     SNs_exist = [check_existing(serial) for serial in measured_SNs]
-    m_part_ids = [
-        m["part_id"]
-        for m in existing_flextails
-        if str(m["serial_number"]) in measured_SNs
-    ]
 
     if sum(SNs_exist) == len(SNs_exist):
         # first build a new tar (temporary file that will only be used for upload,
@@ -232,7 +218,7 @@ def main():
         current_locs = [mapping.get(loc, loc) for loc in current_locs]
 
         possible_locs = ["mainz", "mascir", "cern", "test"]
-        if measurementLocation != None:
+        if measurementLocation is not None:
             if measurementLocation not in possible_locs:
                 print(
                     WARNING
@@ -241,7 +227,7 @@ def main():
                 )
                 print(INFO + "Allowed locations: mainz, mascir, cern, test")
                 good_loc = False
-                while good_loc == False:
+                while not good_loc:
                     measurementLocation = input(
                         "Type measurement location, choose any of the allowed locations from the list. Example: mainz. "
                         "Confirm with [Enter]: "
@@ -284,7 +270,7 @@ def main():
             )
             print(INFO + "Allowed locations: mainz, mascir, cern, test")
             good_loc = False
-            while good_loc == False:
+            while not good_loc:
                 measurementLocation = input(
                     "Type measurement location, choose any of the allowed locations from the list. Example: mainz. "
                     "Confirm with [Enter]: "
@@ -311,7 +297,7 @@ def main():
         # at this point, we should definitely have a valid loc
         loc_id_for_DB = data.relevant_location_IDs_by_shortname[measurementLocation]
 
-        if comment == None:
+        if comment is None:
             comment = ""
 
         allowedRunTypes = [
@@ -324,14 +310,14 @@ def main():
             "FT_characterisation_test",
             "FT_characterisation_test_irradiated",
         ]
-        if runType == None:
+        if runType is None:
             print(
-                ERROR + f"You need to specify the run type! "
+                ERROR + "You need to specify the run type! "
                 "Please choose from the list of allowed run types. "
                 "Allowed run types are: FT_characterisation_mainz, FT_characterisation_mainz_irradiated, FT_characterisation_morocco, FT_characterisation_morocco_irradiated, FT_characterisation_cern, FT_characterisation_cern_irradiated, FT_characterisation_test, FT_characterisation_test_irradiated."
             )
             good_runType = False
-            while good_runType == False:
+            while not good_runType:
                 runType = input(
                     "Give a run type, choose any of the allowed run types from the list. Example: FT_characterisation_mainz. "
                     "Confirm with [Enter]: "
@@ -351,7 +337,7 @@ def main():
                         + f"Your custom input via command line does not contain a valid run type: {runType} that is allowed. "
                         + "Please try again."
                     )
-        if runType != None:
+        if runType is not None:
             if runType not in allowedRunTypes:
                 print(
                     WARNING + f"The run type you chose {runType} is not allowed! "
@@ -359,7 +345,7 @@ def main():
                     "Allowed run types are: FT_characterisation_mainz, FT_characterisation_mainz_irradiated, FT_characterisation_morocco, FT_characterisation_morocco_irradiated, FT_characterisation_cern, FT_characterisation_cern_irradiated, FT_characterisation_test, FT_characterisation_test_irradiated."
                 )
                 good_runType = False
-                while good_runType == False:
+                while not good_runType:
                     runType = input(
                         "Give a run type, choose any of the allowed run types from the list. Example: FT_characterisation_mainz. "
                         "Confirm with [Enter]: "
@@ -409,10 +395,7 @@ def main():
                 )
                 raise RuntimeError("Upload failed")
             else:
-                print(
-                    INFO
-                    + "Data successfully uploaded, deleting temporary tar archive now."
-                )
+                print(INFO + "Data successfully uploaded, deleting temporary tar archive now.")
                 archive_path.unlink()
         else:
             print(INFO + "Concluding dryrun without uploading.")

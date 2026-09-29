@@ -739,7 +739,7 @@ DU_Interlock_dict = {
 ### DU keys
 totalNModules = 0
 allDUkeysStr = ""
-for key in allDUs.keys():
+for key in allDUs:
     allDUkeysStr += f"{key},"
     totalNModules += len(allDUs[key])
 allDUkeysList = list(allDUs.keys())

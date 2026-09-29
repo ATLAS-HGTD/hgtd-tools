@@ -5,7 +5,7 @@ a) Validate hierarchical part rules per parent_serial_number for
 module assembly. Static analysis of csv file only, no requests.
 b) Validate what is in the DB (GET) for each parent, and for each child.
 c) For allowed new relations, execute POST.
-d) For disallowed new relations, warn/report, let user take action.
+d) For disallowed new relations, warn/report, let user take action (DELETE/POST).
 
 Rules:
   0. A given HY/MF child can only be connected to one parent.
@@ -19,8 +19,19 @@ DB rules (layered on top of the static rules):
   DB-Rule 2: every parent (Module) has zero existing Hybrid children
              (CSV adds exactly 2).
 
+CSV input is forgiving: kind names are canonicalised at load time, so
+'Module_flex', 'module flex', 'Module-Flex' etc. all map to 'Module Flex'.
+
+Upload is per-row: each allowed CSV row becomes its own POST. Rows whose
+child already has a parent in the DB are skipped (and reported) rather
+than blocking the run; rows whose parent is already fully wired also
+produce diagnostics but the other (still-unwired) parents still upload.
+
 Usage:
     python bulk_module_assembly.py -i module_children.csv -u <username>
+    python bulk_module_assembly.py -i module_children.csv -u <username> \\
+        --allow-malformed-sn            # static SN check is a warning only;
+                                        # DB existence is still required.
 """
 
 from __future__ import annotations
@@ -46,8 +57,22 @@ REQUIRED_COLUMNS = (
 # ---------- I/O ----------
 
 
+def _normalise_kind(kind: str) -> str:
+    """Map user-typed kind names to the canonical DB kind names.
+
+    Accepts any case, underscore or hyphen or space between tokens, e.g.
+    'Module_flex', 'module flex', 'Module-Flex', 'MODULE_FLEX' all map
+    to the canonical 'Module Flex'. Unknown kinds are returned stripped.
+    """
+    k = (kind or "").strip()
+    if k.lower().replace("_", " ").replace("-", " ") == "module flex":
+        return "Module Flex"
+    return k
+
+
 def load_hierarchy(csv_path: str) -> list[dict[str, str]]:
-    """Read the CSV, normalise 'position' (empty/whitespace -> ''), check schema."""
+    """Read the CSV, normalise 'position' (empty/whitespace -> '') and
+    canonicalise kind names (e.g. 'Module_flex' -> 'Module Flex'), check schema."""
     with open(csv_path, newline="", encoding="utf-8") as fh:
         reader = csv.DictReader(fh)
         if reader.fieldnames is None:
@@ -61,16 +86,10 @@ def load_hierarchy(csv_path: str) -> list[dict[str, str]]:
         for row in reader:
             rows.append(
                 {
-                    "parent_kind_of_part": (
-                        row.get("parent_kind_of_part") or ""
-                    ).strip(),
-                    "parent_serial_number": (
-                        row.get("parent_serial_number") or ""
-                    ).strip(),
-                    "child_kind_of_part": (row.get("child_kind_of_part") or "").strip(),
-                    "child_serial_number": (
-                        row.get("child_serial_number") or ""
-                    ).strip(),
+                    "parent_kind_of_part": _normalise_kind(row.get("parent_kind_of_part")),
+                    "parent_serial_number": (row.get("parent_serial_number") or "").strip(),
+                    "child_kind_of_part": _normalise_kind(row.get("child_kind_of_part")),
+                    "child_serial_number": (row.get("child_serial_number") or "").strip(),
                     "position": (row.get("position") or "").strip(),
                 }
             )
@@ -92,9 +111,8 @@ def collect_missing_serials(
     """
     Return (missing_parents, missing_children), each a list of (serial, kind).
 
-    A serial is "missing" if it is well-formed (SN pre-flight) and appears
-    in the CSV but is absent from the DB lookup tables. Missing parents and
-    missing children both block the corresponding upload rows.
+    A serial is "missing" if it appears in the CSV but is absent from the DB
+    lookup tables. The CSV-existence pre-flight (SN format) is independent.
     """
     sn_to_id_by_kind = {
         "Module Flex": sn_to_flex_id,
@@ -129,12 +147,25 @@ def collect_missing_serials(
 # ---------- Static validation (offline) ----------
 
 
-def validate(rows: list[dict[str, str]]) -> dict[str, list[str]]:
-    """Return {parent_serial_number: [violation_messages]} for offenders only."""
+def validate(
+    rows: list[dict[str, str]],
+    allow_malformed_sn: bool = False,
+) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
+    """
+    Return (violations, sn_warnings).
+
+    `violations` is the parent-keyed dict of rule violations that block the
+    upload. `sn_warnings` carries SN-format issues: when
+    `allow_malformed_sn` is True they go into `sn_warnings` instead of
+    `violations`, so a malformed but DB-known SN can still proceed.
+    """
     violations: dict[str, list[str]] = defaultdict(list)
+    sn_warnings: dict[str, list[str]] = defaultdict(list)
 
     _check_global_uniqueness(rows, violations)
-    _check_serials_valid(rows, violations)
+
+    sink = sn_warnings if allow_malformed_sn else violations
+    _check_serials_valid(rows, sink)
 
     by_parent: dict[str, list[dict[str, str]]] = defaultdict(list)
     for row in rows:
@@ -145,12 +176,13 @@ def validate(rows: list[dict[str, str]]) -> dict[str, list[str]]:
         _check_module_flex(parent_sn, group, violations)
         _check_hybrids(parent_sn, group, violations)
 
-    return {sn: msgs for sn, msgs in violations.items() if msgs}
+    return (
+        {sn: msgs for sn, msgs in violations.items() if msgs},
+        {sn: msgs for sn, msgs in sn_warnings.items() if msgs},
+    )
 
 
-def _check_global_uniqueness(
-    rows: list[dict[str, str]], out: dict[str, list[str]]
-) -> None:
+def _check_global_uniqueness(rows: list[dict[str, str]], out: dict[str, list[str]]) -> None:
     """Rule 0 (offline): every child_serial_number must be globally unique."""
     first_seen: dict[str, dict[str, str]] = {}
     duplicates: dict[str, list[dict[str, str]]] = defaultdict(list)
@@ -178,35 +210,40 @@ def _check_global_uniqueness(
 
 
 def _check_serials_valid(rows: list[dict[str, str]], out: dict[str, list[str]]) -> None:
-    """SN pre-flight: every parent and child serial must satisfy the ATLAS convention."""
+    """
+    SN pre-flight: every parent and child serial must satisfy the ATLAS
+    convention. Messages are appended to `out` (which is either `violations`
+    or `sn_warnings` depending on the CLI flag). Duplicate (role, sn) pairs
+    are reported once per parent.
+    """
+    seen: dict[str, set[tuple[str, str]]] = defaultdict(set)
     for row in rows:
+        parent_sn = row["parent_serial_number"]
         for role, sn in (
             ("parent", row["parent_serial_number"]),
             ("child", row["child_serial_number"]),
         ):
+            key = (role, sn)
+            if key in seen[parent_sn]:
+                continue
+            seen[parent_sn].add(key)
             if not sn:
-                out[row["parent_serial_number"]].append(
-                    f"{role} serial number is empty."
-                )
+                out[parent_sn].append(f"{role} serial number is empty.")
                 continue
             ok, reason = util.check_SN_valid(sn)
             if not ok:
-                out[row["parent_serial_number"]].append(
-                    f"{role} serial {sn} fails ATLAS SN validation: {reason}"
-                )
+                out[parent_sn].append(f"{role} serial {sn} fails ATLAS SN validation: {reason}")
 
 
 def _check_module_flex(
     parent_sn: str, group: list[dict[str, str]], out: dict[str, list[str]]
 ) -> None:
     """Rule 1: exactly one Module_flex, at empty position."""
-    flexes = [r for r in group if r["child_kind_of_part"] == "Module_flex"]
+    flexes = [r for r in group if r["child_kind_of_part"] == "Module Flex"]
     n = len(flexes)
 
     if n == 0:
-        out[parent_sn].append(
-            "no Module_flex child; required: exactly 1 at empty position."
-        )
+        out[parent_sn].append("no Module_flex child; required: exactly 1 at empty position.")
     elif n > 1:
         sns = ", ".join(sorted(r["child_serial_number"] for r in flexes))
         out[parent_sn].append(
@@ -221,9 +258,7 @@ def _check_module_flex(
             )
 
 
-def _check_hybrids(
-    parent_sn: str, group: list[dict[str, str]], out: dict[str, list[str]]
-) -> None:
+def _check_hybrids(parent_sn: str, group: list[dict[str, str]], out: dict[str, list[str]]) -> None:
     """Rule 2: exactly two Hybrids, with positions {HV, LV} (order irrelevant)."""
     hybrids = [r for r in group if r["child_kind_of_part"] == "Hybrid"]
     n = len(hybrids)
@@ -258,8 +293,14 @@ def validate_against_db(
     rows: list[dict[str, str]],
     missing_parents: list[tuple[str, str]],
     missing_children: list[tuple[str, str]],
-) -> dict[str, list[str]]:
-    """Return {parent_serial_number: [violation_messages]} for offenders only."""
+) -> tuple[dict[str, list[str]], set[tuple[str, str]]]:
+    """
+    Return (parent_keyed_violations, blocked_children).
+
+    `blocked_children` is the set of (kind, sn) pairs that already have a
+    parent in the DB. These rows are skipped (not failed) at upload time;
+    their parent SNs still appear in `violations` for diagnostic purposes.
+    """
     violations: dict[str, list[str]] = defaultdict(list)
 
     modules, _ = util.get_relevant_parts("Module")
@@ -291,14 +332,12 @@ def validate_against_db(
 
         parent_id = sn_to_module_id.get(parent_sn)
         if parent_id is None:
-            violations[parent_sn].append(
-                f"parent serial {parent_sn} not found in DB as a Module."
-            )
+            violations[parent_sn].append(f"parent serial {parent_sn} not found in DB as a Module.")
             continue
         eligible_parents.append((parent_sn, parent_id))
 
     parent_messages: dict[str, list[str]] = _db_check_parents_parallel(eligible_parents)
-    child_messages: dict[str, list[str]] = _db_check_children_parallel(
+    child_messages, blocked_children = _db_check_children_parallel(
         rows, sn_to_flex_id, sn_to_hybrid_id, missing_child_sns
     )
 
@@ -307,7 +346,10 @@ def validate_against_db(
     for parent_sn, msgs in child_messages.items():
         violations[parent_sn].extend(msgs)
 
-    return {sn: msgs for sn, msgs in violations.items() if msgs}
+    return (
+        {sn: msgs for sn, msgs in violations.items() if msgs},
+        blocked_children,
+    )
 
 
 def _db_check_parents_parallel(
@@ -322,18 +364,14 @@ def _db_check_parents_parallel(
         existing_hybrids, _ = util.get_children(parent_id, ofKind="Hybrid")
 
         if existing_flexes:
-            sns = ", ".join(
-                sorted(str(c["part"]["serial_number"]) for c in existing_flexes)
-            )
+            sns = ", ".join(sorted(str(c["part"]["serial_number"]) for c in existing_flexes))
             msgs.append(
                 f"parent {parent_sn} already has Module_flex child(ren) in DB "
                 f"({sns}); CSV adds 1 more, exceeding 'exactly 1 Module_flex'."
             )
 
         if existing_hybrids:
-            sns = ", ".join(
-                sorted(str(c["part"]["serial_number"]) for c in existing_hybrids)
-            )
+            sns = ", ".join(sorted(str(c["part"]["serial_number"]) for c in existing_hybrids))
             msgs.append(
                 f"parent {parent_sn} already has Hybrid child(ren) in DB "
                 f"({sns}); CSV adds 2 more, exceeding 'exactly 2 Hybrids'."
@@ -353,9 +391,15 @@ def _db_check_children_parallel(
     sn_to_flex_id: dict[str, int],
     sn_to_hybrid_id: dict[str, int],
     missing_child_sns: set[tuple[str, str]],
-) -> dict[str, list[str]]:
-    """DB-Rule 0: every Hybrid/Module_flex child has zero existing parents."""
+) -> tuple[dict[str, list[str]], set[tuple[str, str]]]:
+    """
+    DB-Rule 0: every Hybrid/Module_flex child has zero existing parents.
 
+    Returns (parent_keyed_messages, blocked_children). `blocked_children` is
+    the set of (kind, sn) pairs that already have a parent in the DB; these
+    rows are reported as 'already connected' but excluded from the upload,
+    so other (still-unwired) parents can still proceed.
+    """
     sn_to_id_by_kind = {
         "Module Flex": sn_to_flex_id,
         "Hybrid": sn_to_hybrid_id,
@@ -382,36 +426,35 @@ def _db_check_children_parallel(
             }
         )
 
-    def fn(payload: dict[str, object]) -> tuple[bool, tuple[str, str]]:
+    def fn(payload: dict[str, object]) -> tuple[bool, tuple[str, str, str]]:
         if payload["part_id"] is None:
             return False, (
                 str(payload["parent_sn"]),
-                (
-                    f"child serial {payload['child_sn']} "
-                    f"(kind {payload['kind']}) not found in DB."
-                ),
+                "",
+                f"child serial {payload['child_sn']} (kind {payload['kind']}) not found in DB.",
             )
         existing, _ = util.get_parents(payload["part_id"], onlyNonDeleted=True)
         if existing:
-            p_sns = ", ".join(
-                sorted(str(p["part_parent"]["serial_number"]) for p in existing)
-            )
+            p_sns = ", ".join(sorted(str(p["part_parent"]["serial_number"]) for p in existing))
             return False, (
                 str(payload["parent_sn"]),
-                (
-                    f"child {payload['child_sn']} ({payload['kind']}) already "
-                    f"connected to parent(s) in DB ({p_sns}); "
-                    f"required: no existing parent."
-                ),
+                f"{payload['kind']}|{payload['child_sn']}",
+                f"child {payload['child_sn']} ({payload['kind']}) already "
+                f"connected to parent(s) in DB ({p_sns}); "
+                f"required: no existing parent.",
             )
-        return True, ("", "")
+        return True, ("", "", "")
 
     _, rejected = util.parallel_partition(payloads, fn, max_workers=4)
     out: dict[str, list[str]] = defaultdict(list)
-    for parent_sn, msg in rejected:
+    blocked_children: set[tuple[str, str]] = set()
+    for parent_sn, blocked_key, msg in rejected:
+        if blocked_key:
+            kind, sn = blocked_key.split("|", 1)
+            blocked_children.add((kind, sn))
         if msg:
             out[parent_sn].append(msg)
-    return dict(out)
+    return dict(out), blocked_children
 
 
 # ---------- Upload ----------
@@ -422,10 +465,17 @@ def select_allowed_rows(
     merged_violations: dict[str, list[str]],
     missing_parents: list[tuple[str, str]],
     missing_children: list[tuple[str, str]],
+    blocked_children: set[tuple[str, str]] | None = None,
 ) -> list[dict[str, str]]:
-    """Filter the CSV down to rows whose parent SN is clean."""
+    """
+    Filter the CSV down to rows whose parent and child are both still
+    available for a new POST. Rows whose child already has a parent in
+    the DB (blocked_children) are skipped, not failed.
+    """
     bad_parents = set(merged_violations.keys()) | {sn for sn, _ in missing_parents}
     bad_children = {(ck, cn) for cn, ck in missing_children}
+    if blocked_children:
+        bad_children |= blocked_children
 
     return [
         r
@@ -435,23 +485,13 @@ def select_allowed_rows(
     ]
 
 
-def build_part_tree_entry(
+def build_part_tree_payload(
     par_part_id: int,
     chi_part_id: int,
     position: str,
     user: str,
 ) -> dict:
-    """
-    Build a single part_tree entry matching the production DB schema:
-
-        {
-            "position": pos,
-            "is_record_deleted": "F",
-            "part": chi_partID,
-            "part_parent": par_partID,
-            "record_insertion_user": self.user,
-        }
-    """
+    """One-row part_tree payload (a single dict, not wrapped in a list)."""
     return {
         "position": position,
         "is_record_deleted": "F",
@@ -459,22 +499,6 @@ def build_part_tree_entry(
         "part_parent": par_part_id,
         "record_insertion_user": user,
     }
-
-
-def build_part_tree_payload_for_parent(
-    parent_sn: str,
-    parent_id: int,
-    children: list[tuple[int, str]],
-    user: str,
-) -> list[dict]:
-    """
-    Build the list of part_tree entries for one parent, POSTed as one body
-    to `/partstreelist`.
-    """
-    return [
-        build_part_tree_entry(parent_id, child_id, position, user)
-        for child_id, position in children
-    ]
 
 
 def upload_relations(
@@ -487,18 +511,27 @@ def upload_relations(
     dryrun: bool = False,
 ) -> dict[str, str]:
     """
-    Group `allowed_rows` by parent and POST one payload per parent.
+    POST one /partstreelist payload per allowed CSV row.
 
-    Each payload is a list of part_tree entries (one per child), matching
-    the production DB schema for `POST /partstreelist`.
+    Each row becomes a single-entry payload; the response is keyed by a
+    composite identifier 'parent_sn -> (kind, child_sn, position)' so a
+    caller can tell exactly which row succeeded or failed.
     """
     sn_to_id_by_kind = {
         "Module Flex": sn_to_flex_id,
         "Hybrid": sn_to_hybrid_id,
     }
 
-    by_parent: dict[str, list[tuple[int, str]]] = defaultdict(list)
-    for row in allowed_rows:
+    responses: dict[str, str] = {}
+    # Iterate in a deterministic order so logs and reports are reproducible.
+    for row in sorted(
+        allowed_rows,
+        key=lambda r: (
+            r["parent_serial_number"],
+            r["child_kind_of_part"],
+            r["child_serial_number"],
+        ),
+    ):
         parent_id = sn_to_module_id.get(row["parent_serial_number"])
         if parent_id is None:
             continue
@@ -506,15 +539,10 @@ def upload_relations(
         child_id = sn_to_id_by_kind[kind].get(row["child_serial_number"])
         if child_id is None:
             continue
-        by_parent[row["parent_serial_number"]].append((child_id, row["position"]))
 
-    responses: dict[str, str] = {}
-    for parent_sn in sorted(by_parent):
-        parent_id = sn_to_module_id[parent_sn]
-        payload = build_part_tree_payload_for_parent(
-            parent_sn, parent_id, by_parent[parent_sn], user
-        )
-        responses[parent_sn] = api.post_information(
+        payload = build_part_tree_payload(parent_id, child_id, row["position"], user)
+        key = f"{row['parent_serial_number']} -> ({kind}, {row['child_serial_number']}, '{row['position']}')"
+        responses[key] = api.post_information(
             "/partstreelist",
             payload,
             dryrun=dryrun,
@@ -528,9 +556,11 @@ def upload_relations(
 
 def report(
     violations: dict[str, list[str]],
+    sn_warnings: dict[str, list[str]],
     missing_parents: list[tuple[str, str]],
     missing_children: list[tuple[str, str]],
     upload_responses: dict[str, str] | None = None,
+    blocked_children: set[tuple[str, str]] | None = None,
     quiet: bool = False,
 ) -> int:
     """Print a summary. Returns 0 on success, 1 on failure (CI-friendly)."""
@@ -550,25 +580,51 @@ def report(
             for sn, kind in missing_children:
                 print(f"  - {sn} (kind: {kind})")
 
+    if sn_warnings:
+        print(
+            f"WARN: {len(sn_warnings)} parent_serial_number(s) or their children "
+            "have malformed SNs but the corresponding parts exist in the DB; "
+            "proceeding because you set allow-malformed-sn:"
+        )
+        for parent_sn, msgs in sn_warnings.items():
+            for m in sorted(msgs):
+                print(f"  - {parent_sn}: {m}")
+
+    if blocked_children and not quiet:
+        print(
+            f"NOTE: {len(blocked_children)} child serial(s) already have a "
+            f"parent in the DB and were skipped (not re-uploaded):"
+        )
+        for kind, sn in sorted(blocked_children):
+            print(f"  - ({kind}, {sn})")
+
+    # Always report upload results *before* the pass/fail decision, so
+    # partial successes (some parents violated, others uploaded cleanly)
+    # are visible alongside the FAIL diagnostics.
+    if upload_responses and not quiet:
+        if violations:
+            print(
+                f"OK: {len(upload_responses)} allowed row(s) were uploaded "
+                f"(partial success; {len(violations)} parent_serial_number(s) "
+                f"still have violations outlined below in FAIL block):"
+            )
+        else:
+            print(f"OK: every allowed row was uploaded ({len(upload_responses)} row(s)):")
+        for key, resp in upload_responses.items():
+            if resp is None:
+                body = "(dry-run, no POST issued)"
+            elif str(resp) == "201, Created":
+                body = "Successfully created relation"
+            else:
+                body = str(resp)
+            print(f"  - {key}: {body}")
+
     if not violations:
         if missing_parents or missing_children:
-            print(
-                "FAIL: rows associated with the missing serials above are "
-                "blocked from upload."
-            )
+            print("FAIL: rows associated with the missing serials above are blocked from upload.")
             return 1
-        if upload_responses and not quiet:
-            print(
-                f"OK: every parent_serial_number satisfies the hierarchy "
-                f"rules; uploaded {len(upload_responses)} parent tree(s):"
-            )
-            for parent_sn, resp in upload_responses.items():
-                print(f"  - {parent_sn}: {resp}")
-        elif not quiet:
-            print(
-                "OK: every parent_serial_number satisfies the hierarchy rules "
-                "(offline + DB)."
-            )
+        if not quiet and not upload_responses:
+            print("OK: every parent_serial_number satisfies the hierarchy rules (offline + DB).")
         return 0
 
     print(f"FAIL: {len(violations)} parent_serial_number(s) violate the rules:")
@@ -576,7 +632,7 @@ def report(
         for m in msgs:
             print(f"  - {parent_sn}: {m}")
     print(
-        "Please correct your input csv or modify the existing relations interactively (hgtd-tools gui)."
+        "Correct mistakes in input csv file and/or interactively change existing relations in hgtd-tools gui"
     )
     return 1
 
@@ -590,7 +646,9 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Validate a parent/child part hierarchy CSV against the Module_flex "
             "and Hybrid position rules, both offline and against the DB, and "
-            "POST the allowed relations."
+            "POST the allowed relations. Per-row partial success is supported: "
+            "rows whose child already has a parent in the DB are skipped (and "
+            "reported) so other (still-unwired) parents can still proceed."
         ),
     )
     parser.add_argument(
@@ -639,6 +697,14 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="validate only; never POST even if all checks pass",
     )
+    parser.add_argument(
+        "--allow-malformed-sn",
+        action="store_true",
+        help=(
+            "treat ATLAS SN-format failures as warnings (not blockers) when "
+            "the part is registered in the DB; DB existence is still required."
+        ),
+    )
     return parser
 
 
@@ -659,8 +725,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: could not read '{csv_path}': {exc}", file=sys.stderr)
         return 2
 
-    offline_violations = validate(rows)
+    # 1) Internally consistent CSV (rules 0, 1, 2 + SN pre-flight).
+    offline_violations, sn_warnings = validate(rows, allow_malformed_sn=args.allow_malformed_sn)
 
+    # 2) Resolve all SN -> part_id once; reuse for missing-SN detection + DB rules.
     try:
         modules, _ = util.get_relevant_parts("Module")
         flexes, _ = util.get_relevant_parts("Module Flex")
@@ -680,12 +748,17 @@ def main(argv: list[str] | None = None) -> int:
     sn_to_flex_id = {p["serial_number"]: p["part_id"] for p in flexes}
     sn_to_hybrid_id = {p["serial_number"]: p["part_id"] for p in hybrids}
 
+    # 3) Missing-SN pre-flight: serials in CSV but absent from DB.
     missing_parents, missing_children = collect_missing_serials(
         rows, sn_to_module_id, sn_to_flex_id, sn_to_hybrid_id
     )
 
-    db_violations = validate_against_db(rows, missing_parents, missing_children)
+    # 4) DB-Rules 0, 1, 2 (skips missing SNs). blocked_children captures
+    #    rows that are already wired in the DB and must be skipped at
+    #    upload time but should not block other (still-unwired) parents.
+    db_violations, blocked_children = validate_against_db(rows, missing_parents, missing_children)
 
+    # 5) Merge: offline + DB.
     merged: dict[str, list[str]] = defaultdict(list)
     for sn, msgs in offline_violations.items():
         merged[sn].extend(msgs)
@@ -694,12 +767,20 @@ def main(argv: list[str] | None = None) -> int:
 
     violations = {sn: msgs for sn, msgs in merged.items() if msgs}
 
-    has_blockers = bool(violations) or bool(missing_parents) or bool(missing_children)
+    # 6) Determine whether to upload. Upload runs whenever at least one row
+    #    survives the per-row filter (clean parent, clean child, child not
+    #    already wired). The presence of violations elsewhere in the CSV is
+    #    still reported but does NOT block the surviving rows.
+    has_blockers = bool(missing_parents) or bool(missing_children)
 
     upload_responses: dict[str, str] | None = None
     if not has_blockers and not args.skip_upload:
         allowed_rows = select_allowed_rows(
-            rows, violations, missing_parents, missing_children
+            rows,
+            violations,
+            missing_parents,
+            missing_children,
+            blocked_children=blocked_children,
         )
         if allowed_rows:
             try:
@@ -724,9 +805,11 @@ def main(argv: list[str] | None = None) -> int:
 
     return report(
         violations,
+        sn_warnings,
         missing_parents,
         missing_children,
         upload_responses=upload_responses,
+        blocked_children=blocked_children,
         quiet=args.quiet,
     )
 

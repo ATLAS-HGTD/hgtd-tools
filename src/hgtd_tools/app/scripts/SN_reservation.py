@@ -1,13 +1,7 @@
-import os.path
-import time
 from argparse import ArgumentParser
 from pprint import pprint
 
-import hgtd_tools.api as api
-import hgtd_tools.data as data
-import hgtd_tools.util as util
-import requests
-import yaml
+from hgtd_tools import api, data, util
 
 
 def main():
@@ -17,6 +11,7 @@ def main():
 
     parser = ArgumentParser("CLI for SN reservation, targeted at Module Assembly")
     parser.add_argument(
+        "-u",
         "--user-name",
         dest="userName",
         help="Your CERN user name.",
@@ -40,14 +35,14 @@ def main():
     parser.add_argument(
         "--batch",
         dest="batch",
-        help=f"Batch. Must be alphanumerical",
+        help="Batch. Must be alphanumerical",
         default=None,
         required=True,
     )
     parser.add_argument(
         "--n-reserve",
         dest="nToReserve",
-        help=f"Number of SNs to reserve. Must be an integer",
+        help="Number of SNs to reserve. Must be an integer",
         default=None,
         required=True,
     )
@@ -60,9 +55,7 @@ def main():
         "./local_info in the current working directory.",
         default=None,
     )
-    parser.add_argument(
-        "--comment", dest="comment", help="[Optional] Set a comment.", default=None
-    )
+    parser.add_argument("--comment", dest="comment", help="[Optional] Set a comment.", default=None)
     parser.add_argument(
         "--dryrun",
         dest="dryrun",
@@ -85,7 +78,7 @@ def main():
     # boolean flag
     dryrun = util.str2bool(args.dryrun)
 
-    if comment == None:
+    if comment is None:
         comment = "part SN reserved via hgtd-tools"
 
     if local_folder is not None:
@@ -126,21 +119,16 @@ def main():
         else:
             still_to_build = N_to_reserve - n_holes_to_use
             recom_counters = holes_to_use + [
-                new_ones
-                for new_ones in range(max_so_far + 1, max_so_far + 1 + still_to_build)
+                new_ones for new_ones in range(max_so_far + 1, max_so_far + 1 + still_to_build)
             ]
 
         return [f"{prefix}{counter:06}" for counter in recom_counters]
 
     my_matching_SNs = find_matching_SNs(my_prefix, module_SNs)
     matched_sorted_counters = find_matching_sorted_counters(my_matching_SNs)
-    matched_sorted_counters_as_INT = change_counter_digits_to_ints(
-        matched_sorted_counters
-    )
+    matched_sorted_counters_as_INT = change_counter_digits_to_ints(matched_sorted_counters)
     max_matched = find_max(matched_sorted_counters_as_INT)
-    holes_in_matched = collect_possible_holes(
-        matched_sorted_counters_as_INT, max_matched
-    )
+    holes_in_matched = collect_possible_holes(matched_sorted_counters_as_INT, max_matched)
     recommended_SNs = build_recommended_SNs(
         how_many_to_reserve, holes_in_matched, max_matched, my_prefix
     )

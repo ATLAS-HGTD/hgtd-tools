@@ -1,12 +1,13 @@
 from datetime import datetime
 
-import hgtd_tools.util as util
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
 from cycler import cycler
 from matplotlib import rcParams
+
+from hgtd_tools import util
 
 color_sequence1 = [
     "#3f90da",
@@ -52,9 +53,7 @@ def plot_categorical_bar_stack(
     log_axis,
     postfix,
 ):
-    plt.rcParams["axes.prop_cycle"] = cycler(
-        "color", colors_tab20c + combination_color_sequence
-    )
+    plt.rcParams["axes.prop_cycle"] = cycler("color", colors_tab20c + combination_color_sequence)
     n_categories = len(categories)
     fig, ax = plt.subplots(figsize=(12, 8))
 
@@ -171,11 +170,7 @@ def plot_multi_categorical_time_trend(
     hep.label.exp_text(
         "ATLAS HGTD",
         " " + exp_text,
-        (
-            f"{title_prefix}Generated with anstein/hgtd-tools~master on {today}"
-            if subtitle
-            else ""
-        ),
+        (f"{title_prefix}Generated with anstein/hgtd-tools~master on {today}" if subtitle else ""),
         loc=4,
         fontsize=(
             rcParams["font.size"] * 1.3,
@@ -300,10 +295,7 @@ def iv_curves_for_sns(
             10
             ** (
                 np.log(ax.get_ylim()[-1]) / np.log(10)
-                + (
-                    np.log(ax.get_ylim()[0]) / np.log(10)
-                    - np.log(ax.get_ylim()[-1]) / np.log(10)
-                )
+                + (np.log(ax.get_ylim()[0]) / np.log(10) - np.log(ax.get_ylim()[-1]) / np.log(10))
                 * 0.11
             ),
             ax.get_ylim()[-1],
@@ -374,8 +366,7 @@ def iv_curves_for_sns(
                 diff_currents_measured_module, diff_voltages
             )
             diff_corrected_currents_to_plot = [
-                diff_currents_measured_module_corrected[i]
-                - diff_currents_sum_of_hybrids[i]
+                diff_currents_measured_module_corrected[i] - diff_currents_sum_of_hybrids[i]
                 for i in range(index_minimum_of_maxima)
             ]
             ax_diff.plot(
@@ -403,7 +394,7 @@ def iv_curves_for_sns(
         leg = ax.get_legend()
         leg.set_loc("lower right")
         ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[-1] / 10)
-    if KoP_legend != None:
+    if KoP_legend is not None:
         if n_legend_entries > 4:
             leg = ax.get_legend()
             leg.set_loc("lower right")
@@ -456,7 +447,7 @@ def pie_chart(
                 )
         pie = ax.pie(filtered_data, colors=filtered_colors)
         wedges = pie[0]
-        labels_outer = ax.pie_label(pie, filtered_labels, distance=1.1)
+        _ = ax.pie_label(pie, filtered_labels, distance=1.1)
         labels_frac = ax.pie_label(pie, "{frac:.1%}", distance=0.7)
         labels_abs = ax.pie_label(pie, "{absval:d}", distance=0.4)
         # change the text color depending on wedge color (luminance)

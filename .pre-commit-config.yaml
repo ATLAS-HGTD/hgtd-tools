@@ -18,5 +18,6 @@ repos:
     rev: v0.16.9
     hooks:
     -   id: ruff-check
-        args: [--fix]
+        args: [--fix, --select, "E,F,I", --ignore=E501, --line-length=100,  --exclude=src/hgtd_tools/templates.py]
     -   id: ruff-format
+        args: [--line-length=100]

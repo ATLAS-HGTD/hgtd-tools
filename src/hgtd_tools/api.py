@@ -1,7 +1,6 @@
 import datetime
 import getpass
 import json
-import os
 from pathlib import Path
 from pprint import pprint
 
@@ -28,7 +27,9 @@ keycloak_endpoint = kc_server + "/auth/realms/cern/protocol/openid-connect/token
 userinfo_endpoint = kc_server + "/auth/realms/cern/protocol/openid-connect/userinfo"
 
 # === For checking against latest version
-hgtd_tools_version_endpoint = "https://cernbox.cern.ch/remote.php/dav/public-files/lFlRlPYl6EO4J3N/hgtd-tools-version"
+hgtd_tools_version_endpoint = (
+    "https://cernbox.cern.ch/remote.php/dav/public-files/lFlRlPYl6EO4J3N/hgtd-tools-version"
+)
 
 CONFIG_API_FILENAME = "config_api"
 SETTINGS_DIRNAME = ".hgtd_tools"
@@ -349,8 +350,7 @@ def user_auth_cli(username, local_folder):
         # authenticate user, request input from CLI
         password = getpass.getpass("Type password, confirm with [Enter]: ")
         sixdigit = input(
-            "Type 6-digit verification code if you have 2FA setup. "
-            "Confirm with [Enter]: "
+            "Type 6-digit verification code if you have 2FA setup. Confirm with [Enter]: "
         )
 
         authenticate(username, password, sixdigit, local_folder)
@@ -359,15 +359,13 @@ def user_auth_cli(username, local_folder):
 def fetch_information(endpoint, authorized=True, debug=False, existing_token=None):
     # https://stackoverflow.com/a/47007419
     try:
-        access_token = get_access_token() if existing_token == None else existing_token
+        access_token = get_access_token() if existing_token is None else existing_token
         authorization = "Bearer " + access_token
         headers = {
             "Authorization": authorization,
             "content-type": "application/json",
         }
-        request = requests.get(
-            protectedApiUrlPrefix + endpoint, timeout=600, headers=headers
-        )
+        request = requests.get(protectedApiUrlPrefix + endpoint, timeout=600, headers=headers)
         request.raise_for_status()
         if debug:
             print(">> GET response:", request.status_code, request.reason)
@@ -408,9 +406,7 @@ def post_information(
         pprint(payload)
     if not dryrun:
         try:
-            access_token = (
-                get_access_token() if existing_token == None else existing_token
-            )
+            access_token = get_access_token() if existing_token is None else existing_token
             authorization = "Bearer " + access_token
             if content_type == "application/json":
                 headers = {
@@ -462,22 +458,16 @@ def post_information(
         print(">>> and payload", payload)
 
 
-def delete_information(
-    endpoint, authorized=True, debug=False, dryrun=False, existing_token=None
-):
+def delete_information(endpoint, authorized=True, debug=False, dryrun=False, existing_token=None):
     if not dryrun:
         try:
-            access_token = (
-                get_access_token() if existing_token == None else existing_token
-            )
+            access_token = get_access_token() if existing_token is None else existing_token
             authorization = "Bearer " + access_token
             headers = {
                 "Authorization": authorization,
                 "content-type": "application/json",
             }
-            response = requests.delete(
-                protectedApiUrlPrefix + endpoint, headers=headers
-            )
+            response = requests.delete(protectedApiUrlPrefix + endpoint, headers=headers)
             response.raise_for_status()
             if debug:
                 print(">> DELETE response:", response.status_code, response.reason)

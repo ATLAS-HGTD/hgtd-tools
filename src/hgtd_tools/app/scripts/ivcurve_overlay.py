@@ -1,10 +1,6 @@
 from argparse import ArgumentParser
-from datetime import datetime
-from datetime import UTC
 
-import hgtd_tools.plotter as plotter
-import hgtd_tools.util as util
-import numpy as np
+from hgtd_tools import plotter, util
 
 
 def main():
@@ -81,7 +77,6 @@ def main():
     )
     args = parser.parse_args()
 
-    mode_alias = args.mode_alias
     sensor_sns = args.sensor_sns
     hybrid_sns = args.hybrid_sns
     module_sns = args.module_sns
@@ -97,7 +92,7 @@ def main():
     currents = []
     KoPs = []
     labels = []
-    if sensor_sns != None:
+    if sensor_sns is not None:
         sensor_sns = [sensor_sns] if "," not in sensor_sns else sensor_sns.split(",")
         all_sensor_ivs_to_plot = []
         for sn in sensor_sns:
@@ -107,16 +102,14 @@ def main():
             all_sensor_ivs_to_plot.append(iv)
             currents.append(iv[0])
             voltages.append(iv[1])
-    if hybrid_sns != None:
+    if hybrid_sns is not None:
         hybrid_sns = [hybrid_sns] if "," not in hybrid_sns else hybrid_sns.split(",")
         all_hybrid_ivs_to_plot = []
         all_hybrid_ivs = util.get_all_hybrid_ivs()
         if plot_sum_hybridIV:
             sum_hybrid_ivs_to_plot = []
         for sn in hybrid_sns:
-            iv, _ = util.get_iv_for_hybrid_or_module(
-                sn, all_ivs=all_hybrid_ivs, KoP="Hybrid"
-            )
+            iv, _ = util.get_iv_for_hybrid_or_module(sn, all_ivs=all_hybrid_ivs, KoP="Hybrid")
             KoPs.append("Hybrid")
             labels.append(sn)
             all_hybrid_ivs_to_plot.append(iv)
@@ -126,31 +119,26 @@ def main():
                 sum_hybrid_ivs_to_plot.append(iv)
         if plot_sum_hybridIV:
             sum_currents = [
-                sum(x)
-                for x in zip(sum_hybrid_ivs_to_plot[0][0], sum_hybrid_ivs_to_plot[1][0])
+                sum(x) for x in zip(sum_hybrid_ivs_to_plot[0][0], sum_hybrid_ivs_to_plot[1][0])
             ]
             currents.append(sum_currents)
             voltages.append(sum_hybrid_ivs_to_plot[1][1])
             KoPs.append("Hybrid")
             labels.append("Sum of Hybrid IVs")
-    if module_sns != None:
+    if module_sns is not None:
         module_sns = [module_sns] if "," not in module_sns else module_sns.split(",")
         all_module_ivs_to_plot = []
         all_module_ivs = util.get_all_module_ivs()
         for sn in module_sns:
-            iv, _ = util.get_iv_for_hybrid_or_module(
-                sn, all_ivs=all_module_ivs, KoP="Module"
-            )
+            iv, _ = util.get_iv_for_hybrid_or_module(sn, all_ivs=all_module_ivs, KoP="Module")
             KoPs.append("Module")
             labels.append(sn)
             all_module_ivs_to_plot.append(iv)
             currents.append(iv[0])
             voltages.append(iv[1])
 
-    if custom_labels != None:
-        labels = (
-            [custom_labels] if "," not in custom_labels else custom_labels.split(",")
-        )
+    if custom_labels is not None:
+        labels = [custom_labels] if "," not in custom_labels else custom_labels.split(",")
     plotter.iv_curves_for_sns(
         voltages,
         currents,

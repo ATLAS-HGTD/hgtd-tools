@@ -1,24 +1,19 @@
 import threading
-import time
 import tkinter
 from dataclasses import dataclass
-from dataclasses import field
 from importlib import metadata
 
 import customtkinter
-import hgtd_tools.api as api
-import hgtd_tools.data as data
-import hgtd_tools.util as util
 import requests
-from hgtd_tools.asset_helpers import load_image_from_assets
-from hgtd_tools.asset_helpers import load_image_from_assets_as_b64
 
-customtkinter.set_appearance_mode(
-    "System"
-)  # Modes: "System" (standard), "Dark", "Light"
-customtkinter.set_default_color_theme(
-    "blue"
-)  # Themes: "blue" (standard), "green", "dark-blue"
+from hgtd_tools import api, data, util
+from hgtd_tools.asset_helpers import (
+    load_image_from_assets,
+    load_image_from_assets_as_b64,
+)
+
+customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
+customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
 wrapped_text = util.CustomTextWrapper(width=90)
 __version__ = metadata.version("hgtd_tools")
@@ -60,15 +55,9 @@ _MODE_TO_SHORT = {
 LAYOUT_BY_MODE = {
     "Module Assembly": dict(ma=True, combobox=False, canvas=False, ft=False),
     "Module Loading": dict(ma=False, combobox=True, canvas=True, ft=False),
-    "Detector Assembly (CERN): DU": dict(
-        ma=False, combobox=True, canvas=True, ft=False
-    ),
-    "Detector Assembly (CERN): PEB": dict(
-        ma=False, combobox=True, canvas=False, ft=False
-    ),
-    "Detector Assembly (CERN): FT": dict(
-        ma=False, combobox=False, canvas=False, ft=True
-    ),
+    "Detector Assembly (CERN): DU": dict(ma=False, combobox=True, canvas=True, ft=False),
+    "Detector Assembly (CERN): PEB": dict(ma=False, combobox=True, canvas=False, ft=False),
+    "Detector Assembly (CERN): FT": dict(ma=False, combobox=False, canvas=False, ft=True),
 }
 _NONE_ATTRS = (
     "par_type",
@@ -180,9 +169,7 @@ class LoginDialog(customtkinter.CTkToplevel):
             textvariable=self.username_variable,
             state="normal",
         )
-        self.username_entry.grid(
-            row=row + 1, column=0, padx=10, pady=(0, 10), sticky="ew"
-        )
+        self.username_entry.grid(row=row + 1, column=0, padx=10, pady=(0, 10), sticky="ew")
 
     def _build_password_field(self, row):
         self.label_password = customtkinter.CTkLabel(
@@ -197,9 +184,7 @@ class LoginDialog(customtkinter.CTkToplevel):
             state="normal",
             show="*",
         )
-        self.password_entry.grid(
-            row=row + 1, column=0, padx=10, pady=(0, 10), sticky="ew"
-        )
+        self.password_entry.grid(row=row + 1, column=0, padx=10, pady=(0, 10), sticky="ew")
 
     def _build_totp_field(self, row):
         self.label_totp = customtkinter.CTkLabel(
@@ -285,8 +270,7 @@ class App(customtkinter.CTk):
         """True if a user is authenticated, else False. Configures label_info."""
         if self.user == "None" or self.user == "new...":
             err_text = (
-                "Please login with your CERN account, because this "
-                "operation requires a user name."
+                "Please login with your CERN account, because this operation requires a user name."
             )
             self._show_error(err_text, exception="")
             return False
@@ -319,9 +303,7 @@ class App(customtkinter.CTk):
             print(f"Yours: {self.my_version}; latest published: {upstream_version}.")
             print("Consider updating to a new release, following these instructions:")
             print("https://hgtd-tools.docs.cern.ch/getting_started/update/")
-            self.version_full_text = (
-                self.version_full_text + f"\noutdated release, please update"
-            )
+            self.version_full_text = self.version_full_text + "\noutdated release, please update"
             self.label_credits.configure(text=self.version_full_text)
         else:
             print(f"You are running the most recent release {self.my_version}. Enjoy!")
@@ -366,9 +348,7 @@ class App(customtkinter.CTk):
         else:
             self.progressbar.set(1)
             if self.api_status == 0:
-                self.progressbar.configure(
-                    progress_color=GUI_CONFIG.progress_color_ERROR
-                )
+                self.progressbar.configure(progress_color=GUI_CONFIG.progress_color_ERROR)
             else:
                 self.progressbar.configure(progress_color=GUI_CONFIG.progress_color_OK)
 
@@ -382,9 +362,7 @@ class App(customtkinter.CTk):
         self.label_logo.grid(row=0, column=0, padx=10, pady=(10, 5), columnspan=2)
 
         self.my_version = __version__
-        self.version_full_text = (
-            f"v{self.my_version} - September 2026\nAnnika Stein (JGU Mainz)"
-        )
+        self.version_full_text = f"v{self.my_version} - September 2026\nAnnika Stein (JGU Mainz)"
         self.label_credits = customtkinter.CTkLabel(
             self.frame_sidebar_left, text=self.version_full_text
         )
@@ -454,15 +432,9 @@ class App(customtkinter.CTk):
 
     def _button_colors(self, is_active: bool) -> dict:
         return {
-            "fg_color": (
-                GUI_CONFIG.fg_active_color
-                if is_active
-                else GUI_CONFIG.fg_inactive_color
-            ),
+            "fg_color": (GUI_CONFIG.fg_active_color if is_active else GUI_CONFIG.fg_inactive_color),
             "hover_color": (
-                GUI_CONFIG.hover_active_color
-                if is_active
-                else GUI_CONFIG.hover_inactive_color
+                GUI_CONFIG.hover_active_color if is_active else GUI_CONFIG.hover_inactive_color
             ),
         }
 
@@ -507,9 +479,7 @@ class App(customtkinter.CTk):
             btn = customtkinter.CTkButton(
                 self.frame_useful_links,
                 text=text,
-                command=lambda u=url: util.open_webbrowser_with_url(
-                    u, noExtraPrefix=True
-                ),
+                command=lambda u=url: util.open_webbrowser_with_url(u, noExtraPrefix=True),
                 fg_color=GUI_CONFIG.fg_inactive_color,
                 hover_color=GUI_CONFIG.hover_inactive_color,
             )
@@ -530,9 +500,7 @@ class App(customtkinter.CTk):
 
     def _build_user_selector(self, row):
         """Label and user selection menu."""
-        label = customtkinter.CTkLabel(
-            self.frame_sidebar_left, text="User:", anchor="e"
-        )
+        label = customtkinter.CTkLabel(self.frame_sidebar_left, text="User:", anchor="e")
         label.grid(row=row, column=0, padx=5, pady=5)
 
         self.optionmenu_user = customtkinter.CTkOptionMenu(
@@ -547,9 +515,7 @@ class App(customtkinter.CTk):
 
     def _build_appearance_mode(self, row):
         """Label and appearance mode menu."""
-        label = customtkinter.CTkLabel(
-            self.frame_sidebar_left, text="Theme:", anchor="e"
-        )
+        label = customtkinter.CTkLabel(self.frame_sidebar_left, text="Theme:", anchor="e")
         label.grid(row=row, column=0, padx=5, pady=5)
 
         self.optionmenu_appearance_mode = customtkinter.CTkOptionMenu(
@@ -563,9 +529,7 @@ class App(customtkinter.CTk):
 
     def _build_ui_scaling(self, row):
         """Label and UI scaling menu."""
-        label = customtkinter.CTkLabel(
-            self.frame_sidebar_left, text="UI Scaling:", anchor="e"
-        )
+        label = customtkinter.CTkLabel(self.frame_sidebar_left, text="UI Scaling:", anchor="e")
         label.grid(row=row, column=0, padx=5, pady=5)
 
         self.optionmenu_scaling = customtkinter.CTkOptionMenu(
@@ -637,12 +601,8 @@ class App(customtkinter.CTk):
         self.partstree = None
 
         # Module-level buttons
-        self.button_inspect_clicked.configure(
-            text="INSPECT CLICKED MODULE", state="disabled"
-        )
-        self.button_delete_clicked.configure(
-            text="UNLOAD CLICKED MODULE", state="disabled"
-        )
+        self.button_inspect_clicked.configure(text="INSPECT CLICKED MODULE", state="disabled")
+        self.button_delete_clicked.configure(text="UNLOAD CLICKED MODULE", state="disabled")
         self.button_delete_child_MF.configure(state="disabled")
         self.button_delete_child_HY_HV.configure(state="disabled")
         self.button_delete_child_HY_LV.configure(state="disabled")
@@ -754,7 +714,7 @@ class App(customtkinter.CTk):
         state["chunks"] = list(chunks)
         state["n_pages"] = n_pages
         state["shown_page"] = 0 if n_pages == 0 else shown_page
-        state["page_label"].configure(text=f"page {state["shown_page"]}/{n_pages}")
+        state["page_label"].configure(text=f"page {state['shown_page']}/{n_pages}")
 
         cb = state["combobox"]
         if n_pages > 0:
@@ -785,11 +745,7 @@ class App(customtkinter.CTk):
         if flags is None:
             return
         self.frame_ma.grid() if flags["ma"] else self.frame_ma.grid_remove()
-        (
-            self.frame_combobox.grid()
-            if flags["combobox"]
-            else self.frame_combobox.grid_remove()
-        )
+        (self.frame_combobox.grid() if flags["combobox"] else self.frame_combobox.grid_remove())
         self.label_canvas.grid() if flags["canvas"] else self.label_canvas.grid_remove()
         self.canvas.grid() if flags["canvas"] else self.canvas.grid_remove()
         self.label_info.grid()  # always
@@ -818,9 +774,7 @@ class App(customtkinter.CTk):
             self._show_error(error_msg)
         return rels, ok
 
-    def _fetch_relevant_parts(
-        self, kind, error_msg, getFullAttributes=False, useLocal=False
-    ):
+    def _fetch_relevant_parts(self, kind, error_msg, getFullAttributes=False, useLocal=False):
         """Fetch a list of parts via util.get_relevant_parts, handle exceptions and API status.
         Returns (parts_list, ok_bool).
         """
@@ -885,16 +839,12 @@ class App(customtkinter.CTk):
 
         # left sub widget: form
         self.frame_combobox = customtkinter.CTkFrame(self.frame_main, width=600)
-        self.frame_combobox.grid(
-            row=0, column=0, padx=5, pady=5, sticky="nsew", rowspan=2
-        )
+        self.frame_combobox.grid(row=0, column=0, padx=5, pady=5, sticky="nsew", rowspan=2)
         self.frame_combobox.grid_columnconfigure((0, 1), weight=1)
 
         # parent
         self.frame_parent = customtkinter.CTkFrame(self.frame_combobox)
-        self.frame_parent.grid(
-            row=0, column=0, padx=5, pady=5, sticky="nsew", columnspan=2
-        )
+        self.frame_parent.grid(row=0, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
         self.frame_parent.grid_columnconfigure((0, 1), weight=1)
 
         self.label_combobox_parent_T = customtkinter.CTkLabel(
@@ -904,12 +854,8 @@ class App(customtkinter.CTk):
             row=0, column=0, padx=10, pady=(5, 0), columnspan=2, sticky="nsew"
         )
 
-        self.label_combobox_par_type = customtkinter.CTkLabel(
-            self.frame_parent, text="DU type"
-        )
-        self.label_combobox_par_type.grid(
-            row=1, column=0, padx=10, pady=(5, 0), sticky="nsew"
-        )
+        self.label_combobox_par_type = customtkinter.CTkLabel(self.frame_parent, text="DU type")
+        self.label_combobox_par_type.grid(row=1, column=0, padx=10, pady=(5, 0), sticky="nsew")
 
         self._build_paged_combobox(
             self.frame_parent,
@@ -931,9 +877,7 @@ class App(customtkinter.CTk):
         self.label_combobox_parent = customtkinter.CTkLabel(
             self.frame_parent, text="Parent Part SN"
         )
-        self.label_combobox_parent.grid(
-            row=2, column=0, padx=10, pady=(5, 0), sticky="nsew"
-        )
+        self.label_combobox_parent.grid(row=2, column=0, padx=10, pady=(5, 0), sticky="nsew")
 
         self._build_paged_combobox(
             self.frame_parent,
@@ -959,9 +903,7 @@ class App(customtkinter.CTk):
 
         # child
         self.frame_child = customtkinter.CTkFrame(self.frame_combobox)
-        self.frame_child.grid(
-            row=1, column=0, padx=5, pady=5, sticky="nsew", columnspan=2
-        )
+        self.frame_child.grid(row=1, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
         self.frame_child.grid_columnconfigure((0, 1), weight=1)
 
         self.label_combobox_child_T = customtkinter.CTkLabel(
@@ -986,9 +928,7 @@ class App(customtkinter.CTk):
             width=250,
         )
         self.combobox_child_manu.grid(row=1, column=1, padx=5, pady=10)
-        self.combobox_child_manu.set(
-            "All manufacturers"
-        )  # ToDo: change values depending on mode
+        self.combobox_child_manu.set("All manufacturers")  # ToDo: change values depending on mode
 
         # === Child Part Type ===
         self._build_paged_combobox(
@@ -1008,17 +948,13 @@ class App(customtkinter.CTk):
         # Initially hidden — becomes visible once mode is switched.
         self._show_paged_combobox("DA-chi-type", visible=False)
 
-        self.label_combobox_child = customtkinter.CTkLabel(
-            self.frame_child, text="Child Part SN"
-        )
+        self.label_combobox_child = customtkinter.CTkLabel(self.frame_child, text="Child Part SN")
         self.label_combobox_child.grid(
             row=2, column=0, padx=10, pady=(5, 0), columnspan=2, sticky="nsew"
         )
 
         self.frame_child_SN_filter = customtkinter.CTkFrame(self.frame_child)
-        self.frame_child_SN_filter.grid(
-            row=3, column=0, padx=10, pady=(10, 5), sticky="nsew"
-        )
+        self.frame_child_SN_filter.grid(row=3, column=0, padx=10, pady=(10, 5), sticky="nsew")
         self.variable_child_SN_filter = customtkinter.StringVar(value="")
         self.entry_child_SN_filter = customtkinter.CTkEntry(
             self.frame_child_SN_filter, textvariable=self.variable_child_SN_filter
@@ -1061,9 +997,7 @@ class App(customtkinter.CTk):
 
         # position / click
         self.frame_position = customtkinter.CTkFrame(self.frame_combobox)
-        self.frame_position.grid(
-            row=2, column=0, padx=5, pady=5, sticky="nsew", columnspan=2
-        )
+        self.frame_position.grid(row=2, column=0, padx=5, pady=5, sticky="nsew", columnspan=2)
         self.frame_position.grid_columnconfigure((0, 1), weight=1)
 
         self.label_position = customtkinter.CTkLabel(
@@ -1128,53 +1062,37 @@ class App(customtkinter.CTk):
         # *********************************************
 
         self.frame_ma = customtkinter.CTkFrame(self.frame_main)
-        self.frame_ma.grid(
-            row=0, column=0, padx=5, pady=5, sticky="nsew", rowspan=2, columnspan=3
-        )
+        self.frame_ma.grid(row=0, column=0, padx=5, pady=5, sticky="nsew", rowspan=2, columnspan=3)
         #
         # === 1st line ===
         #
         self.frame_module_parent = customtkinter.CTkFrame(self.frame_ma)
         self.frame_module_parent.grid(row=0, column=0, padx=5, pady=5, columnspan=2)
 
-        self.frame_module_parent_selection = customtkinter.CTkFrame(
-            self.frame_module_parent
-        )
-        self.frame_module_parent_selection.grid(
-            row=0, column=0, padx=5, pady=5, columnspan=1
-        )
+        self.frame_module_parent_selection = customtkinter.CTkFrame(self.frame_module_parent)
+        self.frame_module_parent_selection.grid(row=0, column=0, padx=5, pady=5, columnspan=1)
         self.frame_module_parent_selection.grid_columnconfigure((0, 1, 2), weight=1)
 
         self.label_module_parent = customtkinter.CTkLabel(
             self.frame_module_parent_selection, text="Parent Module"
         )
-        self.label_module_parent.grid(
-            row=0, column=0, padx=5, pady=(5, 0), columnspan=3
-        )
+        self.label_module_parent.grid(row=0, column=0, padx=5, pady=(5, 0), columnspan=3)
         self.label_module_parent_manu = customtkinter.CTkLabel(
             self.frame_module_parent_selection, text="Manufacturer"
         )
-        self.label_module_parent_manu.grid(
-            row=1, column=0, padx=5, pady=(5, 0), columnspan=1
-        )
+        self.label_module_parent_manu.grid(row=1, column=0, padx=5, pady=(5, 0), columnspan=1)
         self.label_module_parent_loc = customtkinter.CTkLabel(
             self.frame_module_parent_selection, text="Location"
         )
-        self.label_module_parent_loc.grid(
-            row=1, column=1, padx=5, pady=(5, 0), columnspan=1
-        )
+        self.label_module_parent_loc.grid(row=1, column=1, padx=5, pady=(5, 0), columnspan=1)
         self.label_module_parent_conn = customtkinter.CTkLabel(
             self.frame_module_parent_selection, text="Connection status"
         )
-        self.label_module_parent_conn.grid(
-            row=1, column=2, padx=5, pady=(5, 0), columnspan=1
-        )
+        self.label_module_parent_conn.grid(row=1, column=2, padx=5, pady=(5, 0), columnspan=1)
         self.label_module_parent_SN = customtkinter.CTkLabel(
             self.frame_module_parent_selection, text="Parent SN"
         )
-        self.label_module_parent_SN.grid(
-            row=3, column=0, padx=5, pady=(5, 0), columnspan=3
-        )
+        self.label_module_parent_SN.grid(row=3, column=0, padx=5, pady=(5, 0), columnspan=3)
 
         self.combobox_MA_mod_par_manu = customtkinter.CTkComboBox(
             self.frame_module_parent_selection,
@@ -1199,25 +1117,19 @@ class App(customtkinter.CTk):
             command=self.change_MA_parent_Mod_filter_event,
             width=170,
         )
-        self.optionmenu_MA_mod_par_conn.grid(
-            row=2, column=2, padx=5, pady=5, columnspan=2
-        )
+        self.optionmenu_MA_mod_par_conn.grid(row=2, column=2, padx=5, pady=5, columnspan=2)
         self.optionmenu_MA_mod_par_conn.set("No filter")
 
         self.frame_module_parent_SN_filter = customtkinter.CTkFrame(
             self.frame_module_parent_selection
         )
-        self.frame_module_parent_SN_filter.grid(
-            row=4, column=0, padx=10, pady=10, sticky="nsew"
-        )
+        self.frame_module_parent_SN_filter.grid(row=4, column=0, padx=10, pady=10, sticky="nsew")
         self.variable_module_parent_SN_filter = customtkinter.StringVar(value="")
         self.entry_module_parent_SN_filter = customtkinter.CTkEntry(
             self.frame_module_parent_SN_filter,
             textvariable=self.variable_module_parent_SN_filter,
         )
-        self.entry_module_parent_SN_filter.grid(
-            row=0, column=0, padx=5, pady=5, sticky="nsew"
-        )
+        self.entry_module_parent_SN_filter.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
         self.filter_image = customtkinter.CTkImage(
             load_image_from_assets("searchIcon.png"), size=(20, 20)
         )
@@ -1257,9 +1169,7 @@ class App(customtkinter.CTk):
         self.label_module_image_in = customtkinter.CTkLabel(
             self.frame_module_parent, text="", image=self.module_image
         )
-        self.label_module_image_in.grid(
-            row=0, column=1, padx=15, pady=15, sticky="nsew", rowspan=4
-        )
+        self.label_module_image_in.grid(row=0, column=1, padx=15, pady=15, sticky="nsew", rowspan=4)
 
         #
         # === 2nd line ===
@@ -1273,62 +1183,44 @@ class App(customtkinter.CTk):
         #
         # === Module Flex ===
         #
-        self.frame_module_flex_child = customtkinter.CTkFrame(
-            self.frame_module_children
-        )
-        self.frame_module_flex_child.grid(
-            row=1, column=0, padx=5, pady=5, sticky="nsew"
-        )
+        self.frame_module_flex_child = customtkinter.CTkFrame(self.frame_module_children)
+        self.frame_module_flex_child.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
         self.frame_module_flex_child.grid_columnconfigure((0, 1), weight=1)
 
         self.label_module_flex_child = customtkinter.CTkLabel(
             self.frame_module_flex_child, text="Child Module Flex"
         )
-        self.label_module_flex_child.grid(
-            row=0, column=0, padx=5, pady=(5, 0), columnspan=2
-        )
+        self.label_module_flex_child.grid(row=0, column=0, padx=5, pady=(5, 0), columnspan=2)
         self.label_module_flex_child_loc = customtkinter.CTkLabel(
             self.frame_module_flex_child, text="Location"
         )
-        self.label_module_flex_child_loc.grid(
-            row=1, column=0, padx=5, pady=(5, 0), columnspan=2
-        )
+        self.label_module_flex_child_loc.grid(row=1, column=0, padx=5, pady=(5, 0), columnspan=2)
         self.combobox_MA_MF_child_loc = customtkinter.CTkComboBox(
             self.frame_module_flex_child,
             values=["All locations"],
             command=self.change_MA_child_MF_filter_event,
             width=250,
         )
-        self.combobox_MA_MF_child_loc.grid(
-            row=2, column=0, padx=5, pady=5, columnspan=2
-        )
+        self.combobox_MA_MF_child_loc.grid(row=2, column=0, padx=5, pady=5, columnspan=2)
         self.combobox_MA_MF_child_loc.set("All locations")
         self.label_module_flex_child_conn = customtkinter.CTkLabel(
             self.frame_module_flex_child, text="Connection status"
         )
-        self.label_module_flex_child_conn.grid(
-            row=3, column=0, padx=5, pady=(5, 0), columnspan=2
-        )
+        self.label_module_flex_child_conn.grid(row=3, column=0, padx=5, pady=(5, 0), columnspan=2)
         self.optionmenu_MA_child_MF_conn = customtkinter.CTkOptionMenu(
             self.frame_module_flex_child,
             values=["Not yet connected children", "All children"],
             command=self.change_MA_child_MF_filter_event,
             width=250,
         )
-        self.optionmenu_MA_child_MF_conn.grid(
-            row=4, column=0, padx=5, pady=5, columnspan=2
-        )
+        self.optionmenu_MA_child_MF_conn.grid(row=4, column=0, padx=5, pady=5, columnspan=2)
         self.optionmenu_MA_child_MF_conn.set("All children")
         self.label_module_flex_child_SN = customtkinter.CTkLabel(
             self.frame_module_flex_child, text="Module Flex SN"
         )
-        self.label_module_flex_child_SN.grid(
-            row=5, column=0, padx=5, pady=(5, 0), columnspan=2
-        )
+        self.label_module_flex_child_SN.grid(row=5, column=0, padx=5, pady=(5, 0), columnspan=2)
 
-        self.frame_child0_SN_filter = customtkinter.CTkFrame(
-            self.frame_module_flex_child
-        )
+        self.frame_child0_SN_filter = customtkinter.CTkFrame(self.frame_module_flex_child)
         self.frame_child0_SN_filter.grid(
             row=6, column=0, padx=10, pady=(10, 5), columnspan=2, sticky="nsew"
         )
@@ -1364,9 +1256,7 @@ class App(customtkinter.CTk):
             text="INSPECT MODULE FLEX",
             command=self.button_inspect_child_module_flex_event_click,
         )
-        self.button_inspect_child_module_flex.grid(
-            row=8, column=0, padx=5, pady=5, columnspan=2
-        )
+        self.button_inspect_child_module_flex.grid(row=8, column=0, padx=5, pady=5, columnspan=2)
         self.button_add_child_module_flex = customtkinter.CTkButton(
             self.frame_module_flex_child,
             text="CONNECT MODULE FLEX\nTO MODULE ABOVE",
@@ -1374,9 +1264,7 @@ class App(customtkinter.CTk):
             fg_color=GUI_CONFIG.fg_active_color,
             hover_color=GUI_CONFIG.hover_active_color,
         )
-        self.button_add_child_module_flex.grid(
-            row=9, column=0, padx=5, pady=5, columnspan=2
-        )
+        self.button_add_child_module_flex.grid(row=9, column=0, padx=5, pady=5, columnspan=2)
         self.button_delete_child_MF = customtkinter.CTkButton(
             self.frame_module_flex_child,
             text="DISCONNECT MODULE FLEX\nFROM ITS PARENT",
@@ -1397,9 +1285,7 @@ class App(customtkinter.CTk):
             self.frame_HY_HV_child, text="Child Hybrid HV-side"
         )
         self.label_HY_HV_child.grid(row=0, column=0, padx=5, pady=(5, 0), columnspan=2)
-        self.label_HY_HV_child_loc = customtkinter.CTkLabel(
-            self.frame_HY_HV_child, text="Location"
-        )
+        self.label_HY_HV_child_loc = customtkinter.CTkLabel(self.frame_HY_HV_child, text="Location")
         self.label_HY_HV_child_loc.grid(row=1, column=0, padx=5, pady=5, columnspan=2)
         self.combobox_MA_HY_HV_child_loc = customtkinter.CTkComboBox(
             self.frame_HY_HV_child,
@@ -1407,33 +1293,25 @@ class App(customtkinter.CTk):
             command=self.change_MA_child_HY_HV_filter_event,
             width=250,
         )
-        self.combobox_MA_HY_HV_child_loc.grid(
-            row=2, column=0, padx=5, pady=5, columnspan=2
-        )
+        self.combobox_MA_HY_HV_child_loc.grid(row=2, column=0, padx=5, pady=5, columnspan=2)
         self.combobox_MA_HY_HV_child_loc.set("All locations")
         self.label_HY_HV_child_conn = customtkinter.CTkLabel(
             self.frame_HY_HV_child, text="Connection status"
         )
-        self.label_HY_HV_child_conn.grid(
-            row=3, column=0, padx=5, pady=(5, 0), columnspan=2
-        )
+        self.label_HY_HV_child_conn.grid(row=3, column=0, padx=5, pady=(5, 0), columnspan=2)
         self.optionmenu_MA_child_HY_HV_conn = customtkinter.CTkOptionMenu(
             self.frame_HY_HV_child,
             values=["Not yet connected children", "All children"],
             command=self.change_MA_child_HY_HV_filter_event,
             width=250,
         )
-        self.optionmenu_MA_child_HY_HV_conn.grid(
-            row=4, column=0, padx=5, pady=5, columnspan=2
-        )
+        self.optionmenu_MA_child_HY_HV_conn.grid(row=4, column=0, padx=5, pady=5, columnspan=2)
         self.optionmenu_MA_child_HY_HV_conn.set("All children")
 
         self.label_HY_HV_child_SN = customtkinter.CTkLabel(
             self.frame_HY_HV_child, text="HY HV-side SN"
         )
-        self.label_HY_HV_child_SN.grid(
-            row=7, column=0, padx=5, pady=(5, 0), columnspan=2
-        )
+        self.label_HY_HV_child_SN.grid(row=7, column=0, padx=5, pady=(5, 0), columnspan=2)
 
         self.frame_child1_SN_filter = customtkinter.CTkFrame(self.frame_HY_HV_child)
         self.frame_child1_SN_filter.grid(
@@ -1471,9 +1349,7 @@ class App(customtkinter.CTk):
             text="INSPECT HY HV-side",
             command=self.button_inspect_child_HY_HV_event_click,
         )
-        self.button_inspect_child_HY_HV.grid(
-            row=10, column=0, padx=5, pady=5, columnspan=2
-        )
+        self.button_inspect_child_HY_HV.grid(row=10, column=0, padx=5, pady=5, columnspan=2)
         self.button_add_child_HY_HV = customtkinter.CTkButton(
             self.frame_HY_HV_child,
             text="CONNECT HY HV-side\nTO MODULE ABOVE",
@@ -1490,9 +1366,7 @@ class App(customtkinter.CTk):
             fg_color=GUI_CONFIG.fg_color_standard_but_red,
             hover_color=GUI_CONFIG.hover_color_standard_but_red,
         )
-        self.button_delete_child_HY_HV.grid(
-            row=12, column=0, padx=5, pady=5, columnspan=2
-        )
+        self.button_delete_child_HY_HV.grid(row=12, column=0, padx=5, pady=5, columnspan=2)
 
         #
         # === Hybrid LV-side ===
@@ -1504,45 +1378,33 @@ class App(customtkinter.CTk):
             self.frame_HY_LV_child, text="Child Hybrid LV-side"
         )
         self.label_HY_LV_child.grid(row=0, column=0, padx=5, pady=(5, 0), columnspan=2)
-        self.label_HY_LV_child_loc = customtkinter.CTkLabel(
-            self.frame_HY_LV_child, text="Location"
-        )
-        self.label_HY_LV_child_loc.grid(
-            row=1, column=0, padx=5, pady=(5, 0), columnspan=2
-        )
+        self.label_HY_LV_child_loc = customtkinter.CTkLabel(self.frame_HY_LV_child, text="Location")
+        self.label_HY_LV_child_loc.grid(row=1, column=0, padx=5, pady=(5, 0), columnspan=2)
         self.combobox_MA_HY_LV_child_loc = customtkinter.CTkComboBox(
             self.frame_HY_LV_child,
             values=["All locations"],
             command=self.change_MA_child_HY_LV_filter_event,
             width=250,
         )
-        self.combobox_MA_HY_LV_child_loc.grid(
-            row=2, column=0, padx=5, pady=5, columnspan=2
-        )
+        self.combobox_MA_HY_LV_child_loc.grid(row=2, column=0, padx=5, pady=5, columnspan=2)
         self.combobox_MA_HY_LV_child_loc.set("All locations")
         self.label_HY_LV_child_conn = customtkinter.CTkLabel(
             self.frame_HY_LV_child, text="Connection status"
         )
-        self.label_HY_LV_child_conn.grid(
-            row=3, column=0, padx=5, pady=(5, 0), columnspan=2
-        )
+        self.label_HY_LV_child_conn.grid(row=3, column=0, padx=5, pady=(5, 0), columnspan=2)
         self.optionmenu_MA_child_HY_LV_conn = customtkinter.CTkOptionMenu(
             self.frame_HY_LV_child,
             values=["Not yet connected children", "All children"],
             command=self.change_MA_child_HY_LV_filter_event,
             width=250,
         )
-        self.optionmenu_MA_child_HY_LV_conn.grid(
-            row=4, column=0, padx=5, pady=5, columnspan=2
-        )
+        self.optionmenu_MA_child_HY_LV_conn.grid(row=4, column=0, padx=5, pady=5, columnspan=2)
         self.optionmenu_MA_child_HY_LV_conn.set("All children")
 
         self.label_HY_LV_child_SN = customtkinter.CTkLabel(
             self.frame_HY_LV_child, text="HY LV-side SN"
         )
-        self.label_HY_LV_child_SN.grid(
-            row=7, column=0, padx=5, pady=(5, 0), columnspan=2
-        )
+        self.label_HY_LV_child_SN.grid(row=7, column=0, padx=5, pady=(5, 0), columnspan=2)
 
         self.frame_child2_SN_filter = customtkinter.CTkFrame(self.frame_HY_LV_child)
         self.frame_child2_SN_filter.grid(
@@ -1580,9 +1442,7 @@ class App(customtkinter.CTk):
             text="INSPECT HY LV-side",
             command=self.button_inspect_child_HY_LV_event_click,
         )
-        self.button_inspect_child_HY_LV.grid(
-            row=10, column=0, padx=5, pady=5, columnspan=2
-        )
+        self.button_inspect_child_HY_LV.grid(row=10, column=0, padx=5, pady=5, columnspan=2)
         self.button_add_child_HY_LV = customtkinter.CTkButton(
             self.frame_HY_LV_child,
             text="CONNECT HY LV-side\nTO MODULE ABOVE",
@@ -1599,9 +1459,7 @@ class App(customtkinter.CTk):
             fg_color=GUI_CONFIG.fg_color_standard_but_red,
             hover_color=GUI_CONFIG.hover_color_standard_but_red,
         )
-        self.button_delete_child_HY_LV.grid(
-            row=12, column=0, padx=5, pady=5, columnspan=2
-        )
+        self.button_delete_child_HY_LV.grid(row=12, column=0, padx=5, pady=5, columnspan=2)
 
         # ******************************************
         #
@@ -1618,9 +1476,7 @@ class App(customtkinter.CTk):
         # === 1st line ===
         #
         self.frame_slot_sel = customtkinter.CTkFrame(self.frame_ft_rel)
-        self.frame_slot_sel.grid(
-            row=0, column=0, padx=5, pady=5, sticky="nsew", columnspan=3
-        )
+        self.frame_slot_sel.grid(row=0, column=0, padx=5, pady=5, sticky="nsew", columnspan=3)
         self.frame_slot_sel.grid_columnconfigure((0, 1, 2, 3, 4), weight=1)
         self.frame_slot_sel.grid_rowconfigure((0, 1, 2), weight=1)
 
@@ -1670,14 +1526,10 @@ class App(customtkinter.CTk):
         )
         self.button_inspect_slot.grid(row=3, column=1, padx=10, pady=10)
 
-        self.label_slot_local = customtkinter.CTkLabel(
-            self.frame_slot_sel, text="Local (derived):"
-        )
+        self.label_slot_local = customtkinter.CTkLabel(self.frame_slot_sel, text="Local (derived):")
         self.label_slot_local.grid(row=2, column=1, padx=10, pady=10, sticky="nsew")
 
-        self.label_slot_DU_type = customtkinter.CTkLabel(
-            self.frame_slot_sel, text="DU type"
-        )
+        self.label_slot_DU_type = customtkinter.CTkLabel(self.frame_slot_sel, text="DU type")
         self.label_slot_DU_type.grid(row=1, column=2, padx=10, pady=10, sticky="nsew")
 
         self.slot_loc_DUtype_variable = customtkinter.StringVar(value="- automatic -")
@@ -1686,9 +1538,7 @@ class App(customtkinter.CTk):
             textvariable=self.slot_loc_DUtype_variable,
             state="disabled",
         )
-        self.slot_loc_DUtype_entry.grid(
-            row=2, column=2, padx=10, pady=10, sticky="nsew"
-        )
+        self.slot_loc_DUtype_entry.grid(row=2, column=2, padx=10, pady=10, sticky="nsew")
 
         self.slot_glob_row_variable = customtkinter.StringVar(value="")
         self.slot_glob_row_entry = customtkinter.CTkEntry(
@@ -1760,16 +1610,12 @@ class App(customtkinter.CTk):
         self.label_combobox_ft.grid(row=4, column=0, padx=10, pady=10, sticky="nsew")
 
         self.frame_childFT_SN_filter = customtkinter.CTkFrame(self.frame_ft_rel)
-        self.frame_childFT_SN_filter.grid(
-            row=3, column=1, padx=10, pady=(10, 5), sticky="nsew"
-        )
+        self.frame_childFT_SN_filter.grid(row=3, column=1, padx=10, pady=(10, 5), sticky="nsew")
         self.variable_childFT_SN_filter = customtkinter.StringVar(value="")
         self.entry_childFT_SN_filter = customtkinter.CTkEntry(
             self.frame_childFT_SN_filter, textvariable=self.variable_childFT_SN_filter
         )
-        self.entry_childFT_SN_filter.grid(
-            row=0, column=0, padx=5, pady=5, sticky="nsew"
-        )
+        self.entry_childFT_SN_filter.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
         self.filter_image = customtkinter.CTkImage(
             load_image_from_assets("searchIcon.png"), size=(20, 20)
         )
@@ -1846,7 +1692,7 @@ class App(customtkinter.CTk):
         self.users = ["None", "new..."]
 
         print("=" * 80)
-        print(f"Welcome to hgtd-tools!")
+        print("Welcome to hgtd-tools!")
         print("-" * 80)
         self._check_version_against_upstream()
 
@@ -1859,18 +1705,14 @@ class App(customtkinter.CTk):
             self.locations = []
             self.last_responseText = str(e)
         if not self._report_api_status(expected_prefix="200"):
-            self._show_error(
-                "Manufacturers / locations could not be loaded from ProdDB API."
-            )
+            self._show_error("Manufacturers / locations could not be loaded from ProdDB API.")
             return
 
         self.combobox_child_manu.configure(
-            values=["All manufacturers"]
-            + [m["manufacturer_name"] for m in self.manufacturers]
+            values=["All manufacturers"] + [m["manufacturer_name"] for m in self.manufacturers]
         )
         self.combobox_MA_mod_par_manu.configure(
-            values=["All manufacturers"]
-            + [m["manufacturer_name"] for m in self.manufacturers]
+            values=["All manufacturers"] + [m["manufacturer_name"] for m in self.manufacturers]
         )
         self.combobox_MA_mod_par_loc.configure(
             values=["All locations"] + [m["location_name"] for m in self.locations]
@@ -1940,9 +1782,7 @@ class App(customtkinter.CTk):
         if not self._logged_in():
             return
         chi_partID = self.possible_MF_partIDs[self.possible_MF_SNs.index(chi)]
-        par_partID = self.possible_MA_mod_par_partIDs[
-            self.possible_MA_mod_par_SNs.index(par)
-        ]
+        par_partID = self.possible_MA_mod_par_partIDs[self.possible_MA_mod_par_SNs.index(par)]
         part_tree = {
             "position": "",
             "is_record_deleted": "F",
@@ -1991,7 +1831,7 @@ class App(customtkinter.CTk):
                         "/partstreelist", part_tree, dryrun=False
                     )
             else:
-                info_text = f"You can not connect this MF to the selected module.\nFirst you need to delete its existing relation to a module!"
+                info_text = "You can not connect this MF to the selected module.\nFirst you need to delete its existing relation to a module!"
                 self._show_error(info_text, exception="")
         except _REQUEST_EXCEPTIONS as e:
             self.last_responseText = str(e)
@@ -2055,9 +1895,7 @@ class App(customtkinter.CTk):
                     if str(c["position"]) != occupied_position_to_skip:
                         occupied = True
                         occupied_target_positions.append(c["position"])
-                        HYs_already_occupying_target_position.append(
-                            c["part"]["serial_number"]
-                        )
+                        HYs_already_occupying_target_position.append(c["part"]["serial_number"])
                         Mod_HY_relations_to_delete.append(c["record_id"])
                 if occupied:
                     overwrite_confirmed = self._confirm_by_typing(
@@ -2099,9 +1937,7 @@ class App(customtkinter.CTk):
             )
             return
         if posted_new_rel:
-            info_text = (
-                f"Child {position}-side Hybrid added successfully to ProdDB API."
-            )
+            info_text = f"Child {position}-side Hybrid added successfully to ProdDB API."
             self._show_info(info_text)
             self._run_with_progress(
                 self.wrap_data_ui_fetch_MA_p_c,
@@ -2123,9 +1959,7 @@ class App(customtkinter.CTk):
             chi=chi,
             chi_partID=self.possible_HY_HV_partIDs[self.possible_HY_HV_SNs.index(chi)],
             par=par,
-            par_partID=self.possible_MA_mod_par_partIDs[
-                self.possible_MA_mod_par_SNs.index(par)
-            ],
+            par_partID=self.possible_MA_mod_par_partIDs[self.possible_MA_mod_par_SNs.index(par)],
             position="HV",
             occupied_position_to_skip="LV",
         )
@@ -2145,9 +1979,7 @@ class App(customtkinter.CTk):
             chi=chi,
             chi_partID=self.possible_HY_LV_partIDs[self.possible_HY_LV_SNs.index(chi)],
             par=par,
-            par_partID=self.possible_MA_mod_par_partIDs[
-                self.possible_MA_mod_par_SNs.index(par)
-            ],
+            par_partID=self.possible_MA_mod_par_partIDs[self.possible_MA_mod_par_SNs.index(par)],
             position="LV",
             occupied_position_to_skip="HV",
         )
@@ -2168,7 +2000,6 @@ class App(customtkinter.CTk):
             if str(s["part_serial_number"]) == str(par):
                 par_partID = s["part_id"]
                 connects_to_PEB_type = s["PEB_type"]
-                connects_to_DU_type = s["SU_type"]
                 break
         part_tree = {
             "position": "",
@@ -2177,7 +2008,6 @@ class App(customtkinter.CTk):
             "part_parent": par_partID,
             "record_insertion_user": self.user,
         }
-        allowed_slot = False
         occupied_slot = False
         overwrite_confirmed = False
         try:
@@ -2185,18 +2015,15 @@ class App(customtkinter.CTk):
             gen = self.ft_filter.split("+")[0].split("/")  # multiple generations
             cat = self.ft_filter[-2:]  # the last two chars make the category
             if any(gen_ in chi for gen_ in gen) and int(chi[9:11]) == int(cat):
-                allowed_slot = True
                 children_of_targetSlot, self.last_responseText = util.get_children(
                     par_partID, ofKind="Flex Tail"
                 )
                 FT_already_occupying_target_position = ""
-                Slot_FT_relation_to_delete = ""
                 matching_partIDs = []
                 matching_relations = []
                 for c in children_of_targetSlot:
                     occupied_slot = True
                     FT_already_occupying_target_position = c["part"]["serial_number"]
-                    Slot_FT_relation_to_delete = c["record_id"]
                     matching_relations.append(c)
                     matching_partIDs.append(c["part"]["part_id"])
                     break
@@ -2223,9 +2050,7 @@ class App(customtkinter.CTk):
                     "/partstreelist", part_tree, dryrun=False
                 )
                 # mod to connect FT to
-                mod_for_FT, self.last_responseText = util.get_children(
-                    par_partID, ofKind="Module"
-                )
+                mod_for_FT, self.last_responseText = util.get_children(par_partID, ofKind="Module")
                 if len(mod_for_FT) > 0:
                     for mFT in mod_for_FT:
                         parentMod_for_FT_partID = mFT["part"]["part_id"]
@@ -2259,15 +2084,10 @@ class App(customtkinter.CTk):
                             (
                                 all_PEB_childs_of_mainDet,
                                 self.last_responseText,
-                            ) = util.get_children(
-                                data.partID_parent_Detector, ofKind="PEB"
-                            )
+                            ) = util.get_children(data.partID_parent_Detector, ofKind="PEB")
                             found_PEB_for_FT = False
                             for peb_rel in all_PEB_childs_of_mainDet:
-                                if (
-                                    str(peb_rel["position"])
-                                    == f"V{par[1]}L{par[4]}Q{par[7]}"
-                                ):
+                                if str(peb_rel["position"]) == f"V{par[1]}L{par[4]}Q{par[7]}":
                                     # it's for the correct quadrant
                                     if str(connects_to_PEB_type) == str(
                                         peb_rel["part"]["serial_number"][9:11]
@@ -2319,15 +2139,12 @@ class App(customtkinter.CTk):
         pos = self.position_entry.get()
         if not self._selected_non_placeholders(
             [chi, par, pos],
-            "Select a child & parent from the respective lists "
-            "and a position to proceed.",
+            "Select a child & parent from the respective lists and a position to proceed.",
         ):
             return
         if not self._logged_in():
             return
-        chi_partID = self.possible_children_partIDs[
-            self.possible_children_SNs.index(chi)
-        ]
+        chi_partID = self.possible_children_partIDs[self.possible_children_SNs.index(chi)]
         par_partID = self.possible_parents_partIDs[self.possible_parents_SNs.index(par)]
         part_tree = {
             "position": pos,
@@ -2384,24 +2201,19 @@ class App(customtkinter.CTk):
                                 (
                                     children_of_targetDetector,
                                     self.last_responseText,
-                                ) = util.get_children(
-                                    par_partID, ofKind="Detector Unit"
-                                )
+                                ) = util.get_children(par_partID, ofKind="Detector Unit")
                                 DU_already_occupying_target_position = ""
-                                Det_DU_relation_to_delete = ""
                                 matching_relations = []
                                 for c in children_of_targetDetector:
                                     # position of Det child is the same as the desired one, and DU type of desired DU is same as the one that already occupies the spot:
                                     if (
                                         str(c["position"]) == pos
-                                        and self.displayedDUtype
-                                        in c["part"]["serial_number"]
+                                        and self.displayedDUtype in c["part"]["serial_number"]
                                     ):
                                         occupied_VLQ = True
-                                        DU_already_occupying_target_position = c[
-                                            "part"
-                                        ]["serial_number"]
-                                        Det_DU_relation_to_delete = c["record_id"]
+                                        DU_already_occupying_target_position = c["part"][
+                                            "serial_number"
+                                        ]
                                         matching_relations.append(c)
                                         break
                                 if occupied_VLQ:
@@ -2500,7 +2312,6 @@ class App(customtkinter.CTk):
                                         self.last_responseText,
                                     ) = util.get_children(par_partID, ofKind="PEB")
                                     PEB_already_occupying_target_position = ""
-                                    Det_PEB_relation_to_delete = ""
                                     matching_relations = []
                                     for c in children_of_targetDetector:
                                         # position of Det child is the same as the desired one, and PEB type of desired PEB is same as the one that already occupies the spot:
@@ -2510,13 +2321,8 @@ class App(customtkinter.CTk):
                                                 in c["part"]["serial_number"]
                                             ):
                                                 occupied_VLQ = True
-                                                PEB_already_occupying_target_position = c[
-                                                    "part"
-                                                ][
+                                                PEB_already_occupying_target_position = c["part"][
                                                     "serial_number"
-                                                ]
-                                                Det_PEB_relation_to_delete = c[
-                                                    "record_id"
                                                 ]
                                                 matching_relations.append(c)
                                                 break
@@ -2539,12 +2345,10 @@ class App(customtkinter.CTk):
                                                 )
                                             # POSTING NEW STUFF
                                             # place new PEB at this position by creating a new Det -> PEB relation
-                                            self.last_responseText = (
-                                                api.post_information(
-                                                    "/partstreelist",
-                                                    part_tree,
-                                                    dryrun=False,
-                                                )
+                                            self.last_responseText = api.post_information(
+                                                "/partstreelist",
+                                                part_tree,
+                                                dryrun=False,
                                             )
                                     else:
                                         self.last_responseText = api.post_information(
@@ -2588,9 +2392,7 @@ class App(customtkinter.CTk):
             elif direction == "R":
                 shown = min(shown + 1, n_pages)
             else:
-                raise NotImplementedError(
-                    "Can only go left (L) or right (R) in pagination frame!"
-                )
+                raise NotImplementedError("Can only go left (L) or right (R) in pagination frame!")
         else:
             shown = 0
 
@@ -2645,10 +2447,7 @@ class App(customtkinter.CTk):
             return
         if not self._delete_single_part_parents(
             part_id=self.clicked_module["part"]["part_id"],
-            error_msg=(
-                "Existing module relation could not be deleted "
-                "(unloaded) with ProdDB API."
-            ),
+            error_msg=("Existing module relation could not be deleted (unloaded) with ProdDB API."),
         ):
             return
         # reload DU etc.
@@ -2733,13 +2532,9 @@ class App(customtkinter.CTk):
         else:
             self.combobox_child.set("- Select -")
             if self.operation_mode == "Module Loading":
-                self._run_with_progress(
-                    self.fetch_p_c, "Detector Unit", "Module", "child_only"
-                )
+                self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module", "child_only")
             elif self.operation_mode == "Detector Assembly (CERN): DU":
-                self._run_with_progress(
-                    self.fetch_p_c, "Detector", "Detector Unit", "child_only"
-                )
+                self._run_with_progress(self.fetch_p_c, "Detector", "Detector Unit", "child_only")
             elif self.operation_mode == "Detector Assembly (CERN): PEB":
                 self._run_with_progress(self.fetch_p_c, "Detector", "PEB", "child_only")
 
@@ -2752,14 +2547,14 @@ class App(customtkinter.CTk):
     def button_find_slot_event_click(self):
         """Find slot & load possible matching FTs given the filter."""
         self.label_info.configure(text=" ")
-        v = self.optionmenu_slot_vessel.get()[-1]
-        l = self.optionmenu_slot_layer.get()[-1]
-        q = self.optionmenu_slot_quadrant.get()[-1]
-        r = self.slot_glob_row_entry.get()
-        m = self.slot_glob_mod_entry.get()
+        ve = self.optionmenu_slot_vessel.get()[-1]
+        la = self.optionmenu_slot_layer.get()[-1]
+        qu = self.optionmenu_slot_quadrant.get()[-1]
+        ro = self.slot_glob_row_entry.get()
+        mo = self.slot_glob_mod_entry.get()
         self.ft_filter = ""
 
-        self.combined_slot = f"V{v}:L{l}:Q{q}:R{r}:M{m}"
+        self.combined_slot = f"V{ve}:L{la}:Q{qu}:R{ro}:M{mo}"
         self.this_SLOT_relations_FT = []
         self.this_FT_relations_SLOT = []
         self.possible_ft = []
@@ -2771,7 +2566,7 @@ class App(customtkinter.CTk):
                 self.slot_loc_DUtype_variable.set(s["SU_type"])
                 self.slot_loc_row_variable.set(s["SU_Row"])
                 self.slot_loc_mod_variable.set(s["SU_Module"])
-                if v == "D":
+                if ve == "D":
                     if s["PEB_type"] == "1F":
                         # demonstrator V1 (PEB 1F)
                         # demo V1 (PEB 1F): 20WFTC11F/20WFTS11F/20WFTG11F (old order cat 01--36),
@@ -2779,28 +2574,36 @@ class App(customtkinter.CTk):
                         self.label_ft_gen_output.configure(
                             text="20WFTC11F/20WFTS11F/20WFTG11F (old order cat 01--36), 20WFTG12F (new order cat 37--57)"
                         )
-                        self.ft_filter = f"20WFTC11F/20WFTS11F/20WFTG11F/20WFTG12F+{s['FT_length_category']}"
+                        self.ft_filter = (
+                            f"20WFTC11F/20WFTS11F/20WFTG11F/20WFTG12F+{s['FT_length_category']}"
+                        )
                     elif s["PEB_type"] == "3F":
                         # demonstrator V2 (PEB 3F)
                         # Pre-production: 20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F (cat 01--62)
                         self.label_ft_gen_output.configure(
                             text="20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F (cat 01--62)"
                         )
-                        self.ft_filter = f"20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F+{s['FT_length_category']}"
-                elif v == "M":
+                        self.ft_filter = (
+                            f"20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F+{s['FT_length_category']}"
+                        )
+                elif ve == "M":
                     # Module 0
                     # Pre-production: 20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F (cat 01--62)
                     self.label_ft_gen_output.configure(
                         text="20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F (cat 01--62)"
                     )
-                    self.ft_filter = f"20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F+{s['FT_length_category']}"
+                    self.ft_filter = (
+                        f"20WFTCP1F/20WFTSP1F/20WFTGPF/20WFTMP1F+{s['FT_length_category']}"
+                    )
                 else:
                     # Full Detector
                     # Main Production: 20WFTCM1F/20WFTSM1F/20WFTGM1F/20WFTMM1F (cat 01--62)
                     self.label_ft_gen_output.configure(
                         text="20WFTCM1F/20WFTSM1F/20WFTGM1F/20WFTMM1F (cat 01--62)"
                     )
-                    self.ft_filter = f"20WFTCM1F/20WFTSM1F/20WFTGM1F/20WFTMM1F+{s['FT_length_category']}"
+                    self.ft_filter = (
+                        f"20WFTCM1F/20WFTSM1F/20WFTGM1F/20WFTMM1F+{s['FT_length_category']}"
+                    )
                 self.label_ft_type_output.configure(
                     text=f"{s['FT_length_category']} ({s['FT_Length_mm']} mm)"
                 )
@@ -2816,25 +2619,19 @@ class App(customtkinter.CTk):
         """Load part page of selected child in browser."""
         childSNIn = self.combobox_child.get()
         if childSNIn != "- Select -":
-            chi_partID = self.possible_children_partIDs[
-                self.possible_children_SNs.index(childSNIn)
-            ]
+            chi_partID = self.possible_children_partIDs[self.possible_children_SNs.index(childSNIn)]
             util.open_webbrowser_with_url(f"/viewparts/{chi_partID}")
 
     def button_inspect_clicked_event_click(self):
         """Load part page of clicked module in browser."""
         if len(self.clicked_module) > 0:
-            util.open_webbrowser_with_url(
-                f"/viewparts/{self.clicked_module['part']['part_id']}"
-            )
+            util.open_webbrowser_with_url(f"/viewparts/{self.clicked_module['part']['part_id']}")
 
     def button_inspect_parent_event_click(self):
         """Load part page of selected parent in browser."""
         parentSNIn = self.combobox_parent.get()
         if parentSNIn != "- Select -":
-            par_partID = self.possible_parents_partIDs[
-                self.possible_parents_SNs.index(parentSNIn)
-            ]
+            par_partID = self.possible_parents_partIDs[self.possible_parents_SNs.index(parentSNIn)]
             util.open_webbrowser_with_url(f"/viewparts/{par_partID}")
 
     def button_inspect_slot_event_click(self):
@@ -2847,7 +2644,9 @@ class App(customtkinter.CTk):
                     break
             util.open_webbrowser_with_url(f"/viewparts/{par_partID}")
         else:
-            info_text = "You first need to find the slot in the slot table to inspect its properties."
+            info_text = (
+                "You first need to find the slot in the slot table to inspect its properties."
+            )
             self._show_error(info_text, exception="")
 
     def button_inspect_ft_event_click(self):
@@ -2877,18 +2676,14 @@ class App(customtkinter.CTk):
         """Load part page of selected MA HY-HV in browser."""
         childSNIn = self.combobox_MA_HY_HV_chi.get()
         if childSNIn != "- Select -":
-            chi_partID = self.possible_HY_HV_partIDs[
-                self.possible_HY_HV_SNs.index(childSNIn)
-            ]
+            chi_partID = self.possible_HY_HV_partIDs[self.possible_HY_HV_SNs.index(childSNIn)]
             util.open_webbrowser_with_url(f"/viewparts/{chi_partID}")
 
     def button_inspect_child_HY_LV_event_click(self):
         """Load part page of selected MA HY-LV in browser."""
         childSNIn = self.combobox_MA_HY_LV_chi.get()
         if childSNIn != "- Select -":
-            chi_partID = self.possible_HY_LV_partIDs[
-                self.possible_HY_LV_SNs.index(childSNIn)
-            ]
+            chi_partID = self.possible_HY_LV_partIDs[self.possible_HY_LV_SNs.index(childSNIn)]
             util.open_webbrowser_with_url(f"/viewparts/{chi_partID}")
 
     # https://stackoverflow.com/a/23944658
@@ -2918,13 +2713,9 @@ class App(customtkinter.CTk):
             self.label_canvas.configure(text="Interactive canvas: accepting user click")
             self.combobox_parent.set("- Select -")
             self.combobox_child.set("- Select -")
-            self.label_combobox_parent_T.configure(
-                text="Parent Part Type: Detector Unit"
-            )
+            self.label_combobox_parent_T.configure(text="Parent Part Type: Detector Unit")
             self.label_combobox_child_T.configure(text="Child Part Type: Module")
-            self.label_position.configure(
-                text="Position (derived from canvas interaction)"
-            )
+            self.label_position.configure(text="Position (derived from canvas interaction)")
             self.position_variable.set("- automatic -")
             self.position_entry.configure(state="disabled")
             self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module")
@@ -2987,9 +2778,7 @@ class App(customtkinter.CTk):
             self.slot_glob_mod_variable.set("")
             self._run_with_progress(self.fetch_ft)
 
-    def _handle_canvas_click(
-        self, event, slots, already_used, relations, *, active_on_hover=True
-    ):
+    def _handle_canvas_click(self, event, slots, already_used, relations, *, active_on_hover=True):
         """Hit-test a canvas click and update slot visuals + clicked-module state.
 
         `active_on_hover` controls whether an unoccupied slot under the mouse
@@ -3022,9 +2811,7 @@ class App(customtkinter.CTk):
         return mouse_in_slot, occupied, possible_slot
 
     # https://stackoverflow.com/a/44100075
-    def _canvas_place_rounded_rectangle(
-        self, x1, y1, width_rect, height, radius=25, **kwargs
-    ):
+    def _canvas_place_rounded_rectangle(self, x1, y1, width_rect, height, radius=25, **kwargs):
         """Draw a rounded rectangle on canvas, passing its geo & style as arguments."""
         x2 = x1 + width_rect
         y2 = y1 + height
@@ -3094,30 +2881,20 @@ class App(customtkinter.CTk):
         if (occupied or under_mouse) and is_interlock:
             kwargs["outline"] = GUI_CONFIG.fillColor_InterlockSlot
             kwargs["width"] = 10
-        self._canvas_place_rounded_rectangle(
-            slot["x"], slot["y"], slot["w"], slot["h"], **kwargs
-        )
+        self._canvas_place_rounded_rectangle(slot["x"], slot["y"], slot["w"], slot["h"], **kwargs)
 
     def _activate_clicked_module(self, relation, slot):
         """Store the clicked module relation and enable inspect/unload buttons."""
         self.clicked_module = relation
         label = f"\n{relation['part']['serial_number']}\n at {slot['slot']}"
-        self.button_inspect_clicked.configure(
-            text=f"INSPECT CLICKED MODULE{label}", state="normal"
-        )
-        self.button_delete_clicked.configure(
-            text=f"UNLOAD CLICKED MODULE{label}", state="normal"
-        )
+        self.button_inspect_clicked.configure(text=f"INSPECT CLICKED MODULE{label}", state="normal")
+        self.button_delete_clicked.configure(text=f"UNLOAD CLICKED MODULE{label}", state="normal")
 
     def _reset_clicked_module(self):
         """Clear clicked-module state and disable inspect/unload buttons."""
         self.clicked_module = []
-        self.button_inspect_clicked.configure(
-            text="INSPECT CLICKED MODULE", state="disabled"
-        )
-        self.button_delete_clicked.configure(
-            text="UNLOAD CLICKED MODULE", state="disabled"
-        )
+        self.button_inspect_clicked.configure(text="INSPECT CLICKED MODULE", state="disabled")
+        self.button_delete_clicked.configure(text="UNLOAD CLICKED MODULE", state="disabled")
 
     def canvas_event_click(self, event):
         """Dispatch user click into canvas (ML or DA-DU)."""
@@ -3127,24 +2904,16 @@ class App(customtkinter.CTk):
             if self.displayedDUtype != "None":
                 arrayOfModulesInDU = data.allDUs[self.displayedDUtype]
                 alreadyConnectedModules = self.this_DU_relations_MODULE
-                alreadyUsedSlots = [
-                    entry["position"] for entry in alreadyConnectedModules
-                ]
+                alreadyUsedSlots = [entry["position"] for entry in alreadyConnectedModules]
                 alreadyConnectedDUsForModule = self.this_MODULE_relations_DU
                 alreadyConnectedSLOTsForModule = self.this_MODULE_relations_SLOT
-                mouseInSomeMod, notAllowedSlot, possible_slot = (
-                    self._handle_canvas_click(
-                        event,
-                        arrayOfModulesInDU,
-                        alreadyUsedSlots,
-                        alreadyConnectedModules,
-                    )
+                mouseInSomeMod, notAllowedSlot, possible_slot = self._handle_canvas_click(
+                    event,
+                    arrayOfModulesInDU,
+                    alreadyUsedSlots,
+                    alreadyConnectedModules,
                 )
-                if (
-                    len(alreadyConnectedDUsForModule)
-                    + len(alreadyConnectedSLOTsForModule)
-                    > 0
-                ):
+                if len(alreadyConnectedDUsForModule) + len(alreadyConnectedSLOTsForModule) > 0:
                     self.position_variable.set("- automatic -")
                     info_text = (
                         "Your selected child is already connected to some parent.\n"
@@ -3182,9 +2951,7 @@ class App(customtkinter.CTk):
             if self.displayedDUtype != "None":
                 arrayOfModulesInDU = data.allDUs[self.displayedDUtype]
                 alreadyConnectedModules = self.this_DU_relations_MODULE
-                alreadyUsedSlots = [
-                    entry["position"] for entry in alreadyConnectedModules
-                ]
+                alreadyUsedSlots = [entry["position"] for entry in alreadyConnectedModules]
                 mouseInSomeMod, _, _ = self._handle_canvas_click(
                     event,
                     arrayOfModulesInDU,
@@ -3240,13 +3007,9 @@ class App(customtkinter.CTk):
         self.combobox_child.set("- Select -")
 
         if self.operation_mode == "Module Loading":
-            self._run_with_progress(
-                self.fetch_p_c, "Detector Unit", "Module", "child_only"
-            )
+            self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module", "child_only")
         elif self.operation_mode == "Detector Assembly (CERN): DU":
-            self._run_with_progress(
-                self.fetch_p_c, "Detector", "Detector Unit", "child_only"
-            )
+            self._run_with_progress(self.fetch_p_c, "Detector", "Detector Unit", "child_only")
         elif self.operation_mode == "Detector Assembly (CERN): PEB":
             self._run_with_progress(self.fetch_p_c, "Detector", "PEB", "child_only")
 
@@ -3265,9 +3028,7 @@ class App(customtkinter.CTk):
         self.par_type = self.combobox_par_type.get()
         self.combobox_parent.set("- Select -")
 
-        self._run_with_progress(
-            self.fetch_p_c, "Detector Unit", "Module", "parent_only"
-        )
+        self._run_with_progress(self.fetch_p_c, "Detector Unit", "Module", "parent_only")
 
     def combobox_chi_type_event_select(self, chi_type):
         """DA-DU/-PEB: Refresh possible children and UI given selected type.
@@ -3279,9 +3040,7 @@ class App(customtkinter.CTk):
         self.combobox_child.set("- Select -")
 
         if self.operation_mode == "Detector Assembly (CERN): DU":
-            self._run_with_progress(
-                self.fetch_p_c, "Detector", "Detector Unit", "child_only"
-            )
+            self._run_with_progress(self.fetch_p_c, "Detector", "Detector Unit", "child_only")
         elif self.operation_mode == "Detector Assembly (CERN): PEB":
             self._run_with_progress(self.fetch_p_c, "Detector", "PEB", "child_only")
 
@@ -3334,32 +3093,22 @@ class App(customtkinter.CTk):
         self.this_MODULE_relations_SLOT = []
         self.partstree = None
         self.clicked_module = []
-        self.button_inspect_clicked.configure(text=f"INSPECT CLICKED MODULE")
+        self.button_inspect_clicked.configure(text="INSPECT CLICKED MODULE")
         self.button_inspect_clicked.configure(state="disabled")
-        self.button_delete_clicked.configure(text=f"UNLOAD CLICKED MODULE")
+        self.button_delete_clicked.configure(text="UNLOAD CLICKED MODULE")
         self.button_delete_clicked.configure(state="disabled")
 
         parentSNIn = self.combobox_parent.get()
         childSNIn = self.combobox_child.get()
         if self.operation_mode == "Module Loading":
-            parentNameIn = "Detector Unit"
-            childNameIn = "Module"
             self.canvas.delete("all")
             if parentSNIn != "- Select -":
-                self._run_with_progress(
-                    self.fetch_loaded_DU_and_display, childSNIn, parentSNIn
-                )
+                self._run_with_progress(self.fetch_loaded_DU_and_display, childSNIn, parentSNIn)
         elif self.operation_mode == "Detector Assembly (CERN): DU":
-            parentNameIn = "Detector"
-            childNameIn = "Detector Unit"
             self.canvas.delete("all")
             if childSNIn != "- Select -":
-                self._run_with_progress(
-                    self.fetch_loaded_DU_and_display, childSNIn, parentSNIn
-                )
+                self._run_with_progress(self.fetch_loaded_DU_and_display, childSNIn, parentSNIn)
         elif self.operation_mode == "Detector Assembly (CERN): PEB":
-            parentNameIn = "Detector"
-            childNameIn = "PEB"
             self.canvas.delete("all")
             if childSNIn != "- Select -":
                 self._run_with_progress(self.fetch_loaded_PEB, childSNIn, parentSNIn)
@@ -3423,9 +3172,7 @@ class App(customtkinter.CTk):
         """Fetch selected DU information and update UI (incl. canvas)."""
         if self.operation_mode == "Module Loading":
             DU_SN = parentSNIn
-            parentDU_partID = self.possible_parents_partIDs[
-                self.possible_parents_SNs.index(DU_SN)
-            ]
+            parentDU_partID = self.possible_parents_partIDs[self.possible_parents_SNs.index(DU_SN)]
             if childSNIn != "- Select -":
                 childModule_partID = self.possible_children_partIDs[
                     self.possible_children_SNs.index(childSNIn)
@@ -3457,7 +3204,7 @@ class App(customtkinter.CTk):
             ]
 
         self.duAlreadyPlacedText = self.canvas.create_text(
-            380, 525, text=f"", anchor="nw", fill=GUI_CONFIG.fillColor_SU_Text
+            380, 525, text="", anchor="nw", fill=GUI_CONFIG.fillColor_SU_Text
         )
         self.clicked_module = []
         for key in data.allDUs.keys():
@@ -3465,9 +3212,7 @@ class App(customtkinter.CTk):
                 self.displayedDUtype = key
                 self.interlockSlots = data.DU_Interlock_dict[key]
                 self.label_info.configure(text=" ")
-                self.canvas.create_rectangle(
-                    40, 40, 360, 540, fill=GUI_CONFIG.fillColor_SU
-                )
+                self.canvas.create_rectangle(40, 40, 360, 540, fill=GUI_CONFIG.fillColor_SU)
                 for mod in data.allDUs[self.displayedDUtype]:
                     self._redraw_slot(mod, occupied=False, under_mouse=False)
                 self.canvas.create_text(
@@ -3521,9 +3266,7 @@ class App(customtkinter.CTk):
                     show_error=False,
                 )
                 if not (ok_tree and ok_det):
-                    self._show_error(
-                        "DU relations could not be loaded from ProdDB API."
-                    )
+                    self._show_error("DU relations could not be loaded from ProdDB API.")
                     self.this_DU_relations_MODULE = []
                     return
 
@@ -3536,13 +3279,9 @@ class App(customtkinter.CTk):
                             # make the corresponding slot blue if already in use, white if not used
                             for mod in data.allDUs[self.displayedDUtype]:
                                 if str(mod["slot"]) == str(r["position"]):
-                                    self._redraw_slot(
-                                        mod, occupied=True, under_mouse=False
-                                    )
+                                    self._redraw_slot(mod, occupied=True, under_mouse=False)
                                     self.clicked_module = r["part"]
-                if len(self.this_DU_relations_MODULE) == len(
-                    data.allDUs[self.displayedDUtype]
-                ):
+                if len(self.this_DU_relations_MODULE) == len(data.allDUs[self.displayedDUtype]):
                     self.canvas.create_text(
                         380,
                         475,
@@ -3580,7 +3319,9 @@ class App(customtkinter.CTk):
 
         if ft_par != []:
             for r in ft_par:
-                info_text = f"This FT is already connected to a slot: {r['part_parent']['serial_number']}."
+                info_text = (
+                    f"This FT is already connected to a slot: {r['part_parent']['serial_number']}."
+                )
                 self._show_info(info_text)
                 self.this_FT_relations_SLOT.append(r)
             self.button_delete_connected_ft.configure(state="normal")
@@ -3588,9 +3329,7 @@ class App(customtkinter.CTk):
     def fetch_loaded_PEB(self, childSNIn, parentSNIn):
         """DA-PEB: Fetch selected PEB information and update UI."""
         PEB_SN = childSNIn
-        PEB_partID = self.possible_children_partIDs[
-            self.possible_children_SNs.index(PEB_SN)
-        ]
+        PEB_partID = self.possible_children_partIDs[self.possible_children_SNs.index(PEB_SN)]
         self.label_info.configure(text=" ")
         matched_key = next((p for p in data.allPEBs if p in PEB_SN), None)
         if matched_key is None:
@@ -3607,7 +3346,9 @@ class App(customtkinter.CTk):
 
         if detector:
             for r in detector:
-                info_text = f"This PEB is already mounted to the parent detector, at {r['position']}."
+                info_text = (
+                    f"This PEB is already mounted to the parent detector, at {r['position']}."
+                )
                 self._show_info(info_text)
 
     def fetch_ft(self):
@@ -3632,18 +3373,12 @@ class App(customtkinter.CTk):
             sn_does_include_any=" ".join(sn_substrings) or None,
             sn_does_include=self.childFT_SN_filter,
             sn_chars_9_to_10_eq=cat,
-            no_parents_ofKind=(
-                "Slot" if self.ft_conn == "Not yet connected FTs" else None
-            ),
+            no_parents_ofKind=("Slot" if self.ft_conn == "Not yet connected FTs" else None),
         )
-        self.possible_ft_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-            self.possible_ft
-        )
+        self.possible_ft_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_ft)
         self.possible_ft_SNs = [entry[0] for entry in self.possible_ft_SNs_and_partIDs]
         self.possible_ft_SNs_chunked = _chunk(self.possible_ft_SNs)
-        self.possible_ft_partIDs = [
-            entry[1] for entry in self.possible_ft_SNs_and_partIDs
-        ]
+        self.possible_ft_partIDs = [entry[1] for entry in self.possible_ft_SNs_and_partIDs]
         self.cbx_ft_n_pages = len(self.possible_ft_SNs_chunked)
         self.cbx_ft_shown_page = min(1, self.cbx_ft_n_pages)
         self._set_pagination(
@@ -3659,9 +3394,7 @@ class App(customtkinter.CTk):
         Pure CPU — no API calls, safe to call on the Tk main thread.
         Reads live values from self.*_manu, self.*_loc, self.entry_*_SN_filter.get().
         """
-        branches = (
-            ["Module", "Module Flex", "HY_HV", "HY_LV"] if update == "all" else [update]
-        )
+        branches = ["Module", "Module Flex", "HY_HV", "HY_LV"] if update == "all" else [update]
 
         for branch in branches:
             # Cheap-filter inputs (None / "" / sentinel = "not active")
@@ -3674,8 +3407,7 @@ class App(customtkinter.CTk):
                     ]
                 )
                 conn_active = (
-                    self.MA_mod_par_conn is not None
-                    and self.MA_mod_par_conn != "No filter"
+                    self.MA_mod_par_conn is not None and self.MA_mod_par_conn != "No filter"
                 )
                 if conn_active and not active_cheap:
                     return True
@@ -3688,8 +3420,7 @@ class App(customtkinter.CTk):
                     ]
                 )
                 conn_active = (
-                    self.MF_child_conn is not None
-                    and self.MF_child_conn != "All children"
+                    self.MF_child_conn is not None and self.MF_child_conn != "All children"
                 )
                 if conn_active and not active_cheap:
                     return True
@@ -3702,8 +3433,7 @@ class App(customtkinter.CTk):
                     ]
                 )
                 conn_active = (
-                    self.HY_HV_child_conn is not None
-                    and self.HY_HV_child_conn != "All children"
+                    self.HY_HV_child_conn is not None and self.HY_HV_child_conn != "All children"
                 )
                 if conn_active and not active_cheap:
                     return True
@@ -3716,13 +3446,18 @@ class App(customtkinter.CTk):
                     ]
                 )
                 conn_active = (
-                    self.HY_LV_child_conn is not None
-                    and self.HY_LV_child_conn != "All children"
+                    self.HY_LV_child_conn is not None and self.HY_LV_child_conn != "All children"
                 )
                 if conn_active and not active_cheap:
                     return True
 
         return False
+
+    def _has_incomplete_connectivity(pid):
+        return (
+            len(util.get_children(pid, ofKind="Module Flex")[0]) == 0
+            or len(util.get_children(pid, ofKind="Hybrid")[0]) < 2
+        )
 
     def fetch_MA_p_c_data(self, update="all"):
         """Data-only worker for the Module Assembly operation mode.
@@ -3740,28 +3475,20 @@ class App(customtkinter.CTk):
         """
         try:
             if update == "all" or update == "Module":
-                self.possible_MA_mod_par, self.last_responseText = (
-                    util.get_relevant_parts("Module")
-                )
+                self.possible_MA_mod_par, self.last_responseText = util.get_relevant_parts("Module")
                 self.this_MOD_relations_MF = []
                 self.this_MOD_relations_HY_HV = []
                 self.this_MOD_relations_HY_LV = []
                 self.this_MOD_relations_HY_unknownPosition = []
                 self.this_MOD_relations_HY_invalidPosition = []
             if update == "all" or update == "Module Flex":
-                self.possible_MF, self.last_responseText = util.get_relevant_parts(
-                    "Module Flex"
-                )
+                self.possible_MF, self.last_responseText = util.get_relevant_parts("Module Flex")
                 self.this_MF_relations_MOD = []
             if update == "all" or update == "HY_HV":
-                self.possible_HY_HV, self.last_responseText = util.get_relevant_parts(
-                    "Hybrid"
-                )
+                self.possible_HY_HV, self.last_responseText = util.get_relevant_parts("Hybrid")
                 self.this_HY_HV_relations_MOD = []
             if update == "all" or update == "HY_LV":
-                self.possible_HY_LV, self.last_responseText = util.get_relevant_parts(
-                    "Hybrid"
-                )
+                self.possible_HY_LV, self.last_responseText = util.get_relevant_parts("Hybrid")
                 self.this_HY_LV_relations_MOD = []
         except _REQUEST_EXCEPTIONS as e:
             if update == "all" or update == "Module":
@@ -3788,9 +3515,7 @@ class App(customtkinter.CTk):
         # ---------- Module ----------
         if update == "all" or update == "Module":
             sn_filter = self.entry_module_parent_SN_filter.get() or ""
-            conn_active = (
-                self.MA_mod_par_conn is not None and self.MA_mod_par_conn != "No filter"
-            )
+            conn_active = self.MA_mod_par_conn is not None and self.MA_mod_par_conn != "No filter"
             has_cheap = any(
                 [
                     self.MA_mod_par_manu not in (None, "", "All manufacturers"),
@@ -3800,13 +3525,7 @@ class App(customtkinter.CTk):
             )
             if conn_active and not has_cheap:
                 self._pending_conn_only_warning = True
-            if conn_active:
-                conn_pred = lambda pid: (
-                    len(util.get_children(pid, ofKind="Module Flex")[0]) == 0
-                    or len(util.get_children(pid, ofKind="Hybrid")[0]) < 2
-                )
-            else:
-                conn_pred = None
+            conn_pred = self._has_incomplete_connectivity if conn_active else None
             self.possible_MA_mod_par = util.select_parts(
                 self.possible_MA_mod_par,
                 location_name=self.MA_mod_par_loc,
@@ -3818,9 +3537,7 @@ class App(customtkinter.CTk):
         # ---------- Module Flex ----------
         if update == "all" or update == "Module Flex":
             sn_filter = self.entry_child0_SN_filter.get() or ""
-            conn_active = (
-                self.MF_child_conn is not None and self.MF_child_conn != "All children"
-            )
+            conn_active = self.MF_child_conn is not None and self.MF_child_conn != "All children"
             has_cheap = any(
                 [
                     self.module_flex_child_loc not in (None, "", "All locations"),
@@ -3840,8 +3557,7 @@ class App(customtkinter.CTk):
         if update == "all" or update == "HY_HV":
             sn_filter = self.entry_child1_SN_filter.get() or ""
             conn_active = (
-                self.HY_HV_child_conn is not None
-                and self.HY_HV_child_conn != "All children"
+                self.HY_HV_child_conn is not None and self.HY_HV_child_conn != "All children"
             )
             has_cheap = any(
                 [
@@ -3862,8 +3578,7 @@ class App(customtkinter.CTk):
         if update == "all" or update == "HY_LV":
             sn_filter = self.entry_child2_SN_filter.get() or ""
             conn_active = (
-                self.HY_LV_child_conn is not None
-                and self.HY_LV_child_conn != "All children"
+                self.HY_LV_child_conn is not None and self.HY_LV_child_conn != "All children"
             )
             has_cheap = any(
                 [
@@ -3896,42 +3611,26 @@ class App(customtkinter.CTk):
         self.cbx_MA_mod_par_shown_page = min(1, self.cbx_MA_mod_par_n_pages)
 
         # Module Flex
-        self.possible_MF_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-            self.possible_MF
-        )
+        self.possible_MF_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_MF)
         self.possible_MF_SNs = [entry[0] for entry in self.possible_MF_SNs_and_partIDs]
         self.possible_MF_SNs_chunked = _chunk(self.possible_MF_SNs)
-        self.possible_MF_partIDs = [
-            entry[1] for entry in self.possible_MF_SNs_and_partIDs
-        ]
+        self.possible_MF_partIDs = [entry[1] for entry in self.possible_MF_SNs_and_partIDs]
         self.cbx_MF_n_pages = len(self.possible_MF_SNs_chunked)
         self.cbx_MF_shown_page = min(1, self.cbx_MF_n_pages)
 
         # Hybrid HV-side
-        self.possible_HY_HV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-            self.possible_HY_HV
-        )
-        self.possible_HY_HV_SNs = [
-            entry[0] for entry in self.possible_HY_HV_SNs_and_partIDs
-        ]
+        self.possible_HY_HV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_HY_HV)
+        self.possible_HY_HV_SNs = [entry[0] for entry in self.possible_HY_HV_SNs_and_partIDs]
         self.possible_HY_HV_SNs_chunked = _chunk(self.possible_HY_HV_SNs)
-        self.possible_HY_HV_partIDs = [
-            entry[1] for entry in self.possible_HY_HV_SNs_and_partIDs
-        ]
+        self.possible_HY_HV_partIDs = [entry[1] for entry in self.possible_HY_HV_SNs_and_partIDs]
         self.cbx_HY_HV_n_pages = len(self.possible_HY_HV_SNs_chunked)
         self.cbx_HY_HV_shown_page = min(1, self.cbx_HY_HV_n_pages)
 
         # Hybrid LV-side
-        self.possible_HY_LV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
-            self.possible_HY_LV
-        )
-        self.possible_HY_LV_SNs = [
-            entry[0] for entry in self.possible_HY_LV_SNs_and_partIDs
-        ]
+        self.possible_HY_LV_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(self.possible_HY_LV)
+        self.possible_HY_LV_SNs = [entry[0] for entry in self.possible_HY_LV_SNs_and_partIDs]
         self.possible_HY_LV_SNs_chunked = _chunk(self.possible_HY_LV_SNs)
-        self.possible_HY_LV_partIDs = [
-            entry[1] for entry in self.possible_HY_LV_SNs_and_partIDs
-        ]
+        self.possible_HY_LV_partIDs = [entry[1] for entry in self.possible_HY_LV_SNs_and_partIDs]
         self.cbx_HY_LV_n_pages = len(self.possible_HY_LV_SNs_chunked)
         self.cbx_HY_LV_shown_page = min(1, self.cbx_HY_LV_n_pages)
 
@@ -4020,9 +3719,7 @@ class App(customtkinter.CTk):
 
     def fetch_MA_mod(self, SN):
         """Module Assembly: Fetch selected Module information and update UI."""
-        partID = self.possible_MA_mod_par_partIDs[
-            self.possible_MA_mod_par_SNs.index(SN)
-        ]
+        partID = self.possible_MA_mod_par_partIDs[self.possible_MA_mod_par_SNs.index(SN)]
         self.label_info.configure(text=" ")
         par, ok = self._fetch_relations(
             lambda: util.get_children(partID),
@@ -4036,16 +3733,14 @@ class App(customtkinter.CTk):
             self.this_MOD_relations_HY_invalidPosition = []
             return
         if par != []:
-            info_text = f"This Module is already connected to some children."
+            info_text = "This Module is already connected to some children."
             self._show_info(info_text)
             for r in par:
                 if str(data.KoPID_from_partKoPName["Module Flex"]) == str(
                     r["part"]["kind_of_part"]["kind_of_part_id"]
                 ):
                     self.this_MOD_relations_MF.append(r)
-                    add_info_text = (
-                        f"\n\nExisting MF relation: {r['part']['serial_number']}."
-                    )
+                    add_info_text = f"\n\nExisting MF relation: {r['part']['serial_number']}."
                     print(f"{add_info_text}")
                     info_text += add_info_text
                 elif (
@@ -4053,7 +3748,9 @@ class App(customtkinter.CTk):
                     == str(r["part"]["kind_of_part"]["kind_of_part_id"])
                 ) and (str(r["position"]) == "HV"):
                     self.this_MOD_relations_HY_HV.append(r)
-                    add_info_text = f"\n\nExisting HY HV-side relation: {r['part']['serial_number']}."
+                    add_info_text = (
+                        f"\n\nExisting HY HV-side relation: {r['part']['serial_number']}."
+                    )
                     print(f"{add_info_text}")
                     info_text += add_info_text
                 elif (
@@ -4061,7 +3758,9 @@ class App(customtkinter.CTk):
                     == str(r["part"]["kind_of_part"]["kind_of_part_id"])
                 ) and (str(r["position"]) == "LV"):
                     self.this_MOD_relations_HY_LV.append(r)
-                    add_info_text = f"\n\nExisting HY LV-side relation: {r['part']['serial_number']}."
+                    add_info_text = (
+                        f"\n\nExisting HY LV-side relation: {r['part']['serial_number']}."
+                    )
                     print(f"{add_info_text}")
                     info_text += add_info_text
                 elif (
@@ -4077,7 +3776,7 @@ class App(customtkinter.CTk):
                     == str(r["part"]["kind_of_part"]["kind_of_part_id"])
                 ) and (str(r["position"]) not in ["HV", "LV"]):
                     self.this_MOD_relations_HY_invalidPosition.append(r)
-                    add_info_text = f"\n\nExisting HY relation, at invalid position {str(r["position"])} within module: {r['part']['serial_number']}.\nPlease consider adding the child again with this tool to record a valid position (DB convention: HV or LV)."
+                    add_info_text = f"\n\nExisting HY relation, at invalid position {r['position']!s} within module: {r['part']['serial_number']}.\nPlease consider adding the child again with this tool to record a valid position (DB convention: HV or LV)."
                     print(f"{add_info_text}")
                     info_text += add_info_text
                 else:
@@ -4159,9 +3858,7 @@ class App(customtkinter.CTk):
             par_kwargs = {}
             if p == "Detector Unit" and c == "Module":
                 par_kwargs["sn_does_include"] = self.par_type
-            self.possible_parents = util.select_parts(
-                self.possible_parents, **par_kwargs
-            )
+            self.possible_parents = util.select_parts(self.possible_parents, **par_kwargs)
             self.possible_parents_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
                 self.possible_parents
             )
@@ -4191,18 +3888,14 @@ class App(customtkinter.CTk):
             self.child_SN_filter = self.entry_child_SN_filter.get()
             if p == "Detector Unit" and c == "Module":
                 chi_kwargs["manu_name"] = self.child_manu
-            elif p == "Detector" and c == "Detector Unit":
-                chi_kwargs["sn_does_include"] = self.chi_type
-            elif p == "Detector" and c == "PEB":
+            elif p == "Detector" and c == "Detector Unit" or p == "Detector" and c == "PEB":
                 chi_kwargs["sn_does_include"] = self.chi_type
             if self.child_SN_filter:
                 chi_kwargs["sn_does_include"] = self.child_SN_filter
             chi_kwargs["no_parents_ofKind"] = (
                 "all" if self.child_conn == "Not yet connected children" else None
             )
-            self.possible_children = util.select_parts(
-                self.possible_children, **chi_kwargs
-            )
+            self.possible_children = util.select_parts(self.possible_children, **chi_kwargs)
             self.possible_children_SNs_and_partIDs = util.get_relevant_SNs_and_partIDs(
                 self.possible_children
             )
@@ -4218,9 +3911,7 @@ class App(customtkinter.CTk):
                 chunks=self.possible_children_SNs_chunked,
                 n_pages=len(self.possible_children_SNs_chunked),
             )
-            if p == "Detector Unit" and c == "Module":
-                self.combobox_p_c_event_select("dummy")
-            elif p == "Detector" and c == "Detector Unit":
+            if p == "Detector Unit" and c == "Module" or p == "Detector" and c == "Detector Unit":
                 self.combobox_p_c_event_select("dummy")
 
     def fetch_slots(self):

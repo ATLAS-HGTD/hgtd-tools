@@ -1,8 +1,7 @@
 import hashlib
 import os
 import subprocess
-from datetime import datetime
-from datetime import timezone
+from datetime import UTC, datetime
 
 from markdown import Extension
 from markdown.postprocessors import Postprocessor
@@ -27,9 +26,7 @@ class FileMatcherCache:
     _cache = {}
 
     @classmethod
-    def get_file_for_content(
-        cls, target_text, docs_dir="docs", placeholder="{{ last_updated }}"
-    ):
+    def get_file_for_content(cls, target_text, docs_dir="docs", placeholder="{{ last_updated }}"):
         if not cls._cache:
             cls._build_cache(docs_dir)
 
@@ -48,8 +45,7 @@ class FileMatcherCache:
                         file_content = cls._normalize(f.read())
                         # Check line overlap/substring match
                         if normalized_target and (
-                            normalized_target in file_content
-                            or file_content in normalized_target
+                            normalized_target in file_content or file_content in normalized_target
                         ):
                             return file_path
                 except Exception:
@@ -77,9 +73,7 @@ class FileMatcherCache:
 
                         normalized = cls._normalize(content)
                         if normalized:
-                            content_hash = hashlib.md5(
-                                normalized.encode("utf-8")
-                            ).hexdigest()
+                            content_hash = hashlib.md5(normalized.encode("utf-8")).hexdigest()
                             cls._cache[content_hash] = full_path
                             print(f"[DEBUG GitDates] Indexed: {full_path}")
                     except Exception as e:
@@ -116,7 +110,7 @@ def _get_git_date(file_path, use_utc=True, fallback_to_mtime=True, date_type="au
             timestamp_str = result.stdout.strip()
 
             if timestamp_str and timestamp_str.isdigit():
-                tz = timezone.utc if use_utc else None
+                tz = UTC if use_utc else None
                 return datetime.fromtimestamp(int(timestamp_str), tz=tz)
             else:
                 if result.stderr:
@@ -127,7 +121,7 @@ def _get_git_date(file_path, use_utc=True, fallback_to_mtime=True, date_type="au
         if fallback_to_mtime:
             try:
                 mtime = os.path.getmtime(file_path)
-                tz = timezone.utc if use_utc else None
+                tz = UTC if use_utc else None
                 return datetime.fromtimestamp(mtime, tz=tz)
             except Exception as e:
                 print(f"[DEBUG GitDates mtime Error]: {e}")
@@ -160,12 +154,10 @@ class GitDatesPostprocessor(Postprocessor):
         raw_content = self.last_raw_text or text
         docs_dir = self.config.get("docs_dir") or "docs"
 
-        file_path = FileMatcherCache.get_file_for_content(
-            raw_content, docs_dir, placeholder
-        )
+        file_path = FileMatcherCache.get_file_for_content(raw_content, docs_dir, placeholder)
 
         if not file_path:
-            print(f"[DEBUG GitDates] Match failed for content chunk.")
+            print("[DEBUG GitDates] Match failed for content chunk.")
             return text.replace(placeholder, "Unknown")
 
         print(f"[DEBUG GitDates] Matched File: {file_path}")

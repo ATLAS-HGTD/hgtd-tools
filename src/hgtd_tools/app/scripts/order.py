@@ -1,11 +1,6 @@
 from argparse import ArgumentParser
 
-import hgtd_tools.api as api
-import hgtd_tools.data as data
-import hgtd_tools.plotter as plotter
-import hgtd_tools.relation_validation as relation_validation
-import hgtd_tools.templates as templates
-import hgtd_tools.util as util
+from hgtd_tools import api, data, plotter, relation_validation, templates, util
 
 
 def main():
@@ -60,7 +55,7 @@ def main():
     dev = util.str2bool(args.dev)
     merge = util.str2bool(args.merge)
     subtitle = util.str2bool(args.subtitle)
-    exp_text = args.customText if args.customText != None else "Production Database"
+    exp_text = args.customText if args.customText is not None else "Production Database"
 
     if mode_alias == "all":
         # need to run multiple validations in this script
@@ -81,30 +76,20 @@ def main():
         # Collect stats from SNs, and proceed only with valid ones
         if mode_alias == "Module Assembly":
             # there are valid modules (in terms of SN), but which are digital modules not to be checked
-            valid_SN_parts = util.select_parts(
-                parts_subset, check_valid_SN_latest_spec=True
-            )
+            valid_SN_parts = util.select_parts(parts_subset, check_valid_SN_latest_spec=True)
             # filter the valid modules, which are digital modules
             valid_and_DigitalMod_parts = util.select_parts(
                 valid_SN_parts, name_label_does_include="_Digital"
             )
             # and the opposite, non-digital (= full) modules
-            valid_parts = util.select_parts(
-                valid_SN_parts, name_label_does_not_include="_Digital"
-            )
+            valid_parts = util.select_parts(valid_SN_parts, name_label_does_not_include="_Digital")
             # invalid in terms of SN
-            invalid_SN_parts = util.select_parts(
-                parts_subset, check_invalid_SN_latest_spec=True
-            )
+            invalid_SN_parts = util.select_parts(parts_subset, check_invalid_SN_latest_spec=True)
             # add the digital modules on top of the invalid SN modules
             invalid_parts = invalid_SN_parts + valid_and_DigitalMod_parts
         else:
-            valid_parts = util.select_parts(
-                parts_subset, check_valid_SN_latest_spec=True
-            )
-            invalid_parts = util.select_parts(
-                parts_subset, check_invalid_SN_latest_spec=True
-            )
+            valid_parts = util.select_parts(parts_subset, check_valid_SN_latest_spec=True)
+            invalid_parts = util.select_parts(parts_subset, check_invalid_SN_latest_spec=True)
         fake_parts = util.select_parts(parts_subset, check_fake_SN=True)
         ## Count and prepare dict for relation validation
         # if the relation validation is of nature parent -> check its children, do not allow unconnected
@@ -136,36 +121,30 @@ def main():
             if mode_alias == "Module Loading":
                 individual_part_results = relation_validation.validate_DU(this_part_id)
             elif mode_alias == "Module Assembly":
-                individual_part_results = relation_validation.validate_module(
-                    this_part_id
-                )
+                individual_part_results = relation_validation.validate_module(this_part_id)
             elif mode_alias == "Hybridization":
-                individual_part_results = relation_validation.validate_hybrid(
-                    this_part_id
-                )
+                individual_part_results = relation_validation.validate_hybrid(this_part_id)
             elif mode_alias == "Sensor_Parents":
-                individual_part_results = relation_validation.validate_sensor(
-                    this_part_id
-                )
+                individual_part_results = relation_validation.validate_sensor(this_part_id)
 
-            if individual_part_results["validation_result_overall"] == True:
+            if individual_part_results["validation_result_overall"]:
                 # this part only has correct connections, note down its SN / url (every part => new line)
                 validation_subset["n_valid_connected_parts"] += 1
-                validation_subset[
-                    "relations_template_good"
-                ] += f'\t\t[Part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}).\n\n'
+                validation_subset["relations_template_good"] += (
+                    f"\t\t[Part {this_part_SN}]({api.frontendUrlPrefix + f'/viewparts/{this_part_id}'}).\n\n"
+                )
             else:
                 if mode_alias == "Sensor_Parents":
                     # Sensors are a special case: there are acceptable failures (sensor not used yet for a Hybrid)
                     # but also non-acceptable failures (sensor not connected to parent Wafer, connection to Hybrid truly faulty)
                     if individual_part_results["validation_result_S_par_HY"] == "new":
                         # could be acceptable, but need to test also against Wafer
-                        if individual_part_results["validation_result_S_par_W"] == True:
+                        if individual_part_results["validation_result_S_par_W"]:
                             # connection to parent Wafer is fine, but this part has not been connected yet to HY parent(s), OK during production (every part => new line)
                             validation_subset["n_valid_new_parts"] += 1
-                            validation_subset[
-                                "relations_template_new"
-                            ] += f'\t\t[Part {this_part_SN}]({api.frontendUrlPrefix + f"/viewparts/{this_part_id}"}).\n\n'
+                            validation_subset["relations_template_new"] += (
+                                f"\t\t[Part {this_part_SN}]({api.frontendUrlPrefix + f'/viewparts/{this_part_id}'}).\n\n"
+                            )
                         else:
                             # not yet connected to HY, but no connection to Wafer parent, which is not acceptable
                             validation_subset[
@@ -179,7 +158,7 @@ def main():
                                 + individual_part_results["validation_reason_S_par_W"]
                                 + "\n\n"
                             )
-                    elif individual_part_results["validation_result_S_par_HY"] == False:
+                    elif not individual_part_results["validation_result_S_par_HY"]:
                         # validation failed and at least the connection to Hybrid is truly faulty (wrong position, or more than one connection)
                         validation_subset[
                             "relations_template_bad"
@@ -188,25 +167,17 @@ def main():
 \t\tDetailed failure reason:\n
 """
                         validation_subset["relations_template_bad"] += (
-                            "\t\t"
-                            + individual_part_results["validation_reason_S_par_HY"]
-                            + "\n\n"
+                            "\t\t" + individual_part_results["validation_reason_S_par_HY"] + "\n\n"
                         )
-                        if (
-                            individual_part_results["validation_result_S_par_W"]
-                            == False
-                        ):
+                        if not individual_part_results["validation_result_S_par_W"]:
                             validation_subset["relations_template_bad"] += (
                                 "\t\t"
                                 + individual_part_results["validation_reason_S_par_W"]
                                 + "\n\n"
                             )
-                    elif individual_part_results["validation_result_S_par_HY"] == True:
+                    elif individual_part_results["validation_result_S_par_HY"]:
                         # relation validation to Hybrid is OK, test against Wafer
-                        if (
-                            individual_part_results["validation_result_S_par_W"]
-                            == False
-                        ):
+                        if not individual_part_results["validation_result_S_par_W"]:
                             validation_subset[
                                 "relations_template_bad"
                             ] += f"""\t??? failure "Relation validation failed for {this_part_SN}:"\n
@@ -228,38 +199,26 @@ def main():
 """
                     # note down the reason(s) individually
                     if mode_alias == "Module Loading":
-                        if (
-                            individual_part_results["validation_result_DU_chi_MO"]
-                            == False
-                        ):
+                        if not individual_part_results["validation_result_DU_chi_MO"]:
                             validation_subset["relations_template_bad"] += (
                                 "\t\t"
                                 + individual_part_results["validation_reason_DU_chi_MO"]
                                 + "\n\n"
                             )
-                        if (
-                            individual_part_results["validation_result_DU_chi_SU"]
-                            == False
-                        ):
+                        if not individual_part_results["validation_result_DU_chi_SU"]:
                             validation_subset["relations_template_bad"] += (
                                 "\t\t"
                                 + individual_part_results["validation_reason_DU_chi_SU"]
                                 + "\n\n"
                             )
                     elif mode_alias == "Module Assembly":
-                        if (
-                            individual_part_results["validation_result_MO_chi_MF"]
-                            == False
-                        ):
+                        if not individual_part_results["validation_result_MO_chi_MF"]:
                             validation_subset["relations_template_bad"] += (
                                 "\t\t"
                                 + individual_part_results["validation_reason_MO_chi_MF"]
                                 + "\n\n"
                             )
-                        if (
-                            individual_part_results["validation_result_MO_chi_HY"]
-                            == False
-                        ):
+                        if not individual_part_results["validation_result_MO_chi_HY"]:
                             validation_subset["relations_template_bad"] += (
                                 "\t\t"
                                 + individual_part_results["validation_reason_MO_chi_HY"]
@@ -267,10 +226,7 @@ def main():
                             )
                     elif mode_alias == "Hybridization":
                         # Currently, only check the 1-1 relation to sensors, in the future, also ASICs!
-                        if (
-                            individual_part_results["validation_result_HY_chi_S"]
-                            == False
-                        ):
+                        if not individual_part_results["validation_result_HY_chi_S"]:
                             validation_subset["relations_template_bad"] += (
                                 "\t\t"
                                 + individual_part_results["validation_reason_HY_chi_S"]
@@ -318,13 +274,9 @@ def main():
             # further split by manufacturer
             for manu in manufacturers:
                 parts_per_manu = util.select_parts(parts, manu_shortname=manu)
-                validation_all[manu] = prepare_validation_per_subset(
-                    parts_per_manu, mode_alias
-                )
+                validation_all[manu] = prepare_validation_per_subset(parts_per_manu, mode_alias)
 
-            contributions_valid_all = [
-                validation_all[m]["n_valid_parts"] for m in manufacturers
-            ]
+            contributions_valid_all = [validation_all[m]["n_valid_parts"] for m in manufacturers]
             contributions_valid_connected_all = [
                 validation_all[m]["n_valid_connected_parts"] for m in manufacturers
             ]
@@ -333,12 +285,8 @@ def main():
                 "n_valid_parts": sum(contributions_valid_all),
                 "contributions_valid_connected": contributions_valid_connected_all,
                 "n_valid_connected_parts": sum(contributions_valid_connected_all),
-                "n_invalid_parts": sum(
-                    validation_all[m]["n_invalid_parts"] for m in manufacturers
-                ),
-                "n_fake_parts": sum(
-                    validation_all[m]["n_fake_parts"] for m in manufacturers
-                ),
+                "n_invalid_parts": sum(validation_all[m]["n_invalid_parts"] for m in manufacturers),
+                "n_fake_parts": sum(validation_all[m]["n_fake_parts"] for m in manufacturers),
             }
             if mode_alias == "Sensor_Parents":
                 contributions_new_all = [
@@ -409,7 +357,7 @@ def main():
                 manufacturers = data.S_W_manus_to_monitor
             else:
                 manufacturers = []  # not implemented, but to use same pattern
-            if single_manufacturer != None:
+            if single_manufacturer is not None:
                 manufacturers = [single_manufacturer]
             validation_all = prepare_validation_per_mode(mode_alias, manufacturers)
             if mode_alias == "Module Loading":

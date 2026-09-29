@@ -1,17 +1,13 @@
 import os
 import time
 from argparse import ArgumentParser
-from datetime import datetime
-from datetime import UTC
+from datetime import UTC, datetime
 
-import hgtd_tools.data as data
-import hgtd_tools.relation_validation as relation_validation
-import hgtd_tools.util as util
 import numpy as np
 
-parser = ArgumentParser(
-    "Hybrid matcher (recommender system to pair Hybrids for HV- and LV-side)"
-)
+from hgtd_tools import data, relation_validation, util
+
+parser = ArgumentParser("Hybrid matcher (recommender system to pair Hybrids for HV- and LV-side)")
 parser.add_argument(
     "--mode-alias",
     dest="mode_alias",
@@ -74,9 +70,7 @@ max_workers = args.max_workers
 # to a text file with one SN per line.
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 def _looks_like_file_path(s):
-    return os.path.sep in s or s.lower().endswith(
-        (".txt", ".list", ".ignore", ".sn", ".sns")
-    )
+    return os.path.sep in s or s.lower().endswith((".txt", ".list", ".ignore", ".sn", ".sns"))
 
 
 def _parse_manual_ignore_hybrid_sns(raw):
@@ -86,11 +80,7 @@ def _parse_manual_ignore_hybrid_sns(raw):
         # Path to an existing file: one SN per line.
         # Strip whitespace, drop blank lines and '#'-comment lines.
         with open(raw) as f:
-            sns = [
-                line.strip()
-                for line in f
-                if line.strip() and not line.lstrip().startswith("#")
-            ]
+            sns = [line.strip() for line in f if line.strip() and not line.lstrip().startswith("#")]
     elif _looks_like_file_path(raw):
         # Looks like a path but the file is missing -> fail loud, don't
         # silently treat the bad path as an SN.
@@ -111,9 +101,7 @@ def _parse_manual_ignore_hybrid_sns(raw):
     return deduped
 
 
-manual_ignore_hybrid_sns = _parse_manual_ignore_hybrid_sns(
-    args.manual_ignore_hybrid_sns
-)
+manual_ignore_hybrid_sns = _parse_manual_ignore_hybrid_sns(args.manual_ignore_hybrid_sns)
 dev = util.str2bool(args.dev)
 
 
@@ -165,7 +153,7 @@ def get_decision_scores_only_Sensor_VBD_closest(p):
     part_SN = p["serial_number"]
     children_S = util.get_children(part_id, ofKind="Sensor")[0]
     rel_val_result, rel_val_reason = relation_validation.validate_HY_chi_S(children_S)
-    if rel_val_result == False:
+    if not rel_val_result:
         # Not a valid connection to Sensor child.
         # Must ignore this Hybrid for matching.
         return False, [
@@ -181,7 +169,7 @@ def get_decision_scores_only_Sensor_VBD_closest(p):
         child_S_part_SN = children_S[0]["part"]["serial_number"]
         parents_W = util.get_parents(child_S_part_id, ofKind="Wafer")[0]
         rel_val_result, rel_val_reason = relation_validation.validate_S_par_W(parents_W)
-        if rel_val_result == False:
+        if not rel_val_result:
             # Not a valid connection to Wafer parent.
             # Must ignore this Hybrid for matching.
             return False, [
@@ -193,7 +181,6 @@ def get_decision_scores_only_Sensor_VBD_closest(p):
             # Wafer parent exists, valid connection.
             # We know it is exactly one Wafer parent (@ index 0).
             # Now check Wafer-Sensor VBD table.
-            parent_W_part_id = parents_W[0]["part_parent"]["part_id"]
             parent_W_part_SN = parents_W[0]["part_parent"]["serial_number"]
             vbd_value, vbd_reason = util.get_vbd_for_sensor_via_wafer(
                 child_S_part_SN, parent_W_part_SN, metric="VBD_AVERAGE"
@@ -401,9 +388,7 @@ def hybridmatch(
     ignored_parts, kept_parts_and_scoring = prepare_data_sources(
         mode_alias, parts, max_workers=max_workers
     )
-    print(
-        f"prepare_data_sources took {time.perf_counter() - t0:.2f}s with {max_workers} workers"
-    )
+    print(f"prepare_data_sources took {time.perf_counter() - t0:.2f}s with {max_workers} workers")
 
     # Prepend manual ignores so the operator sees them together with the
     # algorithm-ignored parts in the same flat list.
@@ -437,9 +422,7 @@ def hybridmatch(
             )
         return ignored_parts, kept_parts_and_scoring, [], 0.0, []
 
-    pairings, total, leftover = run_pairing(
-        kept_parts_and_scoring, algorithm=mode_alias
-    )
+    pairings, total, leftover = run_pairing(kept_parts_and_scoring, algorithm=mode_alias)
     if printouts:
         if leftover != []:
             print(
@@ -512,9 +495,7 @@ def main():
         # tells the operator why the pool is empty without them having to
         # re-run the script with verbose output.
         n_manual = sum(
-            1
-            for ip in ignored_parts
-            if len(ip) > 2 and "Manually ignored" in str(ip[2])
+            1 for ip in ignored_parts if len(ip) > 2 and "Manually ignored" in str(ip[2])
         )
         n_algo = len(ignored_parts) - n_manual
         n_total_seen = len(ignored_parts) + len(kept_parts_and_scoring)
