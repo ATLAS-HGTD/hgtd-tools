@@ -45,6 +45,7 @@ The following overview lists the implemented features of `hgtd-tools` and links 
 ??? success "Additional tools / scripts / automation"
     - Serial Number reservation for module assembly [with CLI script `SN-reservation`](use_cases/SN_reservation.md)
     - Hybrid matching for module assembly [with CLI script `hybridmatch`](use_cases/hybrid_matching.md)
+    - Bulk module assembly relation upload including consistency validation [with CLI script `bulk-module-assembly`](use_cases/bulk_module_assembly.md)
     - IV curve plotting [with CLI script `ivcurve-overlay`](use_cases/ivcurve_plotting.md)
     - Reporting
         - automation with Gitlab CI, using the hgtdbot account
@@ -73,6 +74,16 @@ If you walked through the [install](getting_started/install.md) guide and you ac
 
     ```shell
     hybridmatch --location <your-site>
+    ```
+
+??? tip "Using the `bulk-module-assembly` script for multiple relation upload including validation"
+
+    When doing module assembly, you may have a prefilled csv file with parent-child relations to upload in one go. On the DB website, there was a method to do such a bulk relation upload, but without validation according to this [set of rules](https://hgtd-tools-internal.web.cern.ch/reports/validation/#module-assembly){target="_blank"}. In the HGTD Tools GUI, you get the validation, mistakes are prevented by construction, but you need to go module by module, and connect all children manually. This script is the combination of both - bulk upload, but with built-in consistency check. For more information, please read [Bulk Module Assembly](use_cases/bulk_module_assembly.md).
+
+    Execute the following:
+
+    ```shell
+    bulk-module-assembly -u <your-username> -i <path-to-input-csv-file>
     ```
 
 ??? tip "Using the `ivcurve-overlay` script for IV curve plotting"

@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "hgtd-tools"
-version = "3.0.0"
+version = "3.1.0rc1"
 description = "Tools for the HGTD production database"
 readme = "README.md"
 keywords = [ "atlas", "cern", "database", "hgtd", "physics" ]
@@ -45,13 +45,13 @@ Reports = "https://hgtd-tools-internal.web.cern.ch/"
 hgtd-tools = "hgtd_tools.app.cli:main"
 hgtd-tools-gui = "hgtd_tools.app.gui:run_gui"
 # scripts used primarily in GitLab CI with their own standalone entrypoints
+SN-reservation = "hgtd_tools.app.scripts.SN_reservation:main"
 hybridmatch = "hgtd_tools.app.scripts.hybridmatch:main"
+bulk-module-assembly = "hgtd_tools.app.scripts.bulk_module_assembly:main"
 ivcurve-overlay = "hgtd_tools.app.scripts.ivcurve_overlay:main"
+upload-FlexTail-measurement = "hgtd_tools.app.scripts.upload_FlexTail_measurement:main"
 order = "hgtd_tools.app.scripts.order:main"
 report-stats = "hgtd_tools.app.scripts.report_stats:main"
-SN-reservation = "hgtd_tools.app.scripts.SN_reservation:main"
-bulk-module-assembly = "hgtd_tools.app.scripts.bulk_module_assembly:main"
-upload-FlexTail-measurement = "hgtd_tools.app.scripts.upload_FlexTail_measurement:main"
 [project.entry-points."markdown.extensions"]
 zensical_git_dates = "hgtd_tools.zensical_git_dates.extension:GitDatesExtension"
 
