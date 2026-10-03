@@ -10,6 +10,8 @@ This python application comes with API client, GUI, automatic reporting and comm
 
 The [internal part of the project](https://gitlab.cern.ch/anstein/hgtd-tools-internal){target="_blank"} performs nightly checks of yields and consistency validation, as documented on the resulting [reports page](https://hgtd-tools-internal.web.cern.ch/){target="_blank"}.
 
+This software follows the [HGTD Detector Naming Conventions for the surface assembly](https://edms.cern.ch/document/3483138/0.1){target="_blank"}, the [HGTD ProdDB Serial Number Note](https://cds.cern.ch/record/2910370/files/ATL-COM-HGTD-2024-026.pdf){target="_blank"} and [HGTD Module QC docs page](https://hgtd-module-qc.docs.cern.ch/){target="_blank"} for nomenclature and specifications.
+
 ## Getting started
 
 Please check the [install](getting_started/install.md) guide for installing hgtd-tools the first time or the [update page](getting_started/update.md) when updating it.
