@@ -7,8 +7,8 @@
 ```bash
 rm -drf dist
 python -m build
-tar -tzf dist/hgtd_tools-3.0.0rc3.tar.gz
-unzip -l dist/hgtd_tools-3.0.0rc3-py3-none-any.whl
+tar -tzf dist/hgtd_tools-3.2.0.tar.gz
+unzip -l dist/hgtd_tools-3.2.0-py3-none-any.whl
 twine upload --repository testpypi dist/*
 ```
 or upload to the main pypi
@@ -44,6 +44,6 @@ v0.Y.Z: early R&D of the tools
 ## Plan
 roughly one new planned release X.Y each month, patches in between
 
-v3.1.0: Production
+v4.0.0: Production
 
 *Last updated: {{ last_updated }}*
