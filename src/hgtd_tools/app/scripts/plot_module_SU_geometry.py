@@ -76,7 +76,7 @@ def orientation(row: int) -> str:
 
 def plot_modules(
     combined: pd.DataFrame,
-    outfile: str = "ft_modules.png",
+    outfile: str = "geo_modules",
     title: str = "Modules",
     invert_x: bool = False,
     zoom: bool = False,
@@ -163,7 +163,8 @@ def plot_modules(
     )
 
     plt.tight_layout()
-    plt.savefig(outfile, dpi=120, bbox_inches="tight")
+    plt.savefig(f"{outfile}.png", dpi=300, bbox_inches="tight")
+    plt.savefig(f"{outfile}.pdf", dpi=300, bbox_inches="tight")
     plt.close(fig)  # Close figure to allow script to continue generating others
     print(f"Saved: {outfile}")
 
@@ -180,19 +181,19 @@ def main():
     front_peb_3f = front[front["PEB_type"] == "3F"]
 
     # 1. Combined (Front in Q1, Back in Q3 - original coordinates) -> Uses zoomed view
-    plot_modules(combined, "ft_modules_combined.png", "Front & Back Combined", zoom=True)
+    plot_modules(combined, "geo_modules_combined", "Front & Back Combined", zoom=True)
 
     # 2. Front Only
-    plot_modules(front, "ft_modules_front.png", "Front Quadrant Only")
+    plot_modules(front, "geo_modules_front", "Front Quadrant Only")
 
     # 3. Back Only (Transformed x to negative, vertical modules use right edge center)
-    plot_modules(back, "ft_modules_back.png", "Back Quadrant Only (x < 0, y > 0)", invert_x=True)
+    plot_modules(back, "geo_modules_back", "Back Quadrant Only (x < 0, y > 0)", invert_x=True)
 
     # 4. First Three Rows of Front
-    plot_modules(front_rows_1_3, "ft_modules_front_rows_1_3.png", "Front - Rows 1-3")
+    plot_modules(front_rows_1_3, "geo_modules_front_rows_1_3", "Front - Rows 1-3")
 
     # 5. PEB Type 3F on Front
-    plot_modules(front_peb_3f, "ft_modules_front_peb_3f.png", "Front - PEB Type 3F")
+    plot_modules(front_peb_3f, "geo_modules_front_peb_3f", "Front - PEB Type 3F")
 
 
 if __name__ == "__main__":
