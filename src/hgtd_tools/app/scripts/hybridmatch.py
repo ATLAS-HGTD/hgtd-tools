@@ -63,6 +63,39 @@ mode_alias = args.mode_alias
 location = args.location
 max_workers = args.max_workers
 
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# VBD-bin configuration for the grouped pairing step.
+#
+# Parts with VBD < VBD_IGNORE_BELOW are excluded from pairing and reported
+# alongside the other ignores with an explicit reason. The remaining parts
+# are split into the bins below and paired within each bin separately,
+# so a low-VBD hybrid is never matched against a high-VBD one.
+#
+# Bin convention: [lower_edge, next_lower_edge), i.e. half-open on the
+# right. So:
+#   vbd = 150.0  -> "150-160V"
+#   vbd = 160.0  -> "160-170V"
+#   ...
+#   vbd = 190.0  -> ">190V"
+#   vbd = 149.99 -> ignored (< VBD_IGNORE_BELOW)
+#
+# Change these three constants to retune the binning without touching
+# the rest of the script.
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+VBD_IGNORE_BELOW = 150.0
+VBD_BIN_LOWER_EDGES = [150.0, 160.0, 170.0, 180.0, 190.0]
+VBD_BIN_LABELS = [
+    "150-160V",
+    "160-170V",
+    "170-180V",
+    "180-190V",
+    ">190V",
+]
+assert len(VBD_BIN_LABELS) == len(VBD_BIN_LOWER_EDGES), (
+    "VBD_BIN_LABELS and VBD_BIN_LOWER_EDGES must have the same length; "
+    "the last label is the open-ended bin for vbd >= VBD_BIN_LOWER_EDGES[-1]."
+)
+
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Resolve --manual_ignore_hybrid_sns into a clean list of unique SN strings.
@@ -156,11 +189,7 @@ def get_decision_scores_only_Sensor_VBD_closest(p):
     if not rel_val_result:
         # Not a valid connection to Sensor child.
         # Must ignore this Hybrid for matching.
-        return False, [
-            part_id,
-            part_SN,
-            rel_val_reason,
-        ]
+        return False, [part_id, part_SN, rel_val_reason]
     else:
         # Sensor child exists, valid connection.
         # We know it is exactly one Sensor child (@ index 0) at empty position.
@@ -315,6 +344,78 @@ def run_pairing(parts, algorithm):
         raise NotImplementedError
 
 
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# VBD-bin assignment.
+#
+# Given a kept part of the form [part_id, part_SN, vbd_value], return:
+#   ("ignore", reason_string)   if vbd < VBD_IGNORE_BELOW
+#   ("bin",    bin_label)       otherwise
+#
+# Bin convention: [lower_edge_i, lower_edge_{i+1}), except the last bin
+# which is open-ended (>= last edge). The check on VBD_BIN_LOWER_EDGES
+# uses np.searchsorted with side="right" so the lower edge is inclusive.
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+def assign_vbd_bin(part_record):
+    _, _, vbd_value = part_record
+    try:
+        vbd = float(vbd_value)
+    except (TypeError, ValueError):
+        # If VBD is not a valid number for some reason, fall back to the
+        # ignore path with a clear reason so the operator notices.
+        return ("ignore", f"VBD value is not a valid number: {vbd_value!r}")
+
+    if vbd < VBD_IGNORE_BELOW:
+        return ("ignore", f"VBD ({vbd} V) is below {VBD_IGNORE_BELOW} V; excluded from pairing")
+
+    edges = np.asarray(VBD_BIN_LOWER_EDGES, dtype=float)
+    # np.searchsorted(side="right") returns the insertion index AFTER
+    # any equal values, so for vbd in [edge_i, edge_{i+1}) the result is
+    # i+1. Subtract 1 to get the bin index. Clip to the last bin so
+    # vbd >= edges[-1] lands in the open-ended ">190V" bin rather than
+    # overflowing.
+    idx = int(np.searchsorted(edges, vbd, side="right")) - 1
+    idx = max(0, min(idx, len(VBD_BIN_LABELS) - 1))
+    return ("bin", VBD_BIN_LABELS[idx])
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Run pairing within each VBD bin independently.
+#
+# Returns a list of per-bin result dicts:
+#   {"label": str, "n": int, "pairs": [...], "total": float, "leftover": [...]}
+# plus the flat ignored-VBD list, which the caller merges into the
+# main ignored_parts report.
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+def run_pairing_grouped_by_vbd_bin(kept_parts_and_scoring, algorithm):
+    grouped_by_bin = {label: [] for label in VBD_BIN_LABELS}
+    ignored_vbd = []
+
+    for rec in kept_parts_and_scoring:
+        kind, payload = assign_vbd_bin(rec)
+        if kind == "ignore":
+            ignored_vbd.append(
+                [rec[0], rec[1], payload]  # same [part_id, part_SN, reason] shape as other ignores
+            )
+        else:
+            grouped_by_bin[payload].append(rec)
+
+    group_results = []
+    for label in VBD_BIN_LABELS:
+        parts_in_bin = grouped_by_bin[label]
+        pairs, total, leftover = run_pairing(parts_in_bin, algorithm=algorithm)
+        group_results.append(
+            {
+                "label": label,
+                "n": len(parts_in_bin),
+                "pairs": pairs,
+                "total": total,
+                "leftover": leftover,
+            }
+        )
+
+    return group_results, ignored_vbd
+
+
 def hybridmatch(
     mode_alias,
     location,
@@ -349,6 +450,7 @@ def hybridmatch(
         print(f"- {dev=}")
         print(f"- {manual_ignore_hybrid_sns=}")
         print(f"- {max_workers=}")
+        print(f"- VBD-bin grouping: ignore below {VBD_IGNORE_BELOW} V, bins = {VBD_BIN_LABELS}")
 
         print("\n" + "%" * 80 + "\n")
         print(">>> 1. Preparing relevant Hybrids at your location...\n")
@@ -402,7 +504,7 @@ def hybridmatch(
         for kp in kept_parts_and_scoring:
             print(kp)
         print("\n" + "%" * 80)
-        print("\n>>> 3. Running pairing algorithm...\n")
+        print("\n>>> 3. Running pairing algorithm (grouped by VBD bin)...\n")
 
     # Guard: no parts survived all filters -> skip pairing entirely and
     # tell the operator why the pool is empty, instead of crashing in
@@ -420,24 +522,54 @@ def hybridmatch(
                 f"  - Surviving candidates: {len(kept_parts_and_scoring)}\n"
                 "Skipping pairing. See 'Ignored parts' above for reasons."
             )
-        return ignored_parts, kept_parts_and_scoring, [], 0.0, []
+        # In the empty-pool case, return the same shape but with empty
+        # grouped results so the markdown generator doesn't have to
+        # special-case it.
+        empty_group_results = [
+            {"label": label, "n": 0, "pairs": [], "total": 0.0, "leftover": []}
+            for label in VBD_BIN_LABELS
+        ]
+        return ignored_parts, kept_parts_and_scoring, empty_group_results, 0.0, []
 
-    pairings, total, leftover = run_pairing(kept_parts_and_scoring, algorithm=mode_alias)
+    # Group by VBD bin and pair within each bin.
+    group_results, ignored_vbd = run_pairing_grouped_by_vbd_bin(
+        kept_parts_and_scoring, algorithm=mode_alias
+    )
+    # Fold the VBD-ignored parts into the main ignored-parts list so the
+    # operator sees them with the same reporting style.
+    ignored_parts = ignored_parts + ignored_vbd
+
+    # Aggregate across bins for the console summary.
+    all_pairs = [p for gr in group_results for p in gr["pairs"]]
+    total = sum(gr["total"] for gr in group_results)
+    leftover = [lo for gr in group_results for lo in gr["leftover"]]
+
     if printouts:
-        if leftover != []:
-            print(
-                f"\nOdd number of parts for pairing, optimal leftover to minimize the total distance: {leftover}"
-            )
-        print(f"\nTotal distance for optimal pairing: {total}")
-        print("\nOptimal pairings:\n")
-        for pairing in pairings:
+        # Per-bin detail first, then the aggregated summary.
+        for gr in group_results:
+            print(f"\n--- Bin {gr['label']} ({gr['n']} parts) ---")
+            if gr["leftover"]:
+                print(
+                    f"  Odd count in bin, optimal leftover to minimize total distance: {gr['leftover']}"
+                )
+            print(f"  Total distance for optimal pairing in this bin: {gr['total']}")
+            print("  Optimal pairings in this bin:")
+            for pairing in gr["pairs"]:
+                print(f"    {pairing}")
+
+        if leftover:
+            print(f"\nOdd-count bins -> aggregated optimal leftovers (sum across bins): {leftover}")
+        print(f"\nAggregated total distance across all bins: {total}")
+        print(f"\nAggregated optimal pairings ({len(all_pairs)} pairs):\n")
+        for pairing in all_pairs:
             print(pairing)
         print()
-    return ignored_parts, kept_parts_and_scoring, pairings, total, leftover
+
+    return ignored_parts, kept_parts_and_scoring, group_results, total, leftover
 
 
 def main():
-    (ignored_parts, kept_parts_and_scoring, pairings, total, leftover) = hybridmatch(
+    (ignored_parts, kept_parts_and_scoring, group_results, total, leftover) = hybridmatch(
         mode_alias,
         location,
         dev,
@@ -452,7 +584,10 @@ def main():
     md_content += f"- `location` = `{location}`\n"
     md_content += f"- `dev` = `{dev}`\n"
     md_content += f"- `manual_ignore_hybrid_sns` = `{manual_ignore_hybrid_sns}`\n"
-    md_content += f"- `max_workers` = `{max_workers}`\n\n"
+    md_content += f"- `max_workers` = `{max_workers}`\n"
+    md_content += (
+        f"- VBD-bin grouping: ignore below `{VBD_IGNORE_BELOW}` V, bins = `{VBD_BIN_LABELS}`\n\n"
+    )
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # Step 1
@@ -488,8 +623,9 @@ def main():
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # Step 3 — Pairing results (or empty-pool explanation).
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    md_content += "## Step 3: Running pairing algorithm\n\n"
+    md_content += "## Step 3: Running pairing algorithm (grouped by VBD bin)\n\n"
 
+    # Empty-pool case: mirror the console breakdown.
     if not kept_parts_and_scoring:
         # Reproduce the same breakdown the console prints so the markdown
         # tells the operator why the pool is empty without them having to
@@ -497,35 +633,50 @@ def main():
         n_manual = sum(
             1 for ip in ignored_parts if len(ip) > 2 and "Manually ignored" in str(ip[2])
         )
-        n_algo = len(ignored_parts) - n_manual
+        n_vbd = sum(
+            1
+            for ip in ignored_parts
+            if len(ip) > 2 and isinstance(ip[2], str) and "below" in ip[2] and "V" in ip[2]
+        )
+        n_algo = len(ignored_parts) - n_manual - n_vbd
         n_total_seen = len(ignored_parts) + len(kept_parts_and_scoring)
         md_content += "**No parts survived for pairing; pairing step was skipped.**\n\n"
         md_content += f"- Candidates seen after `prepare_parts`: {n_total_seen}\n"
         md_content += f"- Filtered out by `--manual_ignore_hybrid_sns`: {n_manual}\n"
+        md_content += f"- Filtered out by VBD < `{VBD_IGNORE_BELOW}` V: {n_vbd}\n"
         md_content += f"- Filtered out by the matching algorithm: {n_algo}\n"
         md_content += f"- Surviving candidates: {len(kept_parts_and_scoring)}\n\n"
     else:
-        if leftover != []:
-            md_content += (
-                "Odd number of parts for pairing, optimal leftover to minimize "
-                "the total distance:\n\n"
-            )
+        # Per-bin sections, then an aggregated summary.
+        for gr in group_results:
+            md_content += f"### Bin `{gr['label']}` ({gr['n']} parts)\n\n"
+            if gr["leftover"]:
+                md_content += (
+                    "Odd number of parts in this bin, optimal leftover to minimize "
+                    "the total distance:\n\n"
+                )
+                for lo in gr["leftover"]:
+                    md_content += "- `[" + "  |  ".join(str(x) for x in lo) + "]`\n"
+                md_content += "\n"
+            md_content += f"Total distance in this bin: `{gr['total']}`\n\n"
+            md_content += "Optimal pairings in this bin:\n\n"
+            if gr["pairs"]:
+                for pairing in gr["pairs"]:
+                    l_pairing = list(pairing)
+                    hy_a = [str(content) for content in l_pairing[0]]
+                    hy_b = [str(content) for content in l_pairing[1]]
+                    md_content += "- " + ", ".join(hy_a) + "  +  " + ", ".join(hy_b) + "\n"
+                md_content += "\n"
+            else:
+                md_content += "_None._\n\n"
+
+        md_content += "### Aggregated across all bins\n\n"
+        if leftover:
+            md_content += "Odd-count bins -> aggregated optimal leftovers (sum across bins):\n\n"
             for lo in leftover:
                 md_content += "- `[" + "  |  ".join(str(x) for x in lo) + "]`\n"
             md_content += "\n"
-
-        md_content += f"Optimal total distance: `{total}`\n\n"
-
-        md_content += "### Optimal pairings\n\n"
-        if pairings:
-            for pairing in pairings:
-                l_pairing = list(pairing)
-                hy_a = [str(content) for content in l_pairing[0]]
-                hy_b = [str(content) for content in l_pairing[1]]
-                md_content += "- " + ", ".join(hy_a) + "  +  " + ", ".join(hy_b) + "\n"
-            md_content += "\n"
-        else:
-            md_content += "_None._\n\n"
+        md_content += f"Aggregated total distance: `{total}`\n\n"
 
     with open(f"pairings_{mode_alias}_{location}.md", "w") as f:
         f.write(md_content)

@@ -26,6 +26,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.patches import Patch
 
+from hgtd_tools import data
+
 # ------------------------------------------------------------------
 # Module dimensions (mm)
 # ------------------------------------------------------------------
@@ -38,6 +40,8 @@ BACK_QUAD = "fullBackQuadrant.csv"
 FRONT_QUAD = "fullFrontQuadrant.csv"
 SLOT_TABLE_DIR = "/Users/annikastein/Documents/PostDoc/HGTD/DB/SlotTable/"
 MODULE_REF_DIR = "/Users/annikastein/Documents/PostDoc/HGTD/DB/SlotTable/To_plot_module_reference/"
+
+CUSTOM_COLORS = True
 
 
 def load_data():
@@ -127,13 +131,17 @@ def plot_modules(
 
             y0 = y_ref - BARE_LENGTH / 2
 
+        if CUSTOM_COLORS and data.DU_FaceColor_dict[r["SU_type"]] != "":
+            facecol = data.DU_FaceColor_dict[r["SU_type"]]
+        else:
+            facecol = color_map[r["SU_type"]]
         rect = patches.Rectangle(
             (x0, y0),
             w,
             h,
             linewidth=0.3,
             edgecolor="black",
-            facecolor=color_map[r["SU_type"]],
+            facecolor=facecol,
             alpha=0.85,
         )
         ax.add_patch(rect)
@@ -151,7 +159,19 @@ def plot_modules(
     ax.set_ylabel("y [mm]")
     ax.set_title(f"Modules — {title}")
 
-    handles = [Patch(facecolor=color_map[st], edgecolor="black", label=st) for st in su_types]
+    if CUSTOM_COLORS:
+        handles = [
+            Patch(
+                facecolor=data.DU_FaceColor_dict[st]
+                if data.DU_FaceColor_dict[st] != ""
+                else color_map[st],
+                edgecolor="black",
+                label=st,
+            )
+            for st in su_types
+        ]
+    else:
+        handles = [Patch(facecolor=color_map[st], edgecolor="black", label=st) for st in su_types]
     ax.legend(
         handles=handles,
         loc="center left",
