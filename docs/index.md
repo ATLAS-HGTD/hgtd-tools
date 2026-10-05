@@ -53,6 +53,7 @@ The following overview lists the implemented features of `hgtd-tools` and links 
         - automation with Gitlab CI, using the hgtdbot account
         - runner script producing overviews / reports: yields and relation validation
     - Flex Tail upload [with CLI script `upload-FlexTail-measurements`](use_cases/FT_upload_instructions.md)
+    - Module and SU geometry plotting [with CLI script `plot-MO-SU-geo`](use_cases/module_SU_plotting.md)
 
 ## Quickstart
 
@@ -129,6 +130,17 @@ If you walked through the [install](getting_started/install.md) guide and you ac
 
     ```shell
     upload-FlexTail-measurement --analysis-folder FT_Measurements --user-name myName --meas_location test --meas_start_date YYYY-MM-DD --meas_end_date YYYY-MM-DD --run_type FT_characterisation_test (--dryrun True)
+    ```
+
+??? tip "Using the `plot-MO-SU-geo` script for plotting flex tail measurements"
+
+    For plotting the pre-defined SU-Module map in front/back quadrants and individually for Demonstrator (V1+V2) slices. Needs the references containing the coordinates and mappings from the slot table / flex tail calculation process. This script requires passing the path to the reference files containing the slots and the module references, respectively.
+    For more information, please read [Module SU Plotting](use_cases/module_SU_plotting.md).
+
+    Execute the following:
+
+    ```shell
+    plot-MO-SU-geo --slot-table-dir <your-path> --module-ref-dir <your-path>
     ```
 
 ## Contributing

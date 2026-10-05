@@ -785,6 +785,12 @@ DU_FaceColor_dict = {
     "FO12": "",
 }
 
+# ------------------------------------------------------------------
+# Module dimensions (mm)
+# ------------------------------------------------------------------
+BARE_LENGTH = 39.9  # Long edge
+BARE_WIDTH = 21.8  # Short edge
+
 ## Keys for DU, PEB
 
 ### DU keys

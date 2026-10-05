@@ -19,6 +19,7 @@ Geometry rules
   of the inner module layers.
 """
 
+import argparse
 import os
 
 import matplotlib.patches as patches
@@ -29,30 +30,25 @@ from matplotlib.patches import Patch
 from hgtd_tools import data
 
 # ------------------------------------------------------------------
-# Module dimensions (mm)
+# PATHS to reference csv files
 # ------------------------------------------------------------------
-BARE_LENGTH = 39.9  # Long edge
-BARE_WIDTH = 21.8  # Short edge
-
 BACK_PLOT = "Back-Back_to_plot_module_reference.csv"
 FRONT_PLOT = "Front-Front_to_plot_module_reference.csv"
 BACK_QUAD = "fullBackQuadrant.csv"
 FRONT_QUAD = "fullFrontQuadrant.csv"
-SLOT_TABLE_DIR = "/Users/annikastein/Documents/PostDoc/HGTD/DB/SlotTable/"
-MODULE_REF_DIR = "/Users/annikastein/Documents/PostDoc/HGTD/DB/SlotTable/To_plot_module_reference/"
 
 CUSTOM_COLORS = True
 
 
-def load_data():
+def load_data(slot_table_dir: str, module_ref_dir: str):
     """Load and merge the four CSVs into one DataFrame."""
     # Load plot references (delimited by ;)
-    back_plot = pd.read_csv(os.path.join(MODULE_REF_DIR, BACK_PLOT), sep=";")
-    front_plot = pd.read_csv(os.path.join(MODULE_REF_DIR, FRONT_PLOT), sep=";")
+    back_plot = pd.read_csv(os.path.join(module_ref_dir, BACK_PLOT), sep=";")
+    front_plot = pd.read_csv(os.path.join(module_ref_dir, FRONT_PLOT), sep=";")
 
     # Load slot tables (delimited by ,)
-    back_quad = pd.read_csv(os.path.join(SLOT_TABLE_DIR, BACK_QUAD), sep=",")
-    front_quad = pd.read_csv(os.path.join(SLOT_TABLE_DIR, FRONT_QUAD), sep=",")
+    back_quad = pd.read_csv(os.path.join(slot_table_dir, BACK_QUAD), sep=",")
+    front_quad = pd.read_csv(os.path.join(slot_table_dir, FRONT_QUAD), sep=",")
 
     # Standardize column names
     back_plot.columns = ["x", "y", "row", "mod"]
@@ -115,21 +111,21 @@ def plot_modules(
         x0, y0 = x_ref, y_ref
 
         if ori == "horizontal":
-            w, h = BARE_LENGTH, BARE_WIDTH
+            w, h = data.BARE_LENGTH, data.BARE_WIDTH
             # Adjust x to be left of center, y is bottom
-            x0 = x_ref - BARE_LENGTH / 2
+            x0 = x_ref - data.BARE_LENGTH / 2
             y0 = y_ref
         else:  # vertical
-            w, h = BARE_WIDTH, BARE_LENGTH
+            w, h = data.BARE_WIDTH, data.BARE_LENGTH
             # Reference coordinate represents the right edge center for back modules.
             # This means the module extends to the left of the reference point.
             # This preserves the "inner edge" connection to the origin for the back view.
             if invert_x and side == "Back":
-                x0 = x_ref - BARE_WIDTH
+                x0 = x_ref - data.BARE_WIDTH
             else:
                 x0 = x_ref
 
-            y0 = y_ref - BARE_LENGTH / 2
+            y0 = y_ref - data.BARE_LENGTH / 2
 
         if CUSTOM_COLORS and data.DU_FaceColor_dict[r["SU_type"]] != "":
             facecol = data.DU_FaceColor_dict[r["SU_type"]]
@@ -190,7 +186,22 @@ def plot_modules(
 
 
 def main():
-    combined = load_data()
+    parser = argparse.ArgumentParser(
+        description="Plot HGTD front & back quadrants as coloured rectangles."
+    )
+    parser.add_argument(
+        "--slot-table-dir",
+        required=True,
+        help="Directory containing fullFrontQuadrant.csv and fullBackQuadrant.csv",
+    )
+    parser.add_argument(
+        "--module-ref-dir",
+        required=True,
+        help="Directory containing Front-Front_to_plot_module_reference.csv and Back-Back_to_plot_module_reference.csv",
+    )
+    args = parser.parse_args()
+
+    combined = load_data(args.slot_table_dir, args.module_ref_dir)
     print(f"Loaded {len(combined)} modules ({combined['side'].value_counts().to_dict()})")
     print(f"Distinct SU_types: {combined['SU_type'].nunique()}")
 

@@ -50,6 +50,7 @@ hybridmatch = "hgtd_tools.app.scripts.hybridmatch:main"
 bulk-module-assembly = "hgtd_tools.app.scripts.bulk_module_assembly:main"
 ivcurve-overlay = "hgtd_tools.app.scripts.ivcurve_overlay:main"
 upload-FlexTail-measurement = "hgtd_tools.app.scripts.upload_FlexTail_measurement:main"
+plot-MO-SU-geo = "hgtd_tools.app.scripts.plot_module_SU_geometry:main"
 order = "hgtd_tools.app.scripts.order:main"
 report-stats = "hgtd_tools.app.scripts.report_stats:main"
 [project.entry-points."markdown.extensions"]

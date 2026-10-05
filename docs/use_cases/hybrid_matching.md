@@ -22,6 +22,24 @@ For the algorithm in the current implementation, we pair by `VBD` of the Sensor.
   - We use the latest upload, if there are multiple uploads, a higher `RUN_END_TIMESTAMP` or a higher `RUN_NUMBER` wins.
 - Hybrids for which neither of these techniques yield a score, have to be ignored for the pairing algorithm.
 
+## Pairing strategy: VBD-bin grouping
+
+Once a `VBD` score has been retrieved for each Hybrid, the script does not pair across the entire surviving pool at once. Instead, parts are split into VBD bins first, and pairing is run **independently within each bin**. This prevents a low-VBD Hybrid from being matched against a high-VBD one, which would inflate the total pairing distance and produce pairings that are not useful for module assembly.
+
+The binning is configurable at the top of the script via three constants:
+
+| Constant | Default | Purpose |
+|---|---|---|
+| `VBD_IGNORE_BELOW` | `150.0` | Parts below this `VBD` (in V) are excluded from pairing and reported in `Ignored parts` with reason `VBD (<value> V) is below 150.0 V; excluded from pairing`. |
+| `VBD_BIN_LOWER_EDGES` | `[150, 160, 170, 180, 190]` | Lower edge (in V) of each consecutive bin. |
+| `VBD_BIN_LABELS` | `["150-160V", "160-170V", "170-180V", "180-190V", ">190V"]` | Human-readable label for each bin. The last label corresponds to the open-ended bin `VBD >= 190 V`. |
+
+Bin convention: `[lower_edge, next_lower_edge)`, i.e. lower edge inclusive and upper edge exclusive. So `VBD = 150.0` lands in `150-160V`, `VBD = 160.0` in `160-170V`, `VBD = 190.0` and above in `>190V`.
+
+The pairing algorithm itself (`get_optimal_pairs_with_leftover_1D_On2`) is unchanged. The new step (`run_pairing_grouped_by_vbd_bin`) is a thin wrapper that bins the inputs and calls the existing pairer per bin. Bins are iterated in label order so the output is stable run-to-run, and per-bin results are aggregated for the summary report.
+
+If the three constants are retuned, they must satisfy `len(VBD_BIN_LABELS) == len(VBD_BIN_LOWER_EDGES)`, enforced by an `assert` at the top of the script.
+
 ## Using the `hybridmatch` script for module assembly
 
 When performing module assembly, you can pair Hybrids that are available for your use case.
@@ -97,12 +115,23 @@ Notes:
 
 The script prints the full pipeline to the CLI:
 
-1. **Settings** — the values of `--mode-alias`, `--location`, `--dev`, `--manual_ignore_hybrid_sns`, `--max-workers`.
+1. **Settings** — the values of `--mode-alias`, `--location`, `--dev`, `--manual_ignore_hybrid_sns`, `--max-workers`, and the active VBD-bin configuration (`VBD_IGNORE_BELOW` plus the list of bin labels).
 2. **Step 1** — relevant Hybrids at the chosen location.
 3. **Step 2** — per-part decision: either in `Ignored parts` (with reason) or in `Kept parts for matching` (with the `VBD` score that will be used for pairing).
-4. **Step 3** — the optimal pairings, the total pairing distance, and — if there is an odd number of survivors — the optimal leftover Hybrid (the one whose removal minimizes the total distance).
+4. **Step 3** — pairing algorithm, run per VBD bin. For each bin in label order, the CLI prints:
+   - the bin label and the number of parts in it;
+   - if the bin has an odd count, the optimal leftover Hybrid (the one whose removal minimizes the total distance);
+   - the total pairing distance for that bin;
+   - the optimal pairings for that bin.
 
-A markdown report is also written next to the script, using the pattern `pairings_<mode-alias>_<location>.md`, and contains the same information in a structured form, including the `Ignored parts` and `Kept parts for matching` lists, the empty-pool breakdown if no part survived, and the optimal pairings.
+   After the per-bin detail, an aggregated summary is printed: the per-bin leftovers (across any odd-count bins), the aggregated total distance, and the aggregated list of optimal pairings.
+
+A markdown report is also written next to the script, using the pattern `pairings_<mode-alias>_<location>.md`, and contains the same information in a structured form. The markdown includes:
+
+- the `Ignored parts` list (now also covering parts excluded by `VBD < VBD_IGNORE_BELOW`) and the `Kept parts for matching` list;
+- one section per VBD bin, with its own leftover (if any), total distance, and optimal pairings;
+- an aggregated section summarising the totals and leftover across all bins;
+- the empty-pool breakdown if no part survived.
 
 ## Guardrails
 
