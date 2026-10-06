@@ -119,12 +119,13 @@ The script prints the full pipeline to the CLI:
 2. **Step 1** — relevant Hybrids at the chosen location.
 3. **Step 2** — per-part decision: either in `Ignored parts` (with reason) or in `Kept parts for matching` (with the `VBD` score that will be used for pairing).
 4. **Step 3** — pairing algorithm, run per VBD bin. For each bin in label order, the CLI prints:
-   - the bin label and the number of parts in it;
-   - if the bin has an odd count, the optimal leftover Hybrid (the one whose removal minimizes the total distance);
-   - the total pairing distance for that bin;
-   - the optimal pairings for that bin.
 
-   After the per-bin detail, an aggregated summary is printed: the per-bin leftovers (across any odd-count bins), the aggregated total distance, and the aggregated list of optimal pairings.
+    - the bin label and the number of parts in it;
+    - if the bin has an odd count, the optimal leftover Hybrid (the one whose removal minimizes the total distance);
+    - the total pairing distance for that bin;
+    - the optimal pairings for that bin.
+
+    After the per-bin detail, an aggregated summary is printed: the per-bin leftovers (across any odd-count bins), the aggregated total distance, and the aggregated list of optimal pairings.
 
 A markdown report is also written next to the script, using the pattern `pairings_<mode-alias>_<location>.md`, and contains the same information in a structured form. The markdown includes:
 
