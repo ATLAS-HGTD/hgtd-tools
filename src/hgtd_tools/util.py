@@ -387,8 +387,10 @@ def get_relevant_parts(
             # the following two files result from manually downloading, exporting and converting them
             if partKoP_shortname != "Slot":
                 raise NotImplementedError
-            these_parts = load_json_from_assets("Slot_Table_fullJuly2026_withPreliminaryNTC.json")
-            slots = load_json_from_assets("Slot_fullJuly2026_withPreliminaryNTC.json")
+            these_parts = load_json_from_assets(
+                "Slot_Table_fullJuly2026_withPreliminaryNTC_fix.json"
+            )
+            slots = load_json_from_assets("Slot_fullJuly2026_withPreliminaryNTC_fix.json")
             responseText = "200: Local File"
             for alSl in these_parts:
                 for s in slots:
