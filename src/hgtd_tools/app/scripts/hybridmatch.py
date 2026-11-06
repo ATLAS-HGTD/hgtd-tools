@@ -34,7 +34,7 @@ parser.add_argument(
     help=(
         "SNs of Hybrids to ignore in the pairing algorithm. Accepted as: "
         "(a) a single SN, (b) multiple comma-separated SNs "
-        "(e.g. '20USX123,20USX456'), or (c) a path to a .txt-like file with "
+        "(e.g. '20WH...1,20WH...2'), or (c) a path to a .txt-like file with "
         "one SN per line ('#' starts a comment, blank lines are ignored). "
         "Duplicates are removed. Ignored parts are reported with reason "
         "'Manually ignored by user' and excluded from pairing."
