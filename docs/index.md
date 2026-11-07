@@ -132,7 +132,7 @@ If you walked through the [install](getting_started/install.md) guide and you ac
     upload-FlexTail-measurement --analysis-folder FT_Measurements --user-name myName --meas_location test --meas_start_date YYYY-MM-DD --meas_end_date YYYY-MM-DD --run_type FT_characterisation_test (--dryrun True)
     ```
 
-??? tip "Using the `plot-MO-SU-geo` script for plotting flex tail measurements"
+??? tip "Using the `plot-MO-SU-geo` script for plotting module positions per quadrant (as in slot table, global reference coordinate system for front and back geometry)"
 
     For plotting the pre-defined SU-Module map in front/back quadrants and individually for Demonstrator (V1+V2) slices. Needs the references containing the coordinates and mappings from the slot table / flex tail calculation process. This script requires passing the path to the reference files containing the slots and the module references, respectively.
     For more information, please read [Module SU Plotting](use_cases/module_SU_plotting.md).
@@ -152,7 +152,7 @@ For any problems, do not hesitate to ask on [mattermost](https://mattermost.web.
 ### Open points requiring implementation
 New features, bugs, compatibility improvements and other items are collected with the [Issues](https://gitlab.cern.ch/anstein/hgtd-tools/-/issues){target="_blank"} on gitlab.
 
-Some of them are also bound to [Milestones](https://gitlab.cern.ch/anstein/hgtd-tools/-/milestones){target="_blank"}, currently entailing `Package refactor` and `Production`.
+Some of them are also bound to [Milestones](https://gitlab.cern.ch/anstein/hgtd-tools/-/milestones){target="_blank"}, currently this is preparing major version 4, `Production`.
 
 ## Acknowledgements
 Thanks to an unknown reddit user who gave me hope when the PyQt6 installation wouldn't want to work with my setup / machine. This [link](https://www.reddit.com/r/Tkinter/comments/snrb1f/comment/hw4bylf/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button){target="_blank"} brought me to [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter){target="_blank"} and the GUI is built on top of the tutorial.
