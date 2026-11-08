@@ -1,6 +1,6 @@
 # Procedure for new release
 
-1. commit with planned version already embedded in `pyproject.toml`
+1. commit with planned version already embedded in `pyproject.toml` and with updated date in gui sidebar (see `self.version_full_text` in [`gui.py`](https://gitlab.cern.ch/anstein/hgtd-tools/-/blob/master/src/hgtd_tools/app/gui.py?ref_type=heads){target="_blank"})
 2. test local install, with upgrade: `pip install -e ".[dev,dev-extra,docs,gui]" --upgrade`
 3. push to master
 4. prepare the package for pypi, for reference, this is an example for a pre-release on testpypi:

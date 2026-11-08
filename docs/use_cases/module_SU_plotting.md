@@ -17,4 +17,6 @@ for the module references.
     plot-MO-SU-geo --slot-table-dir <your-path> --module-ref-dir <your-path>
 ```
 
+The results are uploaded to the [same repo](https://gitlab.cern.ch/anstein/slotsflextailspreproduction/-/tree/master/SlotTable/Geometry_plots?ref_type=heads){target="_blank"} that holds the slot table / references.
+
 *Last updated: {{ last_updated }}*
