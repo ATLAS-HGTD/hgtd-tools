@@ -478,7 +478,7 @@ def main(argv=None):
             dest = _location_name(updated, "to_location")
             n_items = len(updated.get("shipmentitems") or [])
             print(
-                f"shipment {sid} Received — {n_items} part(s) moved to {dest}  [{responseText}]",
+                f"shipment {sid} Received — {n_items} part(s) moved to {dest}  [API response: {responseText}]",
                 file=sys.stderr,
             )
 

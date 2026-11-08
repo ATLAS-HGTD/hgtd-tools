@@ -51,7 +51,7 @@ The following overview lists the implemented features of `hgtd-tools` and links 
     - IV curve plotting [with CLI script `ivcurve-overlay`](use_cases/ivcurve_plotting.md)
     - Reporting
         - automation with Gitlab CI, using the hgtdbot account
-        - runner script producing overviews / reports: yields and relation validation
+        - runner script producing overviews / reports: yields and relation validation, detector parts tree recursive traversal
     - Flex Tail upload [with CLI script `upload-FlexTail-measurements`](use_cases/FT_upload_instructions.md)
     - Module and SU geometry plotting [with CLI script `plot-MO-SU-geo`](use_cases/module_SU_plotting.md)
     - Shipment preparation with recursive part collection [with CLI script `clever-ship`](use_cases/clever_ship.md)

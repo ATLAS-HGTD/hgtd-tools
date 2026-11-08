@@ -639,7 +639,11 @@ def main(argv=None):
     if not args.quiet:
         print(
             f"created shipment_id {created.get('shipment_id')} "
-            f"with {len(parts)} item(s)  [{responseText}]",
+            f"with {len(parts)} item(s)  [API response: {responseText}]\n"
+            " - note this down "
+            "and let your contact person on the receiving end know "
+            f"the shipment_id {created.get('shipment_id')} for later lookup "
+            "and for marking as Received",
             file=sys.stderr,
         )
 
