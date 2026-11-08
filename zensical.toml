@@ -73,6 +73,8 @@ nav = [
         "use_cases/gui_relations.md",
         "use_cases/FT_upload_instructions.md",
         "use_cases/module_SU_plotting.md",
+        "use_cases/clever_ship.md",
+        "use_cases/receive_shipment.md",
     ]},
     {"Development" = [
         "development/dev.md",

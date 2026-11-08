@@ -808,3 +808,18 @@ B_PEBs = ["1F", "1B", "2F", "2B", "3B"]
 
 ## Electrical properties
 module_flex_ohm_res = 11000
+
+# ------------------------------------------------------------------
+# Shipments
+# ------------------------------------------------------------------
+# Shipment companies as returned by the ProdDB. Fallback for when no
+# /shipmentcompanies wrapper exists in util.py.
+SHIPMENT_COMPANIES = {
+    1: "DHL",
+    2: "UPS",
+}
+
+# Statuses accepted by the ProdDB. Only "Received" has a side effect, and only
+# via PUT (util.receive_shipment) — POST stores the status without moving parts.
+SHIPMENT_STATUSES = ("Created", "Shipped", "Received", "Cancel")
+OPEN_SHIPMENT_STATUSES = ("Created", "Shipped")

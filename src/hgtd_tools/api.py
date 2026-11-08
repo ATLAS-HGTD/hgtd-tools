@@ -458,6 +458,71 @@ def post_information(
         print(">>> and payload", payload)
 
 
+def put_information(
+    endpoint,
+    payload,
+    authorized=True,
+    debug=False,
+    dryrun=False,
+    content_type="application/json",
+    files_payload=None,
+    existing_token=None,
+):
+    if debug:
+        pprint(payload)
+    if not dryrun:
+        try:
+            access_token = get_access_token() if existing_token is None else existing_token
+            authorization = "Bearer " + access_token
+            if content_type == "application/json":
+                headers = {
+                    "Authorization": authorization,
+                    "content-type": "application/json",
+                }
+                response = requests.put(
+                    protectedApiUrlPrefix + endpoint,
+                    data=json.dumps(payload),
+                    headers=headers,
+                )
+            elif content_type == "multipart/form-data":
+                headers = {"Authorization": authorization}
+                response = requests.put(
+                    protectedApiUrlPrefix + endpoint,
+                    files=files_payload or {},
+                    data=payload,
+                    headers=headers,
+                )
+            else:
+                raise NotImplementedError("This content-type is not implemented.")
+            response.raise_for_status()
+            if debug:
+                print(">> PUT response:", response.status_code, response.reason)
+            return f"{response.status_code}, {response.reason}"
+        except requests.exceptions.HTTPError as errh:
+            if debug:
+                print("Http Error:", errh)
+            raise requests.exceptions.HTTPError("Http Error:", errh)
+        except requests.exceptions.ConnectionError as errc:
+            if debug:
+                print("Error Connecting:", errc)
+            raise requests.exceptions.ConnectionError("Error Connecting:", errc)
+        except requests.exceptions.Timeout as errt:
+            if debug:
+                print("Timeout Error:", errt)
+            raise requests.exceptions.Timeout("Timeout Error:", errt)
+        except requests.exceptions.RequestException as err:
+            if debug:
+                print("OOps: Something Else", err)
+            raise requests.exceptions.RequestException("OOps: Something Else", err)
+        except RuntimeError as err:
+            if debug:
+                print("RuntimeError", err)
+            raise RuntimeError(err)
+    else:
+        print(">>> Dryrun put operation with endpoint", endpoint)
+        print(">>> and payload", payload)
+
+
 def delete_information(endpoint, authorized=True, debug=False, dryrun=False, existing_token=None):
     if not dryrun:
         try:

@@ -54,6 +54,8 @@ The following overview lists the implemented features of `hgtd-tools` and links 
         - runner script producing overviews / reports: yields and relation validation
     - Flex Tail upload [with CLI script `upload-FlexTail-measurements`](use_cases/FT_upload_instructions.md)
     - Module and SU geometry plotting [with CLI script `plot-MO-SU-geo`](use_cases/module_SU_plotting.md)
+    - Shipment preparation with recursive part collection [with CLI script `clever-ship`](use_cases/clever_ship.md)
+    - Shipment reception, moving parts to their destination [with CLI script `receive-shipment`](use_cases/receive_shipment.md)
 
 ## Quickstart
 
@@ -142,6 +144,31 @@ If you walked through the [install](getting_started/install.md) guide and you ac
     ```shell
     plot-MO-SU-geo --slot-table-dir <your-path> --module-ref-dir <your-path>
     ```
+
+??? tip "Using the `clever-ship` script to ship a part together with everything inside it"
+
+    When sending parts between institutes, you usually want the whole subtree: a Detector Unit with its Modules, a Module with its Module Flex and both Hybrids. Doing that by hand means walking the tree relation by relation. `clever-ship` walks it for you, resolves locations and the shipment company, and takes each shipment item's comment from the part's own `comment_description` — so nothing has to be typed twice. For more information, please read [clever-ship](use_cases/clever_ship.md).
+
+    Always inspect the payload first:
+
+    ```shell
+    clever-ship --sn 20WMO...01,20WMO...02 --kind Module -u <your-username> --from ijclab --to lpnhe --company dhl --list --dry-run
+    ```
+
+    Then drop `--dry-run` to POST. A newly created shipment does **not** move any parts — that happens on reception.
+
+??? tip "Using the `receive-shipment` script to receive a shipment and move its parts"
+
+    When a shipment arrives, marking it `Received` is what moves every part in it to the shipment's destination location. `clever-ship` deliberately cannot do this, because creating a shipment already marked `Received` would leave the hardware where it was. For more information, please read [receive-shipment](use_cases/receive_shipment.md).
+
+    Find the shipment first — either directly by id or tracking number, or by search:
+
+    ```shell
+    receive-shipment --search DHL --open-only -u <your-username> --dry-run
+    receive-shipment 1241,1242 -u <your-username> --reception-date YYYY-MM-DD
+    ```
+
+    Without an explicit id or tracking number, the matching shipments are printed as a table and you pick the ones to receive.
 
 ## Contributing
 

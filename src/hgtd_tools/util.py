@@ -13,6 +13,15 @@ from hgtd_tools import api, data
 from hgtd_tools.asset_helpers import load_json_from_assets
 from hgtd_tools.templates import tree_header
 
+API_ERRORS = (
+    requests.exceptions.HTTPError,
+    requests.exceptions.ConnectionError,
+    requests.exceptions.Timeout,
+    requests.exceptions.RequestException,
+    ValueError,
+    RuntimeError,
+)
+
 # === Helper for argparse
 
 # Source - https://stackoverflow.com/a/43357954
@@ -118,14 +127,7 @@ def delete_children(par_partID, onlyNonDeleted=True, ofKind="all", dryrun=False)
                 f"/partstreedelete/{ip['record_id']}/", dryrun=dryrun
             )
         return responseText
-    except (
-        requests.exceptions.HTTPError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
-        requests.exceptions.RequestException,
-        ValueError,
-        RuntimeError,
-    ) as e:
+    except API_ERRORS as e:
         raise e
 
 
@@ -148,14 +150,7 @@ def delete_parents(chi_partID, onlyNonDeleted=True, ofKind="all", dryrun=False):
                 f"/partstreedelete/{ip['record_id']}/", dryrun=dryrun
             )
         return responseText
-    except (
-        requests.exceptions.HTTPError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
-        requests.exceptions.RequestException,
-        ValueError,
-        RuntimeError,
-    ) as e:
+    except API_ERRORS as e:
         raise e
 
 
@@ -163,14 +158,7 @@ def get_info_of_part_id(part_id):
     try:
         details, responseText = api.fetch_information(f"/part/{part_id}/")
         return details, responseText
-    except (
-        requests.exceptions.HTTPError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
-        requests.exceptions.RequestException,
-        ValueError,
-        RuntimeError,
-    ) as e:
+    except API_ERRORS as e:
         raise e
 
 
@@ -178,14 +166,7 @@ def get_attributes_of_part_id(part_id):
     try:
         attributes, responseText = api.fetch_information(f"/partattrlist/{part_id}/")
         return attributes, responseText
-    except (
-        requests.exceptions.HTTPError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
-        requests.exceptions.RequestException,
-        ValueError,
-        RuntimeError,
-    ) as e:
+    except API_ERRORS as e:
         raise e
 
 
@@ -195,14 +176,7 @@ def get_measurement_types_of_module_SN(part_SN):
             f"/module_threshold_run_type?serial_number={part_SN}"
         )
         return measurements, responseText
-    except (
-        requests.exceptions.HTTPError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
-        requests.exceptions.RequestException,
-        ValueError,
-        RuntimeError,
-    ) as e:
+    except API_ERRORS as e:
         raise e
 
 
@@ -399,15 +373,7 @@ def get_relevant_parts(
                     if str(alSl["part_serial_number"]) == str(s["Serial #"]):
                         alSl["part_id"] = s["Part ID"]
         return these_parts, responseText
-    except (
-        requests.exceptions.HTTPError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
-        requests.exceptions.RequestException,
-        NotImplementedError,
-        ValueError,
-        RuntimeError,
-    ) as e:
+    except API_ERRORS as e:
         raise e
 
 
@@ -450,14 +416,7 @@ def get_parents(chi_partID, onlyNonDeleted=True, ofKind="all"):
             return interesting_partstree, responseText
         else:
             return partstree, responseText
-    except (
-        requests.exceptions.HTTPError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
-        requests.exceptions.RequestException,
-        ValueError,
-        RuntimeError,
-    ) as e:
+    except API_ERRORS as e:
         raise e
 
 
@@ -476,14 +435,7 @@ def get_children(par_partID, onlyNonDeleted=True, ofKind="all"):
             return interesting_partstree, responseText
         else:
             return partstree, responseText
-    except (
-        requests.exceptions.HTTPError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
-        requests.exceptions.RequestException,
-        ValueError,
-        RuntimeError,
-    ) as e:
+    except API_ERRORS as e:
         raise e
 
 
@@ -925,14 +877,7 @@ def get_locations(onlyNonDeleted=True):
             return interesting_locations, responseText
         else:
             return locations, responseText
-    except (
-        requests.exceptions.HTTPError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
-        requests.exceptions.RequestException,
-        ValueError,
-        RuntimeError,
-    ) as e:
+    except API_ERRORS as e:
         raise e
 
 
@@ -947,14 +892,20 @@ def get_manufacturers(onlyNonDeleted=True):
             return interesting_manufacturers, responseText
         else:
             return manufacturers, responseText
-    except (
-        requests.exceptions.HTTPError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
-        requests.exceptions.RequestException,
-        ValueError,
-        RuntimeError,
-    ) as e:
+    except API_ERRORS as e:
+        raise e
+
+
+def get_shipment_companies(onlyNonDeleted=True):
+    try:
+        # NOTE: "shipmentcomany" (sic) is the real route on the ProdDB API,
+        # confirmed against https://hgtddb-api.web.cern.ch/hgtddb/shipmentcomany.
+        # /shipmentcompanies does NOT exist — do not "fix" the spelling.
+        companies, responseText = api.fetch_information("/shipmentcomany")
+        if onlyNonDeleted:
+            companies = [c for c in companies if str(c["is_record_deleted"]) == "F"]
+        return companies, responseText
+    except API_ERRORS as e:
         raise e
 
 
@@ -971,14 +922,7 @@ def load_partstree(onlyNonDeleted=True):
                 ):
                     interesting_partstree.append(p)
         return interesting_partstree, responseText
-    except (
-        requests.exceptions.HTTPError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
-        requests.exceptions.RequestException,
-        ValueError,
-        RuntimeError,
-    ) as e:
+    except API_ERRORS as e:
         raise e
 
 
@@ -2027,30 +1971,32 @@ def sanitize(str_to_sanitize):
 
 # === Shipments
 
-SHIPMENTS_ENDPOINT = "/shipments/"
+SHIPMENTS_ENDPOINT = "/shipment"
 SHIPMENT_ENDPOINT = "/shipment/{shipment_id}/"
-SHIPMENT_STATUSES = ("Created", "Received", "Cancel")
-
-# Same set the existing helpers catch one-by-one; used to avoid repeating it
-# in every shipment wrapper.
-API_ERRORS = (
-    requests.exceptions.HTTPError,
-    requests.exceptions.ConnectionError,
-    requests.exceptions.Timeout,
-    requests.exceptions.RequestException,
-    ValueError,
-    RuntimeError,
-)
 
 
-# Thin adapters around the POST/PUT api calls (only fetch_information and
-# delete_information are visible in this file). Rename if api differs.
-def _shipment_post(path, payload):
-    return api.post_information(path, payload)
+def _shipment_post(path, payload, dryrun=False, access_token=None):
+    return api.post_information(path, payload, dryrun=dryrun, existing_token=access_token)
 
 
-def _shipment_put(path, payload):
-    return api.put_information(path, payload)
+def _shipment_put(path, payload, dryrun=False, access_token=None):
+    return api.put_information(path, payload, dryrun=dryrun, existing_token=access_token)
+
+
+def _find_shipment_by_tracking(tracking_number, include_children=True):
+    """Look up a shipment by its tracking number (unique per record)."""
+    shipments, _ = get_shipments(include_children=include_children)
+    matches = [s for s in shipments if str(s.get("tracking_number")) == str(tracking_number)]
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        raise RuntimeError(
+            f"no shipment with tracking number '{tracking_number}' found after writing it"
+        )
+    raise RuntimeError(
+        f"tracking number '{tracking_number}' is not unique: "
+        f"shipment_ids {[s.get('shipment_id') for s in matches]}"
+    )
 
 
 def _ref_id(value, key):
@@ -2065,6 +2011,33 @@ def _part_id(value):
     if isinstance(value, dict):
         value = value["part_id"]
     return int(value)
+
+
+def part_comment(part):
+    """The part's own comment_description, or '' if absent/blank."""
+    if not isinstance(part, dict):
+        return ""
+    return str(part.get("comment_description") or "").strip()
+
+
+def backfill_part_comments(parts, max_workers=4):
+    """Ensure every part dict has `field`, fetching /part/{id}/ where missing.
+
+    Mutates and returns `parts`. One request per part that lacks the field;
+    parts that already carry it (e.g. from get_info_of_part_id) are untouched.
+    """
+    missing = [p for p in parts if isinstance(p, dict) and "comment_description" not in p]
+    if not missing:
+        return parts
+
+    def fetch(part):
+        details, _ = get_info_of_part_id(part["part_id"])
+        return details.get("comment_description") or ""
+
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        for part, value in zip(missing, ex.map(fetch, missing)):
+            part["comment_description"] = value
+    return parts
 
 
 def get_shipments(include_children=True, onlyNonDeleted=True):
@@ -2098,13 +2071,12 @@ def build_shipment_payload(
     tracking_number=None,
     status="Created",
     shipment_date=None,
-    comment_description=None,
     edh_link=None,
     from_contact=None,
     from_contact_email=None,
     to_contact=None,
     to_contact_email=None,
-    reception_date=None,
+    record_insertion_user=None,
     is_record_deleted="F",
 ):
     """Build the POST body for a new shipment.
@@ -2122,20 +2094,21 @@ def build_shipment_payload(
         "tracking_number": tracking_number,
         "status": status,
         "shipment_date": shipment_date,
-        "comment_description": comment_description,
         "edh_link": edh_link,
         "from_contact": from_contact,
         "from_contact_email": from_contact_email,
         "to_contact": to_contact,
         "to_contact_email": to_contact_email,
-        "reception_date": reception_date,
+        "record_insertion_user": record_insertion_user,
         "is_record_deleted": is_record_deleted,
     }
     payload = {k: v for k, v in payload.items() if v is not None}
     if items:
         shipmentitems = []
         for it in items:
-            entry = {"part_id": _part_id(it), "comment": it.get("comment", "")}
+            # The view does child_data['comment'] with no default, so the key
+            # must always be present; the value always comes from the part.
+            entry = {"part_id": _part_id(it), "comment": part_comment(it)}
             if it.get("serial_number"):
                 entry["serial_number"] = it["serial_number"]
             shipmentitems.append(entry)
@@ -2143,21 +2116,26 @@ def build_shipment_payload(
     return payload
 
 
-def create_shipment(payload, dryrun=False):
+def create_shipment(payload, dryrun=False, access_token=None):
     """POST a new shipment. Returns (shipment_dict, responseText).
 
-    The server re-fetches the record by `tracking_number` after save, so the
-    tracking number must be unique per shipment or the POST returns 500.
+    post_information only returns a status string, so the created record is
+    read back via its tracking_number. That also means the tracking number
+    must be unique — a duplicate makes this lookup ambiguous.
     """
     for key in ("from_location", "to_location", "company"):
         if payload.get(key) in (None, ""):
             raise RuntimeError(f"Shipment payload is missing required field '{key}'")
+    tracking_number = payload.get("tracking_number")
+    if not tracking_number:
+        raise RuntimeError("Shipment payload is missing 'tracking_number'")
     if dryrun:
         return payload, "dryrun: not sent"
     try:
-        created, responseText = _shipment_post(SHIPMENTS_ENDPOINT, payload)
-        if "shipment_id" not in created:
-            raise RuntimeError(f"POST {SHIPMENTS_ENDPOINT} returned no shipment_id: {created}")
+        responseText = _shipment_post(
+            SHIPMENTS_ENDPOINT, payload, dryrun=dryrun, access_token=access_token
+        )
+        created = _find_shipment_by_tracking(tracking_number)
         return created, responseText
     except API_ERRORS as e:
         raise e
@@ -2168,14 +2146,18 @@ def create_shipment_for_parts(
     from_location,
     to_location,
     company,
-    comment="",
     dryrun=False,
+    access_token=None,
     **fields,
 ):
-    """`parts` may be part dicts (get_children / get_info_of_part_id) or IDs."""
+    """`parts` may be part dicts (get_children / get_info_of_part_id) or IDs.
+
+    Each item's comment is taken from the part's comment_description; it
+    cannot be overridden per shipment.
+    """
     items = []
     for p in parts:
-        entry = {"part_id": _part_id(p), "comment": comment}
+        entry = {"part_id": _part_id(p)}
         if isinstance(p, dict) and p.get("serial_number"):
             entry["serial_number"] = p["serial_number"]
         items.append(entry)
@@ -2186,14 +2168,15 @@ def create_shipment_for_parts(
         items=items,
         **fields,
     )
-    return create_shipment(payload, dryrun=dryrun)
+    return create_shipment(payload, dryrun=dryrun, access_token=access_token)
 
 
-def update_shipment(shipment_id, changes, dryrun=False):
+def update_shipment(shipment_id, changes, dryrun=False, access_token=None, user=None):
     """PUT a partial change onto an existing shipment.
 
     The view resolves company/from_location/to_location unconditionally on PUT,
     so merge onto the current record and always send those three as IDs.
+    `user` is sent as record_lastupdate_user.
     """
     current, _ = get_shipment(shipment_id)
     payload = {
@@ -2201,19 +2184,37 @@ def update_shipment(shipment_id, changes, dryrun=False):
         "to_location": _ref_id(current["to_location"], "location_id"),
         "company": _ref_id(current["company"], "company_id"),
     }
+    if user is not None:
+        payload["record_lastupdate_user"] = user
     payload.update(changes)
     if dryrun:
         return payload, "dryrun: not sent"
     try:
-        updated, responseText = _shipment_put(
-            SHIPMENT_ENDPOINT.format(shipment_id=shipment_id), payload
+        responseText = _shipment_put(
+            SHIPMENT_ENDPOINT.format(shipment_id=shipment_id),
+            payload,
+            dryrun=dryrun,
+            access_token=access_token,
         )
+        updated, _ = get_shipment(shipment_id)
         return updated, responseText
     except API_ERRORS as e:
         raise e
 
 
-def receive_shipment(shipment_id, dryrun=False):
+def receive_shipment(shipment_id, dryrun=False, access_token=None, user=None, reception_date=None):
     """Mark as Received -> server side this also moves every item's part
-    to the shipment's `to_location`."""
-    return update_shipment(shipment_id, {"status": "Received"}, dryrun=dryrun)
+    to the shipment's `to_location`.
+
+    `reception_date` is "YYYY-MM-DD"; None leaves the field untouched.
+    """
+    changes = {"status": "Received"}
+    if reception_date is not None:
+        changes["reception_date"] = reception_date
+    return update_shipment(
+        shipment_id,
+        changes,
+        dryrun=dryrun,
+        access_token=access_token,
+        user=user,
+    )

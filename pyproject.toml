@@ -54,6 +54,8 @@ plot-MO-SU-geo = "hgtd_tools.app.scripts.plot_module_SU_geometry:main"
 order = "hgtd_tools.app.scripts.order:main"
 report-stats = "hgtd_tools.app.scripts.report_stats:main"
 hgtd-tree = "hgtd_tools.app.scripts.tree:main"
+clever-ship = "hgtd_tools.app.scripts.clever_ship:main"
+receive-shipment = "hgtd_tools.app.scripts.receive_shipment:main"
 [project.entry-points."markdown.extensions"]
 zensical_git_dates = "hgtd_tools.zensical_git_dates.extension:GitDatesExtension"
 
