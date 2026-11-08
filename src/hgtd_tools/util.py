@@ -4,12 +4,14 @@ import textwrap
 import webbrowser
 from argparse import ArgumentTypeError
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import numpy as np
 import requests
 
 from hgtd_tools import api, data
 from hgtd_tools.asset_helpers import load_json_from_assets
+from hgtd_tools.templates import tree_header
 
 # === Helper for argparse
 
@@ -409,6 +411,31 @@ def get_relevant_parts(
         raise e
 
 
+def resolve_part_id_by_sn(serial_number, kind):
+    """part_id of the part with this SN in the given kind of part.
+
+    Uses get_relevant_parts(kind) + select_parts(sn_does_include=...), then
+    requires exactly one match.
+    """
+    parts, _ = get_relevant_parts(kind)
+    matches = select_parts(parts, sn_does_include=serial_number)
+    # sn_does_include is a substring filter, so "1234" also hits "12345"
+    exact = [p for p in matches if str(p.get("serial_number")) == str(serial_number)]
+    if len(exact) == 1:
+        return int(exact[0]["part_id"])
+
+    if not exact:
+        hint = ""
+        if matches:
+            near = ", ".join(str(p["serial_number"]) for p in matches[:5])
+            hint = f" (substring matches: {near})"
+        raise RuntimeError(f"No part with serial number '{serial_number}' of kind '{kind}'{hint}")
+    raise RuntimeError(
+        f"Serial number '{serial_number}' of kind '{kind}' is ambiguous: "
+        f"part_ids {[int(p['part_id']) for p in exact]}"
+    )
+
+
 def get_parents(chi_partID, onlyNonDeleted=True, ofKind="all"):
     try:
         partstree, responseText = api.fetch_information(f"/parentslist/{chi_partID}/")
@@ -458,6 +485,433 @@ def get_children(par_partID, onlyNonDeleted=True, ofKind="all"):
         RuntimeError,
     ) as e:
         raise e
+
+
+# === Parts tree rendering
+
+PART_VIEW_URL = "https://nginx-hgtddb.app.cern.ch/viewparts/{part_id}"
+
+
+def part_url(part_id, template=PART_VIEW_URL):
+    """Clickable link target for a part in the HGTD DB web view."""
+    return template.format(part_id=int(part_id))
+
+
+def _format_part_node(node, position=None):
+    label = f"{node.get('serial_number') or '?'} (part_id {node.get('part_id')})"
+    if position not in (None, ""):
+        label += f"  [position: {position}]"
+    return label
+
+
+def _part_tree_lines(root_node, children_by_parent, dupes_by_parent, ascii=False, max_lines=None):
+    """Render the tree as box-drawing lines.
+
+    `children_by_parent` / `dupes_by_parent` map parent part_id to lists of
+    (node, position). Duplicate edges are shown in place but not expanded.
+    """
+    tee = "|-- " if ascii else "├── "
+    last_tee = "`-- " if ascii else "└── "
+    pipe = "|   " if ascii else "│   "
+    blank = "    "
+
+    lines = [_format_part_node(root_node)]
+
+    def walk(node, prefix):
+        pid = int(node["part_id"])
+        entries = [(n, p, False) for n, p in children_by_parent.get(pid, [])]
+        entries += [(n, p, True) for n, p in dupes_by_parent.get(pid, [])]
+        for i, (child, position, is_dupe) in enumerate(entries):
+            last = i == len(entries) - 1
+            label = _format_part_node(child, position)
+            if is_dupe:
+                label += "  [already listed above]"
+            lines.append(prefix + (last_tee if last else tee) + label)
+            if not is_dupe:
+                walk(child, prefix + (blank if last else pipe))
+
+    walk(root_node, "")
+    if max_lines is not None and len(lines) > max_lines:
+        lines = lines[:max_lines] + [f"... (tree truncated, {len(lines) - max_lines} more lines)"]
+    return lines
+
+
+def write_tree_txt(path, lines):
+    """Write rendered lines (plain tree or Markdown) to a UTF-8 file."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+# Attribute list appended to inline links; requires the `attr_list` extension.
+NEW_TAB_ATTRS = '{target="_blank"}'
+
+
+def md_link(text, url, new_tab=True, attrs=NEW_TAB_ATTRS):
+    """Inline link, optionally opening in a new tab via attr_list."""
+    link = f"[{text}]({url})"
+    if new_tab:
+        link += attrs
+    return link
+
+
+def _md_title(node, position=None, link=True, url_template=PART_VIEW_URL, new_tab=True):
+    """Admonition title; with link=True the SN itself is the clickable link."""
+    sn = str(node.get("serial_number") or "?")
+    pid = node.get("part_id")
+    text = f"{sn} (part_id {pid})"
+    if link and pid is not None:
+        text = md_link(text, part_url(pid, url_template), new_tab=new_tab)
+    # Escape only what would be misread as inline Markdown. Brackets are left
+    # alone when linking, otherwise the link syntax breaks.
+    chars = ("\\", "`", "*", "_", '"') if link else ("\\", "`", "*", "_", "[", "]", '"')
+    for ch in chars:
+        text = text.replace(ch, "\\" + ch)
+    if position not in (None, ""):
+        text += f" — {position}"
+    return text
+
+
+def _tree_to_markdown_lines(
+    root_node,
+    children_by_parent,
+    dupes_by_parent,
+    admonition_type="note",
+    indent=4,
+    open_root=True,
+    max_depth=None,
+    dedupe_note="already listed above",
+    link=True,
+    url_template=PART_VIEW_URL,
+    new_tab=True,
+):
+    """Render the tree as nested collapsible admonitions (??? / ???+).
+
+    Each title links to <url_template>/{part_id}. Requires the `details` and
+    `admonition` extensions on the site side.
+    """
+    pad = " " * indent
+
+    def render(node, position, depth, is_dupe):
+        pid = int(node["part_id"])
+        marker = "???+" if (open_root and depth == 0) else "???"
+        title = _md_title(node, position, link=link, url_template=url_template, new_tab=new_tab)
+        header = f'{marker} {admonition_type} "{title}"'
+        blocks = []
+
+        meta = []
+        if position not in (None, ""):
+            meta.append(f"Position: `{position}`")
+        if is_dupe:
+            meta.append(f"*{dedupe_note}*")
+        if meta:
+            blocks.append(meta)
+
+        if not is_dupe and (max_depth is None or depth < max_depth):
+            for child, cpos in children_by_parent.get(pid, []):
+                blocks.append(render(child, cpos, depth + 1, False))
+            for child, cpos in dupes_by_parent.get(pid, []):
+                blocks.append(render(child, cpos, depth + 1, True))
+
+        out = [header, ""]
+        for i, block in enumerate(blocks):
+            if i:
+                out.append("")
+            for line in block:
+                out.append(pad + line if line else "")
+        if not blocks:
+            out.append(pad + "_no children_")
+        return out
+
+    return render(root_node, None, 0, False)
+
+
+def _yaml_str(value):
+    return '"' + str(value).replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def _count_nodes(children_by_parent, dupes_by_parent):
+    n = sum(len(v) for v in children_by_parent.values())
+    n += sum(len(v) for v in dupes_by_parent.values())
+    return n
+
+
+def write_detector_tree_page(
+    path,
+    root_node,
+    children_by_parent,
+    dupes_by_parent,
+    title="Detector parts tree",
+    description=None,
+    admonition_type="note",
+    max_depth=None,
+    include_index=False,
+    index_limit=50,
+    indent=4,
+    link=True,
+    url_template=PART_VIEW_URL,
+    new_tab=True,
+):
+    """Write a single Markdown page holding the whole parts tree.
+
+    The page is built from `templates.tree_header` (front matter, H1, the
+    "automatic reports" info admonition, and the "## Nightly report: parts
+    tree" heading), followed by a short summary block, an optional flat index
+    of the root's direct children, and the full tree as nested collapsible
+    admonitions (`???` / `???+`).
+
+    The parent directories of `path` are created if missing and the file is
+    written as UTF-8 (required for the box-drawing characters that may appear
+    in titles).
+
+    Parameters:
+        path: output file path, e.g. "out/detector_tree.md"
+        root_node: the root part dict (needs at least "part_id"; a
+            "serial_number" is used for display and falls back to "?")
+        children_by_parent: mapping parent part_id -> list of
+            (node, position) tuples, in display order. Nodes are part dicts
+            with "part_id" and "serial_number".
+        dupes_by_parent: same shape, for child edges that were already
+            visited elsewhere in the tree. They are rendered in place but
+            never expanded, and marked as duplicates, so the page stays a
+            tree instead of a graph.
+        title: page title; YAML-quoted before being handed to the template
+        description: front-matter description; generated from the root SN and
+            part count when None, YAML-quoted before use
+        admonition_type: admonition class for every node, e.g. "note",
+            "info", "abstract" (any class supported by the admonition
+            extension)
+        max_depth: deepest tree level rendered as admonitions, counting the
+            root as level 0. Nodes deeper than this are omitted from the
+            Markdown only; the traversal result and the .txt output are
+            unaffected. None means no limit.
+        include_index: add a flat "Direct children" list of the root's
+            immediate children above the tree
+        index_limit: maximum number of entries in that index list; the
+            remainder is summarised as "… and N more". Has no effect on the
+            nested tree, which is always complete. Must be an int (None would
+            raise a TypeError on slicing); use include_index=False to drop the
+            section instead.
+        indent: spaces per admonition nesting level. Four is the Markdown
+            convention and what the admonition extension expects.
+        link: wrap each serial number in a link to the parts DB
+        url_template: URL template for those links, formatted with
+            part_id=...; see PART_VIEW_URL
+        new_tab: append `{target="_blank" rel="noopener noreferrer"}` to each
+            link so it opens in a new tab. Requires the `attr_list`
+            extension on the site side, otherwise the attribute block is
+            rendered as literal text.
+
+    Returns:
+        pathlib.Path of the written file.
+
+    Site-side requirements:
+        The `admonition` extension for `!!!`, and `pymdownx.details` for the
+        collapsible `???` / `???+` blocks (without it the markers appear
+        literally). Both must be listed in the *list* form of
+        `markdown_extensions` on `[project]` in zensical.toml — the
+        table-only form silently skips third-party Python-Markdown
+        extensions. `attr_list` is additionally required when new_tab=True.
+
+    Notes:
+        - The page itself is deterministic; the "last updated" line comes from
+          `config.extra.build_time` in the template, so the file only changes
+          when the tree changes.
+        - Each part costs roughly five lines of Markdown. A tree with a few
+          hundred parts is fine; several thousand will make the page slow and
+          hard to navigate.
+        - Nesting is indentation-based and gets fragile beyond ~4 levels.
+          With the HGTD construction depth (Detector > Detector Unit >
+          Module > Hybrid > Sensor) the default of no limit is safe; for
+          deeper or unexpected trees consider max_depth=3.
+        - Duplicate edges are shown with an "already listed above" marker and
+          no children, which is the signal to check before building a
+          shipment from the traversal result.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    root_id = int(root_node["part_id"])
+    root_sn = root_node.get("serial_number") or "?"
+    n_children = len(children_by_parent.get(root_id, []))
+    n_edges = _count_nodes(children_by_parent, dupes_by_parent)
+
+    if description is None:
+        description = f"Recursive part tree below {root_sn} ({n_edges} parts)."
+
+    root_label = f"`{root_sn}` (part_id {root_id})"
+    if link:
+        root_label = md_link(root_label, part_url(root_id, url_template), new_tab=new_tab)
+
+    header = tree_header(_yaml_str(title), _yaml_str(description), title).rstrip("\n")
+    lines = header.split("\n")
+
+    lines += [
+        "",
+        f"**Root:** {root_label}  ",
+        f"**Direct children:** {n_children}  ",
+        f"**Parts in tree:** {n_edges}",
+        "",
+    ]
+
+    if include_index and n_children:
+        lines += ["### Direct children", ""]
+        shown = children_by_parent.get(root_id, [])[:index_limit]
+        for child, cpos in shown:
+            label = f"`{child.get('serial_number') or '?'}` (part_id {child['part_id']})"
+            if link:
+                label = md_link(
+                    label,
+                    part_url(child["part_id"], url_template),
+                    new_tab=new_tab,
+                )
+            if cpos not in (None, ""):
+                label += f" — {cpos}"
+            lines.append(f"- {label}")
+        if n_children > len(shown):
+            lines.append(f"- … and {n_children - len(shown)} more")
+        lines.append("")
+
+    lines += _tree_to_markdown_lines(
+        root_node,
+        children_by_parent,
+        dupes_by_parent,
+        admonition_type=admonition_type,
+        indent=indent,
+        max_depth=max_depth,
+        link=link,
+        url_template=url_template,
+        new_tab=new_tab,
+    )
+
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def get_recursive_children(
+    part_id,
+    ofKind="all",
+    max_depth=None,
+    max_workers=4,
+    include_parent=False,
+    onlyNonDeleted=True,
+    with_edges=False,
+    progress=None,
+    print_tree=False,
+    tree_ascii=False,
+    tree_max_lines=None,
+    tree_file=None,
+    position_key="position",
+    tree_txt_path=None,
+    tree_md_path=None,
+    md_admonition_type="note",
+    md_max_depth=None,
+    page_title="Detector parts tree",
+    page_description=None,
+    md_link_parts=True,
+    md_new_tab=True,
+    part_url_template=PART_VIEW_URL,
+):
+    """Collect all descendants of `part_id` in the part tree (breadth-first).
+
+    Parameters:
+        ofKind: only follow/collect children of this KoP shortname ("all" = no filter)
+        max_depth: levels below the root to traverse (None = unlimited)
+        max_workers: threads for the /childslist/ calls per level
+        include_parent: also return the root itself (first element)
+        with_edges: return (descendants, [(parent_part_id, child), ...])
+        progress: callable(depth, n_collected)
+        print_tree / tree_txt_path: pretty tree to stdout / to a .txt file
+        tree_max_lines: truncates the printed AND written txt tree (None = all)
+        position_key: field holding the child's position inside its parent
+        tree_md_path: single page with the whole tree as nested admonitions
+        md_max_depth: deepest admonition nesting (deeper nodes omitted from .md)
+        page_title / page_description: front matter + H1 of that page
+
+    Returns descendants in BFS order (deduplicated, parents before children),
+    or (descendants, edges) if with_edges=True.
+
+    Notes:
+        - `seen` is seeded with the root, so cycles and parts mounted under two
+          parents cannot loop; the repeat is collected once, at the shallowest
+          level, and only rendered as a non-expanded duplicate edge.
+        - get_children raises on HTTP errors, so a failed call aborts instead of
+          producing a silently truncated (and therefore wrong) shipment.
+    """
+    if ofKind != "all" and ofKind not in data.KoPID_from_partKoPName:
+        raise RuntimeError(f"Unknown kind of part '{ofKind}'")
+
+    root_id = int(part_id)
+    seen = {root_id}
+    collected, edges = [], []
+    children_by_parent, dupes_by_parent = {}, {}
+    frontier, depth = [root_id], 0
+
+    def fetch_children(pid):
+        children, _ = get_children(pid, onlyNonDeleted=onlyNonDeleted, ofKind=ofKind)
+        return children
+
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        while frontier and (max_depth is None or depth < max_depth):
+            results = list(ex.map(fetch_children, frontier))
+            next_frontier = []
+            for parent_id, children in zip(frontier, results):
+                for c in children:
+                    node = c["part"]
+                    position = c.get(position_key)
+                    if position is None:
+                        position = node.get(position_key)
+                    child_id = int(node["part_id"])
+                    if child_id in seen:
+                        dupes_by_parent.setdefault(parent_id, []).append((node, position))
+                        continue
+                    seen.add(child_id)
+                    collected.append(node)
+                    edges.append((parent_id, node))
+                    children_by_parent.setdefault(parent_id, []).append((node, position))
+                    next_frontier.append(child_id)
+            if progress is not None:
+                progress(depth + 1, len(collected))
+            frontier, depth = next_frontier, depth + 1
+
+    needs_root = bool(print_tree or include_parent or tree_txt_path or tree_md_path)
+    root_node = get_info_of_part_id(root_id)[0] if needs_root else None
+
+    if include_parent and root_node is not None:
+        collected.insert(0, root_node)
+
+    if root_node is not None and (print_tree or tree_txt_path):
+        lines = _part_tree_lines(
+            root_node,
+            children_by_parent,
+            dupes_by_parent,
+            ascii=tree_ascii,
+            max_lines=tree_max_lines,
+        )
+        if print_tree:
+            print("\n".join(lines), file=tree_file)
+        if tree_txt_path:
+            write_tree_txt(tree_txt_path, lines)
+
+    if root_node is not None and tree_md_path:
+        write_detector_tree_page(
+            tree_md_path,
+            root_node,
+            children_by_parent,
+            dupes_by_parent,
+            title=page_title,
+            description=page_description,
+            admonition_type=md_admonition_type,
+            max_depth=md_max_depth,
+            link=md_link_parts,
+            url_template=part_url_template,
+            new_tab=md_new_tab,
+        )
+
+    if with_edges:
+        return collected, edges
+    return collected
 
 
 def get_locations(onlyNonDeleted=True):
@@ -1569,3 +2023,197 @@ def sanitize(str_to_sanitize):
     san = re.sub(r"__+", "_", san)
     san = re.sub(r"\.\.+", ".", san)
     return san.strip("_.")
+
+
+# === Shipments
+
+SHIPMENTS_ENDPOINT = "/shipments/"
+SHIPMENT_ENDPOINT = "/shipment/{shipment_id}/"
+SHIPMENT_STATUSES = ("Created", "Received", "Cancel")
+
+# Same set the existing helpers catch one-by-one; used to avoid repeating it
+# in every shipment wrapper.
+API_ERRORS = (
+    requests.exceptions.HTTPError,
+    requests.exceptions.ConnectionError,
+    requests.exceptions.Timeout,
+    requests.exceptions.RequestException,
+    ValueError,
+    RuntimeError,
+)
+
+
+# Thin adapters around the POST/PUT api calls (only fetch_information and
+# delete_information are visible in this file). Rename if api differs.
+def _shipment_post(path, payload):
+    return api.post_information(path, payload)
+
+
+def _shipment_put(path, payload):
+    return api.put_information(path, payload)
+
+
+def _ref_id(value, key):
+    """FK refs (location, company) are sent as strings, e.g. "1521", "2"."""
+    if isinstance(value, dict):
+        value = value[key]
+    return str(value)
+
+
+def _part_id(value):
+    """part_id stays an int."""
+    if isinstance(value, dict):
+        value = value["part_id"]
+    return int(value)
+
+
+def get_shipments(include_children=True, onlyNonDeleted=True):
+    try:
+        path = SHIPMENTS_ENDPOINT
+        if not include_children:
+            path += "?include_children=false"
+        shipments, responseText = api.fetch_information(path)
+        if onlyNonDeleted:
+            shipments = [s for s in shipments if str(s["is_record_deleted"]) == "F"]
+        return shipments, responseText
+    except API_ERRORS as e:
+        raise e
+
+
+def get_shipment(shipment_id):
+    try:
+        shipment, responseText = api.fetch_information(
+            SHIPMENT_ENDPOINT.format(shipment_id=shipment_id)
+        )
+        return shipment, responseText
+    except API_ERRORS as e:
+        raise e
+
+
+def build_shipment_payload(
+    from_location,
+    to_location,
+    company,
+    items=None,
+    tracking_number=None,
+    status="Created",
+    shipment_date=None,
+    comment_description=None,
+    edh_link=None,
+    from_contact=None,
+    from_contact_email=None,
+    to_contact=None,
+    to_contact_email=None,
+    reception_date=None,
+    is_record_deleted="F",
+):
+    """Build the POST body for a new shipment.
+
+    `from_location`, `to_location`, `company` may be IDs or the nested dicts
+    returned by the API; they are serialized as strings. `items` is a list of
+    {"part_id": int, "comment": str, optional "serial_number"}. `shipment_date`
+    is "YYYY-MM-DD". None values are dropped; empty strings are kept (they are
+    how fields get cleared).
+    """
+    payload = {
+        "from_location": _ref_id(from_location, "location_id"),
+        "to_location": _ref_id(to_location, "location_id"),
+        "company": _ref_id(company, "company_id"),
+        "tracking_number": tracking_number,
+        "status": status,
+        "shipment_date": shipment_date,
+        "comment_description": comment_description,
+        "edh_link": edh_link,
+        "from_contact": from_contact,
+        "from_contact_email": from_contact_email,
+        "to_contact": to_contact,
+        "to_contact_email": to_contact_email,
+        "reception_date": reception_date,
+        "is_record_deleted": is_record_deleted,
+    }
+    payload = {k: v for k, v in payload.items() if v is not None}
+    if items:
+        shipmentitems = []
+        for it in items:
+            entry = {"part_id": _part_id(it), "comment": it.get("comment", "")}
+            if it.get("serial_number"):
+                entry["serial_number"] = it["serial_number"]
+            shipmentitems.append(entry)
+        payload["shipmentitems"] = shipmentitems
+    return payload
+
+
+def create_shipment(payload, dryrun=False):
+    """POST a new shipment. Returns (shipment_dict, responseText).
+
+    The server re-fetches the record by `tracking_number` after save, so the
+    tracking number must be unique per shipment or the POST returns 500.
+    """
+    for key in ("from_location", "to_location", "company"):
+        if payload.get(key) in (None, ""):
+            raise RuntimeError(f"Shipment payload is missing required field '{key}'")
+    if dryrun:
+        return payload, "dryrun: not sent"
+    try:
+        created, responseText = _shipment_post(SHIPMENTS_ENDPOINT, payload)
+        if "shipment_id" not in created:
+            raise RuntimeError(f"POST {SHIPMENTS_ENDPOINT} returned no shipment_id: {created}")
+        return created, responseText
+    except API_ERRORS as e:
+        raise e
+
+
+def create_shipment_for_parts(
+    parts,
+    from_location,
+    to_location,
+    company,
+    comment="",
+    dryrun=False,
+    **fields,
+):
+    """`parts` may be part dicts (get_children / get_info_of_part_id) or IDs."""
+    items = []
+    for p in parts:
+        entry = {"part_id": _part_id(p), "comment": comment}
+        if isinstance(p, dict) and p.get("serial_number"):
+            entry["serial_number"] = p["serial_number"]
+        items.append(entry)
+    payload = build_shipment_payload(
+        from_location=from_location,
+        to_location=to_location,
+        company=company,
+        items=items,
+        **fields,
+    )
+    return create_shipment(payload, dryrun=dryrun)
+
+
+def update_shipment(shipment_id, changes, dryrun=False):
+    """PUT a partial change onto an existing shipment.
+
+    The view resolves company/from_location/to_location unconditionally on PUT,
+    so merge onto the current record and always send those three as IDs.
+    """
+    current, _ = get_shipment(shipment_id)
+    payload = {
+        "from_location": _ref_id(current["from_location"], "location_id"),
+        "to_location": _ref_id(current["to_location"], "location_id"),
+        "company": _ref_id(current["company"], "company_id"),
+    }
+    payload.update(changes)
+    if dryrun:
+        return payload, "dryrun: not sent"
+    try:
+        updated, responseText = _shipment_put(
+            SHIPMENT_ENDPOINT.format(shipment_id=shipment_id), payload
+        )
+        return updated, responseText
+    except API_ERRORS as e:
+        raise e
+
+
+def receive_shipment(shipment_id, dryrun=False):
+    """Mark as Received -> server side this also moves every item's part
+    to the shipment's `to_location`."""
+    return update_shipment(shipment_id, {"status": "Received"}, dryrun=dryrun)

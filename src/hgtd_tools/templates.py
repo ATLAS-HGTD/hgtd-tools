@@ -203,3 +203,22 @@ def sensor_par_all(
         ![pie_chart_S_valid_new_all.png](../generated/pie_chart_S_valid_new_all.png)
 
 """
+
+
+def tree_header(yaml_t, d, t):
+    return f"""---
+title: {yaml_t}
+description: {d}
+icon: lucide/network
+---
+
+# {t}
+
+!!! info "Automatic reports taken from the HGTD ProdDB"
+
+    Check the CI results of hgtd-tools, run every night or upon request.
+
+    This report was last updated on: {{{{ config.extra.build_time }}}}.
+
+## Nightly report: parts tree
+"""

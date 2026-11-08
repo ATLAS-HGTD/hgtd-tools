@@ -53,6 +53,7 @@ upload-FlexTail-measurement = "hgtd_tools.app.scripts.upload_FlexTail_measuremen
 plot-MO-SU-geo = "hgtd_tools.app.scripts.plot_module_SU_geometry:main"
 order = "hgtd_tools.app.scripts.order:main"
 report-stats = "hgtd_tools.app.scripts.report_stats:main"
+hgtd-tree = "hgtd_tools.app.scripts.tree:main"
 [project.entry-points."markdown.extensions"]
 zensical_git_dates = "hgtd_tools.zensical_git_dates.extension:GitDatesExtension"
 
