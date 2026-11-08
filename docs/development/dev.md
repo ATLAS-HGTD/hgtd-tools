@@ -51,13 +51,17 @@ If you are developing features yourself or want to resolve an issue, please [For
 
 We run a set of basic pre-commit checks for your MR, so be prepared to modify the changed files according to the `.gitlab-ci.yaml` pipeline before your MR can be merged. Test your changes locally before pushing (and avoid using unneccessary CI time + core-h), using the instructions outlined in the pre-commit paragraph.
 
-Not every minor commit needs to trigger a CI pipeline, for example clerical changes or something that only affects documentation but no logic. In that case, please adapt your regular commit message as follows to skip the CI for a specific commit:
+!!! tip "Commit messages to control CI"
 
-```bash
-git commit -m 'here is my regular commit message [skip ci]'
-```
+    Not every minor commit needs to trigger a CI pipeline, for example clerical changes or something that only affects documentation but no logic. In that case, please adapt your regular commit message as follows to skip the CI for a specific commit:
 
-(note the `[skip ci]` flag).
+    ```bash
+    git commit -m 'here is my regular commit message [skip ci]'
+    ```
+
+    (note the `[skip ci]` flag).
+
+    For commits only involving documentation updates, one may add the more specific tag `[skip report]` to skip the reporting (`test` stage) and only run quick jobs like `pre-commit` (`build` stage) and `zensical` docs pages building (`deploy_docs` stage).
 
 ## New version policy and process
 The procedure for tagging new versions of this software is outlined in [procedure_new_release](procedure_new_release.md).

@@ -50,6 +50,9 @@ api_report:
   variables:
     TRIGGER_TARGET: "api_report_generate_files"
   rules:
+    # User can skip this expensive job (e.g. for building docs only)
+    - if: '$CI_COMMIT_MESSAGE =~ /(?i)\[skip[ -]report\]/'
+      when: never
     # Run on schedules
     - if: $CI_PIPELINE_SOURCE == "schedule"
     # Run on pushes to the default branch (main or master)
@@ -68,6 +71,9 @@ api_test:
     UPSTREAM_MR_BRANCH: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
     UPSTREAM_COMMIT_BRANCH: $CI_COMMIT_BRANCH
   rules:
+    # User can skip this expensive job (e.g. for building docs only)
+    - if: '$CI_COMMIT_MESSAGE =~ /(?i)\[skip[ -]report\]/'
+      when: never
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 prepare_zenodo:
