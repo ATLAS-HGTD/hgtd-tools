@@ -2551,3 +2551,26 @@ def update_part_by_SN(
         dryrun=dryrun,
         access_token=access_token,
     )
+
+
+def recommend_MO_SNs(site, prod, batch, count, existing_SNs, fill_holes=True):
+    """Propose `count` unused Module SNs for site/prod/batch.
+
+    Counters are human-readable and start at 1. With fill_holes=True, gaps in
+    the existing sequence are filled first; otherwise numbering continues right
+    after the highest counter in use. `existing_SNs` is the set of SNs already
+    taken, so the result never collides with them.
+    """
+    prefix = get_MO_SN_prefix(site, prod, batch)
+    counters = sorted(
+        int(str(sn)[8:]) for sn in existing_SNs if str(sn)[:8] == prefix and str(sn)[8:].isdigit()
+    )
+    taken = set(counters)
+    max_so_far = max(counters) if counters else 0
+
+    holes = [i for i in range(1, max_so_far + 1) if i not in taken] if fill_holes else []
+    if len(holes) >= count:
+        chosen = holes[:count]
+    else:
+        chosen = holes + list(range(max_so_far + 1, max_so_far + 1 + (count - len(holes))))
+    return [f"{prefix}{counter:06d}" for counter in chosen]

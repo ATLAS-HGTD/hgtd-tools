@@ -52,6 +52,8 @@ def module_loading_all(
 
         ![pie_chart_ML_valid_all.png](../generated/pie_chart_ML_valid_all.png)
 
+    If the numbers in the plot above do not match those in the plot below, you know that you haven't used `hgtd-tools` for correct relations (DB website does not check validity).
+
     ???+ info "Overview: valid & correctly connected Detector Units by loading sites"
 
         [.png :material-image-search-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_ML_valid_connected_all.png){{ .md-button }}
@@ -97,6 +99,8 @@ def module_assembly_all(
 
         ![pie_chart_MA_valid_all.png](../generated/pie_chart_MA_valid_all.png)
 
+    If the numbers in the plot above do not match those in the plot below, you know that you haven't used `hgtd-tools` for correct relations (DB website does not check validity).
+
     ???+ info "Overview: valid & correctly connected Modules by assembly sites"
 
         [.png :material-image-search-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_MA_valid_connected_all.png){{ .md-button }}
@@ -141,6 +145,8 @@ def hybridization_all(
         [.pdf :material-file-image-outline:](https://cernbox.cern.ch/files/spaces/eos/user/a/anstein/www/hgtd-tools-internal/generated/pie_chart_HY_valid_all.pdf){{ .md-button }}
 
         ![pie_chart_HY_valid_all.png](../generated/pie_chart_HY_valid_all.png)
+
+    If the numbers in the plot above do not match those in the plot below, you know that some relations are incorrect (DB website does not check their validity).
 
     ???+ info "Overview: valid & correctly connected Hybrids by hybridization sites"
 

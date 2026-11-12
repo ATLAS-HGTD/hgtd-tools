@@ -18,24 +18,30 @@ Two CSV layouts are accepted:
 
 The layout is detected from the header — no flag needed.
 
-The script runs in five phases:
+The script runs in six phases:
 
-1. **Load** — read the CSV once, detect the layout, expand one-row-per-Module
-   input into up to three relation rows.
-2. **Module sync** *(one-row-per-Module layout only)* — create Modules that are
+1. **Load** — read the CSV once, detect the layout, keep the Module rows
+   unexpanded for now.
+2. **SN reservation** *(one-row-per-Module layout, empty `module_sn` only)* —
+   propose the next free serial number for `--site`/`--prod`/`--batch`, exactly
+   like `SN-reservation` does.
+3. **Expansion** — turn each Module row into up to three canonical relation rows.
+4. **Module sync** *(one-row-per-Module layout only)* — create Modules that are
    not yet in the DB, update the details of those that are.
-3. **Static validation** (offline, no DB traffic).
+5. **Static validation** (offline, no DB traffic).
 
     - Rule 0: a given `Hybrid` or `Module Flex` child appears at most once across the whole CSV.
     - Rule 1: per parent, exactly one `Module Flex` child at empty position.
     - Rule 2: per parent, exactly two `Hybrid` children at positions `{HV, LV}` (order irrelevant).
     - SN pre-flight: every parent and child serial number satisfies the ATLAS SN convention.
 
-4. **DB checks** — existence of every parent and child SN, plus the DB rules below.
-5. **POST** — one `/partstreelist` payload per allowed CSV row, then the report.
+6. **DB checks, POST and report** — existence of every parent and child SN, the
+   DB rules below, one `/partstreelist` payload per allowed CSV row, then the
+   summary.
 
-The order matters: the sync runs **before** validation, otherwise every Module
-this run would create would be reported as "not found in the DB".
+The order matters: reservation comes first (the SN has to exist before the row
+can be expanded), and the sync runs **before** validation, otherwise every
+Module this run would create would be reported as "not found in the DB".
 
 ## Header handling (both layouts)
 
@@ -65,12 +71,12 @@ The CSV must have a header row and these columns, in any order:
 ```
 module_sn,name_label,version,comment,module_flex_sn,hybrid_hv_sn,hybrid_lv_sn
 20WMOMAA000001,MM-01-A,v1.2,first batch,20WMFMHAA00001,20WHNNNDA00001,20WHNNNDA00002
-20WMOMAA000002,MM-01-B,,,20WMFMHAA00002,20WHNNNDA00003,20WHNNNDA00004
+,MM-01-B,,,20WMFMHAA00002,20WHNNNDA00003,20WHNNNDA00004
 ```
 
 | column | required | meaning |
 |---|---|---|
-| `module_sn` | yes | Module serial number; also the parent of every child in the row |
+| `module_sn` | no | Module serial number. **Empty means "reserve one for me"** — see below. |
 | `name_label` | for creation | required when the Module does not exist yet; ignored otherwise |
 | `version` | no | sent on creation, and on update only if it differs from the stored value |
 | `comment` | no | as `version`; falls back to `--comment` on creation |
@@ -81,12 +87,40 @@ module_sn,name_label,version,comment,module_flex_sn,hybrid_hv_sn,hybrid_lv_sn
 The column names are accepted without the `_sn` suffix as well
 (`module_flex`, `hybrid_hv`, `hybrid_lv`). An empty child cell produces no
 relation row — the offline rules then report the missing flex or hybrid, exactly
-as if the row had been left out of the relation layout. Rows with an empty
-`module_sn` are skipped; a `module_sn` appearing twice aborts the run.
+as if the row had been left out of the relation layout. Rows that are completely
+empty are skipped; a `module_sn` appearing twice aborts the run.
 
 The Module row is **expanded** into up to three canonical relation rows, so
 everything downstream — validation, DB checks, upload — is identical for both
-layouts.
+layouts. A file with Modules but no child cells at all is valid: it only
+registers/reserves the Module parts.
+
+### Empty `module_sn` — serial number reservation
+
+Leaving `module_sn` empty asks the script to reserve a serial number for that
+row, using the same rules as [`SN-reservation`](SN_reservation.md):
+
+- the prefix is derived from `--site`, `--prod` and `--batch`
+  (`20WMO<site><prod><batch>`, or `99WMO…` for the `test` site),
+- the six-digit counter starts at `1`,
+- gaps in the existing sequence are filled first, unless `--no-fill-holes` is
+  given, in which case numbering continues right after the highest counter,
+- serial numbers already present in the CSV (given explicitly in another row)
+  are never proposed again,
+- rows are served in file order.
+
+All three flags are required as soon as one `module_sn` is empty, and the
+assignment is printed before anything is written:
+
+```
+Reserved 2 Module serial number(s) for rows with an empty module_sn:
+  line 3: 20WMOMAA000002  (MM-01-B)
+  line 4: 20WMOMAA000003  (MM-01-C)
+```
+
+The reserved SN is then created as a new Module in the same run (phase 4), so
+reservation and registration are one operation. `--skip-part-sync` cannot be
+combined with empty `module_sn` cells, because nothing would create the part.
 
 ## Kind normalisation
 
@@ -117,7 +151,10 @@ Whitespace in `position` is treated as empty.
 |---|---|---|---|
 | `-i`, `--input` | yes | — | path to the input CSV |
 | `-u`, `--user-name` | yes | — | your CERN user name; stored as `record_insertion_user` on creation and `record_lastupdate_user` on update |
-| `--site` | if Modules must be created | — | site shortname used as location and manufacturer for new Modules |
+| `--site` | for creation / reservation | — | site shortname; used as location and manufacturer for new Modules and as the site part of the SN prefix |
+| `--prod` | if a `module_sn` is empty | — | production code for SN reservation (`preprod`, `prod`, `demo`, `test`, `other`) |
+| `--batch` | if a `module_sn` is empty | — | single alphanumeric batch character for SN reservation |
+| `--no-fill-holes` | no | off (gaps are filled) | when reserving, continue after the highest counter instead of reusing skipped ones |
 | `--comment` | no | — | default comment for created Modules |
 | `--skip-part-sync` | no | off | do not create/update Module parts; only upload relations for Modules that already exist |
 | `--local-folder` | no | `~/.hgtd_tools/local_info`, falling back to `./local_info` | folder that `hgtd-tools` uses for the access token |
@@ -127,9 +164,9 @@ Whitespace in `position` is treated as empty.
 | `--skip-upload` | no | off | validate only; never POST even if every check passes |
 | `--allow-malformed-sn` | no | off | SN-format failures become warnings rather than blockers, **provided the part exists in the DB** |
 
-`--site` is not mandatory because relation-only runs and the relation layout do
-not need it. It becomes mandatory as soon as a Module has to be created, and the
-error message names the offending serial number and CSV line.
+`--site` is not mandatory for relation-only runs and the relation layout. It
+becomes mandatory as soon as a Module has to be created or a serial number
+reserved, and the error message names the offending row.
 
 ## Exit codes
 
@@ -137,7 +174,7 @@ error message names the offending serial number and CSV line.
 |---|---|
 | `0` | every parent_serial_number passes static + DB rules; if `--skip-upload` is not set, every allowed row was POSTed. |
 | `1` | at least one parent_serial_number violated a rule, or rows were blocked because of missing DB serials. The report still lists any partial upload that succeeded. |
-| `2` | the CSV could not be read (missing file, unknown `--encoding`, empty file, duplicate or empty column names, unrecognised header, missing columns, no data rows, duplicate `module_sn`). |
+| `2` | the CSV could not be read (missing file, unknown `--encoding`, empty file, duplicate or empty column names, unrecognised header, missing columns, no data rows, duplicate `module_sn`), or SN reservation was requested but `--site`/`--prod`/`--batch` is missing, or `--skip-part-sync` was combined with empty `module_sn` cells. |
 | `3` | a DB lookup or the Module sync failed (network/HTTP error, missing `--site`, missing `name_label` for a new Module). |
 | `4` | the upload step raised a network/HTTP error mid-run. |
 
@@ -168,6 +205,19 @@ bulk-module-assembly -i modules.csv -u <username> --site mainz --dry-run
 bulk-module-assembly -i modules.csv -u <username> --site mainz
 ```
 
+Reserve serial numbers for the rows that have none, then create and wire them:
+
+```
+bulk-module-assembly -i modules.csv -u <username> --site mainz --prod M --batch A --dry-run
+bulk-module-assembly -i modules.csv -u <username> --site mainz --prod M --batch A
+```
+
+Same, but never reuse a skipped counter:
+
+```
+bulk-module-assembly -i modules.csv -u <username> --site mainz --prod M --batch A --no-fill-holes
+```
+
 Modules are maintained elsewhere; only the relations should be uploaded:
 
 ```
@@ -182,6 +232,13 @@ bulk-module-assembly -i module_children.csv -u <username> --allow-malformed-sn
 ```
 
 ## Behaviour notes
+
+!!! tip "An empty `module_sn` is a reservation request"
+
+    Not a missing value and not an error: the script proposes the next free
+    serial number for `--site`/`--prod`/`--batch` using the `SN-reservation`
+    rules, prints the assignment, and creates that Module in the same run. Use
+    `--dry-run` to see the proposals without writing anything.
 
 !!! note "Partial success is supported"
 
@@ -205,9 +262,10 @@ bulk-module-assembly -i module_children.csv -u <username> --allow-malformed-sn
 
 !!! warning "Only Modules are created or updated"
 
-    The one-row-per-Module layout registers the **Module** parts. A `Module Flex`
-    or `Hybrid` that is not yet in the database still blocks its row — register
-    those first (e.g. with `SN-reservation`) before uploading the relations.
+    The one-row-per-Module layout registers the **Module** parts, including the
+    ones whose serial number was just reserved. A `Module Flex` or `Hybrid` that
+    is not yet in the database still blocks its row — register those first
+    (e.g. with `SN-reservation`) before uploading the relations.
 
 !!! note "Existing Modules are only updated when something differs"
 
@@ -218,11 +276,11 @@ bulk-module-assembly -i module_children.csv -u <username> --allow-malformed-sn
 
 !!! tip "Check the dry run before creating anything"
 
-    `--dry-run` propagates into the Module sync: you see the `POST` body for each
-    new Module and the diff for each changed one. Relation rows whose parent
-    would only be created by this run are reported as
-    `(parent part_id not resolved: parent does not exist yet)` — they are not
-    silently dropped.
+    `--dry-run` propagates into reservation and the Module sync: you see the
+    proposed serial numbers, the `POST` body for each new Module and the diff for
+    each changed one. Relation rows whose parent would only be created by this
+    run are reported as `(parent part_id not resolved: parent does not exist yet)`
+    — they are not silently dropped.
 
 !!! tip "Reproducible logs"
 

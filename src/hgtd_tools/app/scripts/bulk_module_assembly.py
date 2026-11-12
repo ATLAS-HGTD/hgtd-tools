@@ -15,6 +15,11 @@ canonical relation rows (Module -> Module Flex at empty position,
 Module -> Hybrid at HV, Module -> Hybrid at LV) and additionally registers the
 Module parts themselves: created if absent, updated if the details differ.
 
+In layout (b) an EMPTY module_sn cell means "reserve a serial number for me".
+The script then proposes the next unused SN for --site/--prod/--batch, exactly
+like SN-reservation does, fills it into the row and creates that Module. Pass
+--no-fill-holes to continue after the highest counter instead of filling gaps.
+
 Header names are matched case-insensitively and tolerate stray whitespace, in
 both layouts. Two columns differing only in case are rejected, not merged.
 
@@ -49,9 +54,11 @@ produce diagnostics but the other (still-unwired) parents still upload.
 Usage:
     python bulk_module_assembly.py -i module_children.csv -u <username>
     python bulk_module_assembly.py -i modules.csv -u <username> --site mainz
+    python bulk_module_assembly.py -i modules.csv -u <username> --site mainz \\
+        --prod M --batch A          # rows with an empty module_sn get an SN
     python bulk_module_assembly.py -i module_children.csv -u <username> \\
-        --allow-malformed-sn            # static SN check is a warning only;
-                                        # DB existence is still required.
+        --allow-malformed-sn        # static SN check is a warning only;
+                                    # DB existence is still required.
 """
 
 from __future__ import annotations
@@ -63,7 +70,7 @@ from collections import defaultdict
 
 import requests
 
-from hgtd_tools import api, util
+from hgtd_tools import api, data, util
 
 REQUIRED_COLUMNS = (
     "parent_kind_of_part",
@@ -164,14 +171,17 @@ def load_hierarchy(header: list[str], csv_rows: list[dict]) -> list[dict[str, st
     return rows
 
 
-def load_module_rows(
-    header: list[str], csv_rows: list[dict]
-) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
-    """Expand a one-row-per-Module CSV into canonical relation rows.
+def load_module_rows(header: list[str], csv_rows: list[dict]) -> list[dict]:
+    """Read a one-row-per-Module CSV without expanding it yet.
 
-    Returns (rows, module_details). Every Module with at least one non-empty
-    child cell yields one row per child; the position comes from the column
-    (Module Flex -> "", Hybrid -> "HV" / "LV").
+    Returns a list of Module rows:
+        {module_sn, name_label, version, comment, children, line, sn_reserved}
+    where `children` is a list of (kind, position, child_sn) and `module_sn`
+    may be "" — meaning "reserve a serial number for this row" (done later by
+    reserve_module_sns, which needs DB access and the CLI's --prod/--batch).
+
+    Expansion into relation rows happens in expand_module_rows(), after the
+    serial numbers are known.
     """
     child_columns = [c for c in MODULE_ROW_CHILD_COLUMNS if c in header]
     if not child_columns:
@@ -182,33 +192,67 @@ def load_module_rows(
     if "module_sn" not in header:
         raise ValueError("missing required column 'module_sn'")
 
-    rows, details, seen = [], [], {}
+    module_rows: list[dict] = []
+    seen: dict[str, int] = {}
+
     for row in csv_rows:
         lineno = row["_line"]
         sn = row.get("module_sn", "")
-        if not sn:
-            continue
-        if sn in seen:
-            raise ValueError(
-                f"line {lineno}: duplicate module_sn '{sn}' (first seen on line {seen[sn]})"
-            )
-        seen[sn] = lineno
+        name_label = row.get("name_label", "")
+        version = row.get("version", "")
+        comment = row.get("comment", "")
 
-        details.append(
-            {
-                "module_sn": sn,
-                "name_label": row.get("name_label", ""),
-                "version": row.get("version", ""),
-                "comment": row.get("comment", ""),
-                "line": lineno,
-            }
-        )
-
+        children = []
         for column in child_columns:
             kind, position = MODULE_ROW_CHILD_COLUMNS[column]
             child_sn = row.get(column, "")
-            if not child_sn:
-                continue
+            if child_sn:
+                children.append((kind, position, child_sn))
+
+        # a fully blank line is not a Module
+        if not (sn or name_label or version or comment or children):
+            continue
+
+        if sn:
+            if sn in seen:
+                raise ValueError(
+                    f"line {lineno}: duplicate module_sn '{sn}' (first seen on line {seen[sn]})"
+                )
+            seen[sn] = lineno
+
+        module_rows.append(
+            {
+                "module_sn": sn,
+                "name_label": name_label,
+                "version": version,
+                "comment": comment,
+                "children": children,
+                "line": lineno,
+                "sn_reserved": False,
+            }
+        )
+
+    if not module_rows:
+        raise ValueError("CSV has a header but no Module rows.")
+    return module_rows
+
+
+def expand_module_rows(module_rows: list[dict]) -> list[dict[str, str]]:
+    """Turn Module rows into canonical relation rows.
+
+    Must run after reserve_module_sns(), because every row needs its final
+    module_sn. A CSV without any child cells yields no relation rows — that is
+    legitimate when the script is only used to register/reserve Module parts.
+    """
+    rows = []
+    for module in module_rows:
+        sn = module["module_sn"]
+        if not sn:
+            raise RuntimeError(
+                f"line {module['line']}: module_sn is still empty; "
+                "reserve_module_sns() must run before expansion"
+            )
+        for kind, position, child_sn in module["children"]:
             rows.append(
                 {
                     "parent_kind_of_part": "Module",
@@ -218,20 +262,17 @@ def load_module_rows(
                     "position": position,
                 }
             )
-
-    if not rows:
-        raise ValueError("no child serial numbers found in any row")
-    return rows, details
+    return rows
 
 
 def load_input(csv_path: str, encoding: str = "utf-8"):
     """Read either CSV layout.
 
-    Returns (hierarchy_rows, module_details, layout):
-      hierarchy_rows — canonical parent/child rows, ready for validate()
-      module_details — list of {module_sn, name_label, version, comment, line}
-                       for the one-row-per-Module layout, else None
-      layout         — "hierarchy" or "module-rows"
+    Returns (relation_rows, module_rows, layout):
+      relation_rows — canonical parent/child rows (None for the Module layout,
+                      where they are produced by expand_module_rows later)
+      module_rows   — one-row-per-Module input, else None
+      layout        — "hierarchy" or "module-rows"
     """
     header, csv_rows = _read_csv(csv_path, encoding=encoding)
     header_set = set(header)
@@ -240,14 +281,64 @@ def load_input(csv_path: str, encoding: str = "utf-8"):
         return load_hierarchy(header, csv_rows), None, "hierarchy"
 
     if "module_sn" in header_set and any(c in header_set for c in MODULE_ROW_CHILD_COLUMNS):
-        rows, details = load_module_rows(header, csv_rows)
-        return rows, details, "module-rows"
+        return None, load_module_rows(header, csv_rows), "module-rows"
 
     raise ValueError(
         "unrecognised CSV layout. Expected either the parent/child header "
         f"({', '.join(REQUIRED_COLUMNS)}) or one row per Module "
         "(module_sn,name_label,version,comment,module_flex_sn,hybrid_hv_sn,hybrid_lv_sn)."
     )
+
+
+# ---------- SN reservation for empty module_sn cells ----------
+
+
+def reserve_module_sns(
+    module_rows: list[dict],
+    site: str,
+    prod: str,
+    batch: str,
+    existing_sns,
+    fill_holes: bool = True,
+) -> list[tuple[dict, str]]:
+    """Fill empty module_sn cells with proposed SNs for site/prod/batch.
+
+    Mirrors SN-reservation: the prefix comes from util.get_MO_SN_prefix, gaps in
+    the existing sequence are filled first (unless fill_holes is False), and
+    numbering continues after the highest counter. SNs already present in the
+    CSV — explicitly given or assigned earlier in this call — are kept free.
+
+    Mutates `module_rows` in place and returns [(module_row, assigned_sn), ...]
+    in file order.
+    """
+    pending = [m for m in module_rows if not m["module_sn"]]
+    if not pending:
+        return []
+
+    taken = set(existing_sns or ())
+    taken |= {m["module_sn"] for m in module_rows if m["module_sn"]}
+
+    proposals = util.recommend_MO_SNs(site, prod, batch, len(pending), taken, fill_holes=fill_holes)
+
+    assignments = []
+    for module, sn in zip(pending, proposals):
+        module["module_sn"] = sn
+        module["sn_reserved"] = True
+        assignments.append((module, sn))
+    return assignments
+
+
+def report_reserved(assignments: list[tuple[dict, str]], dryrun: bool = False) -> None:
+    if not assignments:
+        return
+    print(f"Reserved {len(assignments)} Module serial number(s) for rows with an empty module_sn:")
+    for module, sn in assignments:
+        label = module["name_label"] or "<no name_label>"
+        print(f"  line {module['line']}: {sn}  ({label})")
+    if dryrun:
+        print(
+            "Dry run: these serial numbers are proposals only and were not written to the database."
+        )
 
 
 # ---------- Missing-SN collection (DB existence check) ----------
@@ -441,7 +532,7 @@ def _check_hybrids(parent_sn: str, group: list[dict[str, str]], out: dict[str, l
 
 
 def sync_modules(
-    module_details: list[dict[str, str]],
+    module_details: list[dict],
     username: str,
     site: str | None = None,
     default_comment: str | None = None,
@@ -450,6 +541,10 @@ def sync_modules(
     verbose: bool = True,
 ) -> tuple[dict[str, int], dict[str, list[str]]]:
     """Create missing Module parts, update the details of existing ones.
+
+    Rows whose module_sn was reserved in this run are simply not in the DB yet,
+    so they take the creation path — the reservation and the creation are two
+    halves of the same operation.
 
     Only Modules are synced: the children (Module Flex, Hybrids) are expected
     to be registered already, and their details are not part of this CSV.
@@ -497,7 +592,8 @@ def sync_modules(
                 kind_of_part="Module",
             )
             if verbose:
-                print(f"[new module] {sn}:")
+                tag = "new module (reserved SN)" if detail.get("sn_reserved") else "new module"
+                print(f"[{tag}] {sn}:")
                 print(f"  {payload}")
             if dryrun:
                 api.post_information(
@@ -939,7 +1035,9 @@ def build_parser() -> argparse.ArgumentParser:
             "relation, or one row per Module (module_sn,name_label,version,comment,"
             "module_flex_sn,hybrid_hv_sn,hybrid_lv_sn), which is expanded into up "
             "to three relation rows and whose Module is created or updated first. "
-            "Header names are case-insensitive in both layouts."
+            "An empty module_sn cell reserves the next free serial number for "
+            "--site/--prod/--batch, like SN-reservation. Header names are "
+            "case-insensitive in both layouts."
         ),
     )
     parser.add_argument(
@@ -962,8 +1060,36 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "site shortname used as location and manufacturer for Modules that "
-            "have to be created (one-row-per-Module layout only). Required if the "
-            "CSV contains a Module that is not yet in the DB."
+            "have to be created, and as the site part of the SN prefix when a "
+            "module_sn has to be reserved (one-row-per-Module layout only). "
+            "Required if the CSV contains a Module that is not yet in the DB."
+        ),
+    )
+    parser.add_argument(
+        "--prod",
+        dest="prod",
+        default=None,
+        help=(
+            f"production code for SN reservation ({','.join(data.MO_prod_id.keys())}); only used "
+            "for rows whose module_sn is empty. Required if any module_sn is empty."
+        ),
+    )
+    parser.add_argument(
+        "--batch",
+        dest="batch",
+        default=None,
+        help=(
+            "single alphanumeric batch character for SN reservation; only used "
+            "for rows whose module_sn is empty. Required if any module_sn is empty."
+        ),
+    )
+    parser.add_argument(
+        "--no-fill-holes",
+        dest="fillHoles",
+        action="store_false",
+        help=(
+            "when reserving serial numbers, do not reuse skipped counters; "
+            "continue right after the highest counter in use (default: fill gaps)."
         ),
     )
     parser.add_argument(
@@ -978,7 +1104,8 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "do not create/update Module parts; only upload relations for "
-            "Modules that already exist in the DB"
+            "Modules that already exist in the DB. Cannot be combined with rows "
+            "that need a serial number."
         ),
     )
     parser.add_argument(
@@ -1021,6 +1148,7 @@ def build_parser() -> argparse.ArgumentParser:
             "the part is registered in the DB; DB existence is still required."
         ),
     )
+    parser.set_defaults(fillHoles=True)
     return parser
 
 
@@ -1036,23 +1164,82 @@ def main(argv: list[str] | None = None) -> int:
     access_token = api.get_access_token()
 
     try:
-        rows, module_details, layout = load_input(csv_path, encoding=args.encoding)
+        relation_rows, module_rows, layout = load_input(csv_path, encoding=args.encoding)
     except (OSError, ValueError, LookupError) as exc:
         # LookupError covers an unknown --encoding name
         print(f"ERROR: could not read '{csv_path}': {exc}", file=sys.stderr)
         return 2
 
+    # ---- SN reservation for empty module_sn cells (Module layout only) ----
+    if module_rows is not None:
+        needs_sn = [m for m in module_rows if not m["module_sn"]]
+        if needs_sn and args.skip_part_sync:
+            print(
+                f"ERROR: {len(needs_sn)} row(s) have an empty module_sn and would "
+                "need a reserved serial number, but --skip-part-sync forbids "
+                "creating parts.",
+                file=sys.stderr,
+            )
+            return 2
+        if needs_sn:
+            missing = [
+                flag
+                for flag, value in (
+                    ("--site", args.site),
+                    ("--prod", args.prod),
+                    ("--batch", args.batch),
+                )
+                if not value
+            ]
+            if missing:
+                print(
+                    f"ERROR: {len(needs_sn)} row(s) have an empty module_sn; "
+                    f"reserving serial numbers needs {', '.join(missing)}.",
+                    file=sys.stderr,
+                )
+                return 2
+            try:
+                modules_db, _ = util.get_relevant_parts("Module")
+            except (
+                requests.exceptions.HTTPError,
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout,
+                requests.exceptions.RequestException,
+                RuntimeError,
+                ValueError,
+            ) as exc:
+                print(f"ERROR: DB lookup failed: {exc}", file=sys.stderr)
+                return 3
+            try:
+                assignments = reserve_module_sns(
+                    module_rows,
+                    args.site,
+                    args.prod,
+                    args.batch,
+                    [p["serial_number"] for p in modules_db],
+                    fill_holes=args.fillHoles,
+                )
+            except (RuntimeError, ValueError) as exc:
+                print(f"ERROR: SN reservation failed: {exc}", file=sys.stderr)
+                return 2
+            report_reserved(assignments, dryrun=args.dry_run)
+
+        relation_rows = expand_module_rows(module_rows)
+
+    rows = relation_rows or []
     print(f"Layout: {layout}; {len(rows)} relation row(s) from {csv_path}.")
-    if module_details is not None:
-        print(f"{len(module_details)} Module row(s) in the CSV.")
+    if module_rows is not None:
+        print(f"{len(module_rows)} Module row(s) in the CSV.")
+        if not rows:
+            print("No child serial numbers given; this run only touches Module parts.")
 
     # 0) Create missing Modules / update their details (new layout only).
     module_sync = None
     pending_modules: set[str] = set()
-    if module_details is not None and not args.skip_part_sync:
+    if module_rows is not None and not args.skip_part_sync:
         try:
             _, module_sync = sync_modules(
-                module_details,
+                module_rows,
                 username,
                 site=args.site,
                 default_comment=args.comment,
@@ -1125,7 +1312,7 @@ def main(argv: list[str] | None = None) -> int:
     has_blockers = bool(missing_parents) or bool(missing_children)
 
     upload_responses: dict[str, str] | None = None
-    if not has_blockers and not args.skip_upload:
+    if not has_blockers and not args.skip_upload and rows:
         allowed_rows = select_allowed_rows(
             rows,
             violations,

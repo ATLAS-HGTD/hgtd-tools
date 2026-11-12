@@ -30,6 +30,8 @@ from pprint import pprint
 
 from hgtd_tools import api, data, util
 
+MAX_LISTED_SNS = 25
+
 # === Small CLI helpers
 
 
@@ -57,12 +59,22 @@ def _print_dryrun_banner(dryrun):
         )
 
 
+def _print_sn_list(sns, label, limit=MAX_LISTED_SNS):
+    """Print a (possibly long) SN list compactly instead of a full pprint."""
+    sns = sorted(str(sn) for sn in sns)
+    print(f"{label} ({len(sns)}):")
+    for sn in sns[:limit]:
+        print(f"  {sn}")
+    if len(sns) > limit:
+        print(f"  … and {len(sns) - limit} more")
+
+
 def _describe_http_error(err):
     """(status_code, body_excerpt) of a requests.HTTPError, or (None, None).
 
     Used to tell a server-side crash (5xx, e.g. Locations.DoesNotExist in the
     PUT view) apart from a rejected payload (4xx) — the two need different
-    advice, and the old catch-all text blamed a duplicate SN for both.
+    advice, and a catch-all text would blame a duplicate SN for both.
     """
     response = getattr(err, "response", None)
     if response is None:
@@ -119,24 +131,15 @@ class _PartIndexCache:
             self._by_kind[kind_of_part] = util.build_part_index(kind_of_part)
         return self._by_kind[kind_of_part]
 
-
-def _report_upload_failure(detail, sn, kind_of_part, action):
-    """Print a failure with the most likely cause spelled out."""
-    print(f"{action} of {sn} ({kind_of_part}) failed:\n{detail}")
-    print(
-        "Possible reasons:\n"
-        f"  - a part with serial number {sn} already exists in the database. Only "
-        f"'{kind_of_part}' parts were checked before uploading, and serial numbers "
-        "are unique across all kinds, so it may exist under another Kind of Part "
-        "(or have been created concurrently since this run started).\n"
-        "  - a previously deleted record with this SN is still present in the DB.\n"
-        "  - the payload was rejected (check the fields printed above).\n"
-        "Verify in the DB web view before retrying; do not blindly re-run."
-    )
+    def add(self, kind_of_part, part):
+        """Record a part created during this run, so later rows see it."""
+        self._by_kind.setdefault(kind_of_part, {})[str(part.get("serial_number", "")).strip()] = (
+            part
+        )
 
 
 def _post_part(payload, sn, kind_of_part, myToken, dryrun):
-    """POST a new part; on failure explain the duplicate-SN possibility and raise."""
+    """POST a new part; on failure report the status and body, then raise."""
     if dryrun:
         api.post_information(util.PARTS_ENDPOINT, payload, dryrun=True, existing_token=myToken)
         print(f"Dryrun: would have created {sn} ({kind_of_part}); nothing was sent.")
@@ -147,17 +150,18 @@ def _post_part(payload, sn, kind_of_part, myToken, dryrun):
             util.PARTS_ENDPOINT, payload, dryrun=False, existing_token=myToken
         )
     except util.API_ERRORS as err:
-        _report_upload_failure(err, sn, kind_of_part, "Creation")
+        status, body = _describe_http_error(err)
+        _report_upload_failure(err, sn, kind_of_part, "Creation", status, body)
         raise
 
-    if response_text[:2] != "20":
+    if str(response_text)[:2] != "20":
         _report_upload_failure(response_text, sn, kind_of_part, "Creation")
         raise RuntimeError(f"Creation failed for {sn}")
 
     print(f"Creation of {sn} succeeded ({response_text}).")
 
 
-def _put_part(existing_part, sn, kind_of_part, changes, username, myToken, dryrun):
+def _put_part(existing_part, sn, kind_of_part, changes, myToken, dryrun):
     """PUT an update; `changes` is the body from util.build_part_update_payload."""
     path = util.PART_ENDPOINT.format(part_id=int(existing_part["part_id"]))
     if dryrun:
@@ -172,7 +176,7 @@ def _put_part(existing_part, sn, kind_of_part, changes, username, myToken, dryru
         _report_upload_failure(err, sn, kind_of_part, "Update", status, body)
         raise
 
-    if response_text[:2] != "20":
+    if str(response_text)[:2] != "20":
         _report_upload_failure(response_text, sn, kind_of_part, "Update")
         raise RuntimeError(f"Update failed for {sn}")
 
@@ -190,58 +194,22 @@ def run_reserve_mode(args, username, default_comment, myToken, dryrun, fill_hole
     module_SNs = util.get_SN_of_parts(modules)
     my_prefix = util.get_MO_SN_prefix(my_site, my_prod, my_batch)
 
-    def find_matching_SNs(prefix, existing_SNs):
-        return [ex for ex in existing_SNs if str(ex[:8]) == str(prefix)]
-
-    def find_matching_sorted_counters(matching_SN_list):
-        return sorted([SN[8:] for SN in matching_SN_list])
-
-    def change_counter_digits_to_ints(counters):
-        return [int(c) for c in counters]
-
-    def find_max(my_list):
-        return max(my_list) if len(my_list) > 0 else 0
-
-    def collect_possible_holes(counters_as_INT, max_match):
-        holes = []
-        # no zero-counting: human-readable counters start from 1
-        for i in range(1, max_match + 1):
-            if i not in counters_as_INT:
-                holes.append(i)
-        return holes
-
-    def build_recommended_SNs(N_to_reserve, holes_to_use, max_so_far, prefix):
-        n_holes_to_use = len(holes_to_use)
-        if n_holes_to_use >= N_to_reserve:
-            recom_counters = holes_to_use[:N_to_reserve]
-        else:
-            still_to_build = N_to_reserve - n_holes_to_use
-            recom_counters = holes_to_use + [
-                new_ones for new_ones in range(max_so_far + 1, max_so_far + 1 + still_to_build)
-            ]
-        return [f"{prefix}{counter:06}" for counter in recom_counters]
-
-    my_matching_SNs = find_matching_SNs(my_prefix, module_SNs)
-    matched_sorted_counters = find_matching_sorted_counters(my_matching_SNs)
-    matched_sorted_counters_as_INT = change_counter_digits_to_ints(matched_sorted_counters)
-    max_matched = find_max(matched_sorted_counters_as_INT)
-
-    if fill_holes:
-        holes_in_matched = collect_possible_holes(matched_sorted_counters_as_INT, max_matched)
-    else:
-        # start right after the highest counter in use; skipped SNs stay unused
-        holes_in_matched = []
-
-    recommended_SNs = build_recommended_SNs(
-        how_many_to_reserve, holes_in_matched, max_matched, my_prefix
+    my_matching_SNs = [sn for sn in module_SNs if str(sn)[:8] == my_prefix]
+    recommended_SNs = util.recommend_MO_SNs(
+        my_site,
+        my_prod,
+        my_batch,
+        how_many_to_reserve,
+        set(module_SNs),
+        fill_holes=fill_holes,
     )
 
-    if len(my_matching_SNs) > 0:
-        print(
-            "hgtd-tools found the following SNs matching your prefix criteria "
-            f"on site/prod/batch: {my_prefix}"
+    if my_matching_SNs:
+        _print_sn_list(
+            my_matching_SNs,
+            f"hgtd-tools found the following SNs matching your prefix "
+            f"criteria on site/prod/batch ({my_prefix})",
         )
-        pprint(my_matching_SNs)
         if fill_holes:
             print(
                 "hgtd-tools will now recommend unused SNs, attempting to fill any "
@@ -294,6 +262,9 @@ def run_reserve_mode(args, username, default_comment, myToken, dryrun, fill_hole
                     "would ask you to confirm this part now."
                 )
                 user_not_yet_happy = False
+            elif args.yes:
+                print("Auto-confirmed (--yes).")
+                user_not_yet_happy = False
             else:
                 happy = input(
                     'Are you happy with this? Type "Y" to upload, any other input '
@@ -311,10 +282,7 @@ def run_reserve_mode(args, username, default_comment, myToken, dryrun, fill_hole
 # === Mode 2: create/update parts from a CSV
 
 
-def run_csv_mode(args, username, default_comment, myToken, dryrun):
-    rows = util.read_parts_csv(args.csvFile)
-    print(f"{len(rows)} row(s) in {args.csvFile}.")
-
+def run_csv_mode(args, username, default_comment, myToken, dryrun, rows):
     index = _PartIndexCache()
     n_created = n_updated = n_skipped = 0
     n_would_create = n_would_update = 0
@@ -374,7 +342,7 @@ def run_csv_mode(args, username, default_comment, myToken, dryrun):
                 n_skipped += 1
                 continue
 
-            _put_part(existing_part, sn, kind_of_part, changes, username, myToken, dryrun)
+            _put_part(existing_part, sn, kind_of_part, changes, myToken, dryrun)
             if dryrun:
                 n_would_update += 1
             else:
@@ -407,6 +375,9 @@ def run_csv_mode(args, username, default_comment, myToken, dryrun):
             n_would_create += 1
         else:
             n_created += 1
+            # keep the index in sync: a repeated SN in the CSV must update,
+            # not be posted a second time
+            index.add(kind_of_part, {"serial_number": sn})
 
     if dryrun:
         print(
@@ -424,7 +395,7 @@ def run_csv_mode(args, username, default_comment, myToken, dryrun):
 # === Entry point
 
 
-def main():
+def build_parser():
     parser = ArgumentParser(
         "CLI for SN reservation and part registration, targeted at Module Assembly."
     )
@@ -512,9 +483,15 @@ def main():
         "--yes",
         dest="yes",
         action="store_true",
-        help="[Optional] Skip the per-row confirmation in CSV mode.",
+        help="[Optional] Skip the confirmation prompts (per row in CSV mode, "
+        "per SN in --n-reserve mode). Data prompts are still asked.",
     )
     parser.set_defaults(fillHoles=True)
+    return parser
+
+
+def main():
+    parser = build_parser()
     args = parser.parse_args()
 
     username = (args.userName or "").strip()
@@ -535,6 +512,16 @@ def main():
         if args.prod is not None or args.batch is not None:
             parser.error("--prod and --batch only apply to --n-reserve")
 
+    # Parse the CSV before authenticating: a broken file should fail without
+    # a token round-trip.
+    rows = None
+    if args.csvFile is not None:
+        try:
+            rows = util.read_parts_csv(args.csvFile)
+        except (OSError, ValueError) as exc:
+            parser.error(f"could not read '{args.csvFile}': {exc}")
+        print(f"{len(rows)} row(s) in {args.csvFile}.")
+
     _print_dryrun_banner(dryrun)
 
     if args.localFolder is not None:
@@ -545,7 +532,7 @@ def main():
     myToken = api.get_access_token()
 
     if args.csvFile is not None:
-        run_csv_mode(args, username, default_comment, myToken, dryrun)
+        run_csv_mode(args, username, default_comment, myToken, dryrun, rows)
     else:
         run_reserve_mode(
             args,

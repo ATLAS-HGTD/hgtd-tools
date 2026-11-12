@@ -47,7 +47,7 @@ The following overview lists the implemented features of `hgtd-tools` and links 
 ??? success "Additional tools / scripts / automation"
     - Serial Number reservation for module assembly, either by count or from a CSV of serial numbers [with CLI script `SN-reservation`](use_cases/SN_reservation.md)
     - Hybrid matching for module assembly [with CLI script `hybridmatch`](use_cases/hybrid_matching.md)
-    - Bulk module assembly relation upload including consistency validation, accepting either one row per relation or one row per Module (with Module registration) [with CLI script `bulk-module-assembly`](use_cases/bulk_module_assembly.md)
+    - Bulk module assembly relation upload including consistency validation, accepting either one row per relation or one row per Module (with Module registration and serial number reservation) [with CLI script `bulk-module-assembly`](use_cases/bulk_module_assembly.md)
     - IV curve plotting [with CLI script `ivcurve-overlay`](use_cases/ivcurve_plotting.md)
     - Reporting
         - automation with Gitlab CI, using the hgtdbot account
@@ -72,7 +72,7 @@ If you walked through the [install](getting_started/install.md) guide and you ac
     SN-reservation -u <your-user-name> --site <some-site> --prod <some-prod> --batch <some-batchNr> --n-reserve <how-many-SNs-to-reserve> --dryrun
     ```
 
-    For every proposed serial number you are asked for name label, version and comment, and you confirm the payload before it is uploaded. Skipped counters are reused by default; pass `--no-fill-holes` to continue right after the highest counter instead.
+    The script lists the serial numbers already in use for that prefix, proposes the next free ones (gaps in the sequence are filled first; pass `--no-fill-holes` to continue right after the highest counter instead), and then asks you for name label, version and comment **per serial number** before showing the payload for confirmation. Nothing is carried over from one SN to the next.
 
     *Register or update parts from a CSV* — the header decides the kind of part:
 
@@ -88,7 +88,9 @@ If you walked through the [install](getting_started/install.md) guide and you ac
 
     A `module_sn` header means the parts are Modules and nothing is asked. A generic `sn` header makes the script ask for the kind of part, or you pass it once with `--kind`. Serial numbers already in the database are **updated** with a PUT (never created twice), unknown ones are created.
 
-    `--dryrun` is a plain flag: it prints the requests instead of sending them, and it skips the confirmation questions. Add `--yes` to skip the per-row confirmation in a real CSV run.
+    `--dryrun` is a plain flag: it prints the requests instead of sending them, and it skips the confirmation questions. Add `--yes` to skip the confirmations in a real run — per CSV row, or per serial number in `--n-reserve` mode; the data prompts are still asked.
+
+    The CSV is read *before* the database login, so a broken file fails immediately instead of after a token round-trip.
 
 ??? tip "Using the `hybridmatch` script for hybrid matching"
 
@@ -119,15 +121,16 @@ If you walked through the [install](getting_started/install.md) guide and you ac
     Module,20WMOMAA000001,Hybrid,20WHNNNDA00002,LV
     ```
 
-    *One row per Module* — when you assemble module by module and want the Module details and its three children in a single line. The Module is **created if missing and updated if its details differ**, then the three relations are uploaded:
+    *One row per Module* — when you assemble module by module and want the Module details and its three children in a single line. The Module is **created if missing and updated if its details differ**, then the three relations are uploaded. Leave `module_sn` empty and the script reserves the next free serial number for you, using the same rules as `SN-reservation`:
 
     ```shell
-    bulk-module-assembly -i modules.csv -u <your-username> --site <some-site> --dry-run
+    bulk-module-assembly -i modules.csv -u <your-username> --site <some-site> --prod <prod> --batch A --dry-run
     ```
 
     ```csv
     module_sn,name_label,version,comment,module_flex_sn,hybrid_hv_sn,hybrid_lv_sn
     20WMOMAA000001,MM-01-A,v1.2,first batch,20WMFMHAA00001,20WHNNNDA00001,20WHNNNDA00002
+    ,MM-01-B,,,20WMFMHAA00002,20WHNNNDA00003,20WHNNNDA00004
     ```
 
     Both layouts enforce the same rules: one Module Flex per Module at empty position, exactly two Hybrids at `HV` and `LV`, and every child connected to at most one parent — checked offline first and then against the DB. Only the Modules are created/updated; Module Flexes and Hybrids must already be registered. Add `--skip-part-sync` to leave the Module records untouched and upload relations only, `--skip-upload` to validate without writing, and `--allow-malformed-sn` to downgrade the serial-number format check to a warning.
