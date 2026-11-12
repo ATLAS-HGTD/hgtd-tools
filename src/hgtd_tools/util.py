@@ -1,3 +1,4 @@
+import csv
 import json
 import re
 import textwrap
@@ -2217,4 +2218,336 @@ def receive_shipment(shipment_id, dryrun=False, access_token=None, user=None, re
         dryrun=dryrun,
         access_token=access_token,
         user=user,
+    )
+
+
+# === Parts: bulk creation / update from CSV
+
+PARTS_ENDPOINT = "/partslist"
+PART_ENDPOINT = "/part/{part_id}/"
+
+# Kinds of Part accepted in a generic `sn` CSV. Extend this tuple when a new
+# KoP gets a working creation path (location/manufacturer mapping per site).
+CSV_KINDS_OF_PART = ("Module",)
+
+PART_CSV_REQUIRED_COLUMNS = ("name_label",)
+PART_CSV_OPTIONAL_COLUMNS = ("version", "comment")
+PART_CSV_SN_COLUMNS = ("module_sn", "sn")
+
+
+def ask(prompt, default=None, required=False):
+    """Prompt until an acceptable value is entered.
+
+    Enter accepts `default` (which may be "" for an optional field).
+    `required=True` without a default means the field cannot be left empty.
+    """
+    shown = f" [{default}]" if default not in (None, "") else ""
+    while True:
+        value = input(f"{prompt}{shown}: ").strip()
+        if value:
+            return value
+        if default is not None:
+            return default
+        if not required:
+            return ""
+        print("  This field is required, please type a value.")
+
+
+def ask_kind_of_part(kinds=None, default="Module"):
+    """Interactively pick a Kind of Part from `kinds` (default: CSV_KINDS_OF_PART).
+
+    With a single candidate the question is skipped entirely. Otherwise the
+    candidate list is numbered and the user must pick one of them: either the
+    number, or the name (case-insensitive). Enter alone selects `default` when
+    it is among `kinds`.
+    """
+    kinds = list(kinds or CSV_KINDS_OF_PART)
+    if not kinds:
+        raise RuntimeError("No Kind of Part available to choose from")
+    if len(kinds) == 1:
+        print(f"Only one Kind of Part available: {kinds[0]} (selected automatically).")
+        return kinds[0]
+
+    fallback = default if default in kinds else None
+    print("\nPlease pick one of the following kinds of part:")
+    for i, kind in enumerate(kinds, start=1):
+        suffix = "   (default)" if kind == fallback else ""
+        print(f"  {i}) {kind}{suffix}")
+
+    while True:
+        raw = input(
+            f"Enter the number of your choice (1-{len(kinds)})"
+            + (f" or press [Enter] for {fallback}" if fallback else "")
+            + ", then confirm with [Enter]: "
+        ).strip()
+        if not raw:
+            if fallback:
+                return fallback
+            print(f"  No default set — please type a number between 1 and {len(kinds)}.")
+            continue
+        if raw.isdigit() and 1 <= int(raw) <= len(kinds):
+            return kinds[int(raw) - 1]
+        for kind in kinds:
+            if raw.lower() == kind.lower():
+                return kind
+        print(
+            f"  '{raw}' is not one of the options above. "
+            f"Valid answers: 1-{len(kinds)}"
+            + (f", or {', '.join(kinds)}" if len(kinds) > 1 else "")
+            + "."
+        )
+
+
+def read_parts_csv(path):
+    """Read a parts CSV.
+
+    Accepted headers:
+        module_sn,name_label[,version][,comment]   -> KoP is Module, no prompt
+        sn,name_label[,version][,comment]          -> KoP unknown, ask the user
+
+    Returns a list of dicts with keys sn, kind_of_part, name_label, version,
+    comment, line. `kind_of_part` is "Module" for a module_sn header and None
+    for a generic sn header (the CLI then asks, or applies --kind).
+    Missing optional columns default to "". Rows with an empty SN are skipped.
+
+    Raises ValueError on anything structural (missing/ambiguous header,
+    missing name_label, duplicate SN) so the CLI fails before writing to the DB.
+    """
+    rows, seen = [], {}
+    with open(path, newline="", encoding="utf-8-sig") as fh:
+        reader = csv.DictReader(fh)
+        if reader.fieldnames is None:
+            raise ValueError(f"{path}: file is empty, expected a header row")
+
+        # tolerate capitalisation and stray whitespace in the header
+        header = {(name or "").strip().lower(): name for name in reader.fieldnames}
+        present_sn_columns = [c for c in PART_CSV_SN_COLUMNS if c in header]
+        if not present_sn_columns:
+            raise ValueError(
+                f"{path}: no SN column; expected one of "
+                f"{', '.join(PART_CSV_SN_COLUMNS)} in the header"
+            )
+        if len(present_sn_columns) > 1:
+            raise ValueError(
+                f"{path}: ambiguous header, found both "
+                f"{' and '.join(present_sn_columns)}; use exactly one"
+            )
+        sn_column = present_sn_columns[0]
+        # module_sn carries the KoP implicitly, a bare sn does not
+        fixed_kind = "Module" if sn_column == "module_sn" else None
+
+        missing = [c for c in PART_CSV_REQUIRED_COLUMNS if c not in header]
+        if missing:
+            raise ValueError(
+                f"{path}: missing required column(s) {missing}; expected header "
+                f"{sn_column},name_label,version[optional],comment[optional]"
+            )
+        absent_optional = [c for c in PART_CSV_OPTIONAL_COLUMNS if c not in header]
+        if absent_optional:
+            print(f"[warn] {path}: no column(s) {absent_optional}, treating them as empty")
+
+        for lineno, raw in enumerate(reader, start=2):
+            row = {
+                (k or "").strip().lower(): (v or "").strip()
+                for k, v in raw.items()
+                if k is not None
+            }
+            sn = row.get(sn_column, "")
+            if not sn:
+                continue
+            if sn in seen:
+                raise ValueError(
+                    f"{path}:{lineno}: duplicate SN '{sn}' (first seen on line {seen[sn]})"
+                )
+            seen[sn] = lineno
+            if not row.get("name_label"):
+                raise ValueError(f"{path}:{lineno}: name_label must not be empty")
+            rows.append(
+                {
+                    "sn": sn,
+                    "kind_of_part": fixed_kind,
+                    "name_label": row["name_label"],
+                    "version": row.get("version", ""),
+                    "comment": row.get("comment", ""),
+                    "line": lineno,
+                }
+            )
+
+    if not rows:
+        raise ValueError(f"{path}: no data rows found")
+    return rows
+
+
+def index_parts_by_SN(parts):
+    """{serial_number: part} for an already fetched part list."""
+    return {str(p["serial_number"]).strip(): p for p in parts if p.get("serial_number")}
+
+
+def build_part_index(kind_of_part, verbose=True):
+    """{serial_number: part} for ONE Kind of Part.
+
+    Deliberately scoped to a single kind: SNs are unique across kinds, but the
+    only SNs a caller can act on are those of the kind it is writing. A clash
+    with another kind therefore surfaces as a backend error on POST/PUT, which
+    the CLI reports instead of pre-empting with a full-DB lookup.
+    """
+    parts, _ = get_relevant_parts(kind_of_part)
+    if verbose:
+        print(f"Loaded {len(parts)} '{kind_of_part}' part(s) from the DB.")
+    return index_parts_by_SN(parts)
+
+
+def build_part_payload(
+    serial_number,
+    name_label,
+    version,
+    comment,
+    username,
+    site,
+    kind_of_part="Module",
+):
+    """POST body for a new part, with location/manufacturer/KoP resolved to IDs.
+
+    `username` is stored as record_insertion_user; it comes from the CLI (-u),
+    never from the CSV.
+    """
+    return {
+        "barcode": "",
+        "serial_number": serial_number,
+        "is_record_deleted": "F",
+        "version": version or "",
+        "name_label": name_label,
+        "comment_description": comment,
+        "kind_of_part": str(data.KoPID_from_partKoPName[kind_of_part]),
+        "location": str(data.relevant_location_IDs_by_shortname[site]),
+        "manufacturer": str(data.relevant_manufacturer_IDs_by_shortname[site]),
+        "record_insertion_user": username,
+    }
+
+
+def _fk_id(part, field, key):
+    """FK of a part record as a string id; raises if the record has none.
+
+    The PUT view resolves location, manufacturer and kind_of_part
+    unconditionally (Locations.objects.get(...) with no default), so a body
+    without them makes the server raise DoesNotExist -> HTTP 500, not 400.
+    """
+    value = part.get(field)
+    ref = value.get(key) if isinstance(value, dict) else value
+    if ref in (None, "", "None"):
+        raise RuntimeError(
+            f"part {part.get('part_id')} has no usable '{field}'; the PUT view "
+            "resolves it unconditionally, so this record cannot be updated"
+        )
+    return str(ref)
+
+
+def _kop_id(part, kind_of_part=None):
+    """kind_of_part as a string id, from the record or from a shortname."""
+    kop = part.get("kind_of_part")
+    if isinstance(kop, dict) and kop.get("kind_of_part_id") is not None:
+        return str(kop["kind_of_part_id"])
+    if isinstance(kop, (str, int)) and str(kop) not in ("", "None"):
+        return str(kop)
+    if kind_of_part is None:
+        raise RuntimeError(
+            f"part {part.get('part_id')} carries no kind_of_part; pass kind_of_part="
+        )
+    return str(data.KoPID_from_partKoPName.get(kind_of_part, kind_of_part))
+
+
+def build_part_update_payload(
+    part, name_label=None, version=None, comment=None, kind_of_part=None, user=None
+):
+    """PUT body for an existing part.
+
+    PartsDetailApiView.put resolves location, kind_of_part and manufacturer with
+    a bare .get() before validating anything, so those three ids must always be
+    present — they are taken from the stored record and therefore unchanged.
+    Everything else is only sent when a new value was given (the serializer runs
+    with partial=True, so omitted fields keep their stored value).
+
+    `user` is sent as record_lastupdate_user. The view also fills that field
+    from the X-Oidc-User header, but passing it explicitly is accepted and is
+    what the shipment PUT does as well.
+
+    Deliberately NOT sent:
+      is_record_deleted  — "T" makes the view delete the part's tree records
+      part_id, barcode, serial_number — nothing to change
+    """
+    if not isinstance(part, dict):
+        raise TypeError("build_part_update_payload needs the full part record")
+    payload = {
+        "location": _fk_id(part, "location", "location_id"),
+        "manufacturer": _fk_id(part, "manufacturer", "manufacturer_id"),
+        "kind_of_part": _kop_id(part, kind_of_part),
+    }
+    if user is not None:
+        payload["record_lastupdate_user"] = user
+    if name_label is not None:
+        payload["name_label"] = name_label
+    if version is not None:
+        payload["version"] = version
+    if comment is not None:
+        payload["comment_description"] = comment
+    return payload
+
+
+def update_part(
+    part,
+    name_label=None,
+    version=None,
+    comment=None,
+    kind_of_part=None,
+    user=None,
+    dryrun=False,
+    access_token=None,
+):
+    """PUT name_label / version / comment_description onto an existing part.
+
+    `part` must be the full record (get_relevant_parts / get_info_of_part_id),
+    because the body has to carry location, manufacturer and kind_of_part.
+    Fields left as None keep their stored value. `user` becomes
+    record_lastupdate_user when given.
+
+    Returns the "<status>, <reason>" string from api.put_information.
+    """
+    payload = build_part_update_payload(
+        part,
+        name_label=name_label,
+        version=version,
+        comment=comment,
+        kind_of_part=kind_of_part,
+        user=user,
+    )
+    return api.put_information(
+        PART_ENDPOINT.format(part_id=_part_id(part)),
+        payload,
+        dryrun=dryrun,
+        existing_token=access_token,
+    )
+
+
+def update_part_by_SN(
+    serial_number,
+    name_label=None,
+    version=None,
+    comment=None,
+    kind_of_part="Module",
+    user=None,
+    dryrun=False,
+    access_token=None,
+):
+    """`update_part` with the part looked up by SN (raises if unknown/ambiguous)."""
+    part_id = resolve_part_id_by_sn(serial_number, kind_of_part)
+    part, _ = get_info_of_part_id(part_id)
+    return update_part(
+        part,
+        name_label=name_label,
+        version=version,
+        comment=comment,
+        kind_of_part=kind_of_part,
+        user=user,
+        dryrun=dryrun,
+        access_token=access_token,
     )

@@ -20,7 +20,7 @@ Please check the [install](getting_started/install.md) guide for installing hgtd
 
 The following overview lists the implemented features of `hgtd-tools` and links to more detailed documentation on specific aspects.
 
-??? success "API (GET / POST / DELETE)"
+??? success "API (GET / POST / PUT / DELETE)"
     - See the API in action inside the GUI with dynamic, colored progress bar (API request status)
     - Efficient lookup of information in local files (e.g. static Slot table) and fetching of dynamic information via ProdDB API
     - Allows standalone usage of API client. It is used e.g. in [FADAPro](https://gitlab.cern.ch/atlas-hgtd/Electronics/fadapro/-/merge_requests/9){target="_blank"}, documented in the [FADAPro docs on `DB_interface.py`](https://hgtd-fadapro.docs.cern.ch/commandlist/#upload-to-database){target="_blank"}. Its DB implementation is part of the [analysis module](https://gitlab.cern.ch/atlas-hgtd/Electronics/fadapro/-/tree/master/analysis?ref_type=heads){target="_blank"}.
@@ -45,7 +45,7 @@ The following overview lists the implemented features of `hgtd-tools` and links 
         - query selection before choosing parent / child from full list (e.g. DU type, module manufacturer, child not yet connected or all possible children)
 
 ??? success "Additional tools / scripts / automation"
-    - Serial Number reservation for module assembly [with CLI script `SN-reservation`](use_cases/SN_reservation.md)
+    - Serial Number reservation for module assembly, either by count or from a CSV of serial numbers [with CLI script `SN-reservation`](use_cases/SN_reservation.md)
     - Hybrid matching for module assembly [with CLI script `hybridmatch`](use_cases/hybrid_matching.md)
     - Bulk module assembly relation upload including consistency validation [with CLI script `bulk-module-assembly`](use_cases/bulk_module_assembly.md)
     - IV curve plotting [with CLI script `ivcurve-overlay`](use_cases/ivcurve_plotting.md)
@@ -62,15 +62,33 @@ The following overview lists the implemented features of `hgtd-tools` and links 
 
 If you walked through the [install](getting_started/install.md) guide and you activated the your `hgtd` environment, the following tools will be available:
 
-??? tip "Using the `SN-reservation` script for module serial number reservation"
+??? tip "Using the `SN-reservation` script to reserve serial numbers or register parts from a CSV"
 
-    When doing module assembly, you may want to reserve serial numbers (e.g. for a new week of module production) that no one else can pick after you reserved them. For more information on the reservation process, please read [SN Reservation](use_cases/SN_reservation.md).
+    When doing module assembly, you may want to reserve serial numbers (e.g. for a new week of module production) that no one else can pick after you reserved them. The script has two mutually exclusive modes: it either **proposes serial numbers for you**, or it **reads a CSV** with the serial numbers and the part details you already have. For more information on both modes, please read [SN Reservation](use_cases/SN_reservation.md).
 
-    Execute the following:
+    *Reserve a number of serial numbers* — `--prod` and `--batch` are required here:
 
     ```shell
-    SN-reservation --user-name <your-user-name> --site <some-site> --prod <some-prod> --batch <some-batchNr> --n-reserve <how-many-SNs-to-reserve> (--dryrun True)
+    SN-reservation -u <your-user-name> --site <some-site> --prod <some-prod> --batch <some-batchNr> --n-reserve <how-many-SNs-to-reserve> --dryrun
     ```
+
+    For every proposed serial number you are asked for name label, version and comment, and you confirm the payload before it is uploaded. Skipped counters are reused by default; pass `--no-fill-holes` to continue right after the highest counter instead.
+
+    *Register or update parts from a CSV* — the header decides the kind of part:
+
+    ```shell
+    SN-reservation -u <your-user-name> --site <some-site> --csv <path-to-your-csv> --dryrun
+    ```
+
+    ```csv
+    module_sn,name_label,version,comment
+    20WMOMAA000001,MM-01-A,v1.2,first batch
+    20WMOMAA000002,MM-01-B,,
+    ```
+
+    A `module_sn` header means the parts are Modules and nothing is asked. A generic `sn` header makes the script ask for the kind of part, or you pass it once with `--kind`. Serial numbers already in the database are **updated** with a PUT (never created twice), unknown ones are created.
+
+    `--dryrun` is a plain flag: it prints the requests instead of sending them, and it skips the confirmation questions. Add `--yes` to skip the per-row confirmation in a real CSV run.
 
 ??? tip "Using the `hybridmatch` script for hybrid matching"
 
