@@ -47,7 +47,7 @@ The following overview lists the implemented features of `hgtd-tools` and links 
 ??? success "Additional tools / scripts / automation"
     - Serial Number reservation for module assembly, either by count or from a CSV of serial numbers [with CLI script `SN-reservation`](use_cases/SN_reservation.md)
     - Hybrid matching for module assembly [with CLI script `hybridmatch`](use_cases/hybrid_matching.md)
-    - Bulk module assembly relation upload including consistency validation [with CLI script `bulk-module-assembly`](use_cases/bulk_module_assembly.md)
+    - Bulk module assembly relation upload including consistency validation, accepting either one row per relation or one row per Module (with Module registration) [with CLI script `bulk-module-assembly`](use_cases/bulk_module_assembly.md)
     - IV curve plotting [with CLI script `ivcurve-overlay`](use_cases/ivcurve_plotting.md)
     - Reporting
         - automation with Gitlab CI, using the hgtdbot account
@@ -104,11 +104,33 @@ If you walked through the [install](getting_started/install.md) guide and you ac
 
     When doing module assembly, you may have a prefilled csv file with parent-child relations to upload in one go. On the DB website, there was a method to do such a bulk relation upload, but without validation according to this [set of rules](https://hgtd-tools-internal.web.cern.ch/reports/validation/#module-assembly){target="_blank"}. In the HGTD Tools GUI, you get the validation, mistakes are prevented by construction, but you need to go module by module, and connect all children manually. This script is the combination of both - bulk upload, but with built-in consistency check. For more information, please read [Bulk Module Assembly](use_cases/bulk_module_assembly.md).
 
-    Execute the following:
+    Two CSV layouts are accepted, and the layout is detected from the header — no flag needed. Header names are case-insensitive in both.
+
+    *One row per relation* — when you already know exactly which child goes where:
 
     ```shell
-    bulk-module-assembly -u <your-username> -i <path-to-input-csv-file>
+    bulk-module-assembly -i module_children.csv -u <your-username> --dry-run
     ```
+
+    ```csv
+    parent_kind_of_part,parent_serial_number,child_kind_of_part,child_serial_number,position
+    Module,20WMOMAA000001,Module Flex,20WMFMHAA00001,
+    Module,20WMOMAA000001,Hybrid,20WHNNNDA00001,HV
+    Module,20WMOMAA000001,Hybrid,20WHNNNDA00002,LV
+    ```
+
+    *One row per Module* — when you assemble module by module and want the Module details and its three children in a single line. The Module is **created if missing and updated if its details differ**, then the three relations are uploaded:
+
+    ```shell
+    bulk-module-assembly -i modules.csv -u <your-username> --site <some-site> --dry-run
+    ```
+
+    ```csv
+    module_sn,name_label,version,comment,module_flex_sn,hybrid_hv_sn,hybrid_lv_sn
+    20WMOMAA000001,MM-01-A,v1.2,first batch,20WMFMHAA00001,20WHNNNDA00001,20WHNNNDA00002
+    ```
+
+    Both layouts enforce the same rules: one Module Flex per Module at empty position, exactly two Hybrids at `HV` and `LV`, and every child connected to at most one parent — checked offline first and then against the DB. Only the Modules are created/updated; Module Flexes and Hybrids must already be registered. Add `--skip-part-sync` to leave the Module records untouched and upload relations only, `--skip-upload` to validate without writing, and `--allow-malformed-sn` to downgrade the serial-number format check to a warning.
 
 ??? tip "Using the `ivcurve-overlay` script for IV curve plotting"
 

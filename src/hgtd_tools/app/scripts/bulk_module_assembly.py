@@ -1,8 +1,27 @@
 """
 Bulk module assembly.
 
+Accepts two CSV layouts:
+
+  a) one row per relation (canonical layout):
+         parent_kind_of_part,parent_serial_number,
+         child_kind_of_part,child_serial_number,position
+  b) one row per Module (compact layout):
+         module_sn,name_label,version,comment,
+         module_flex_sn,hybrid_hv_sn,hybrid_lv_sn
+
+The layout is detected from the header. Layout (b) is expanded into up to three
+canonical relation rows (Module -> Module Flex at empty position,
+Module -> Hybrid at HV, Module -> Hybrid at LV) and additionally registers the
+Module parts themselves: created if absent, updated if the details differ.
+
+Header names are matched case-insensitively and tolerate stray whitespace, in
+both layouts. Two columns differing only in case are rejected, not merged.
+
+Then, for the relation rows:
+
 a) Validate hierarchical part rules per parent_serial_number for
-module assembly. Static analysis of csv file only, no requests.
+   module assembly. Static analysis of csv file only, no requests.
 b) Validate what is in the DB (GET) for each parent, and for each child.
 c) For allowed new relations, execute POST.
 d) For disallowed new relations, warn/report, let user take action (DELETE/POST).
@@ -19,8 +38,8 @@ DB rules (layered on top of the static rules):
   DB-Rule 2: every parent (Module) has zero existing Hybrid children
              (CSV adds exactly 2).
 
-CSV input is forgiving: kind names are canonicalised at load time, so
-'Module_flex', 'module flex', 'Module-Flex' etc. all map to 'Module Flex'.
+Kind names are canonicalised at load time, so 'Module_flex', 'module flex',
+'Module-Flex' etc. all map to 'Module Flex'.
 
 Upload is per-row: each allowed CSV row becomes its own POST. Rows whose
 child already has a parent in the DB are skipped (and reported) rather
@@ -29,6 +48,7 @@ produce diagnostics but the other (still-unwired) parents still upload.
 
 Usage:
     python bulk_module_assembly.py -i module_children.csv -u <username>
+    python bulk_module_assembly.py -i modules.csv -u <username> --site mainz
     python bulk_module_assembly.py -i module_children.csv -u <username> \\
         --allow-malformed-sn            # static SN check is a warning only;
                                         # DB existence is still required.
@@ -53,6 +73,18 @@ REQUIRED_COLUMNS = (
     "position",
 )
 
+# One-row-per-Module layout: the Module's own details plus up to three children.
+# Column name -> (canonical child kind, position). Aliases without the _sn
+# suffix are accepted as well.
+MODULE_ROW_CHILD_COLUMNS = {
+    "module_flex_sn": ("Module Flex", ""),
+    "module_flex": ("Module Flex", ""),
+    "hybrid_hv_sn": ("Hybrid", "HV"),
+    "hybrid_hv": ("Hybrid", "HV"),
+    "hybrid_lv_sn": ("Hybrid", "LV"),
+    "hybrid_lv": ("Hybrid", "LV"),
+}
+
 
 # ---------- I/O ----------
 
@@ -70,33 +102,152 @@ def _normalise_kind(kind: str) -> str:
     return k
 
 
-def load_hierarchy(csv_path: str) -> list[dict[str, str]]:
-    """Read the CSV, normalise 'position' (empty/whitespace -> '') and
-    canonicalise kind names (e.g. 'Module_flex' -> 'Module Flex'), check schema."""
-    with open(csv_path, newline="", encoding="utf-8") as fh:
+def _canon_row(raw: dict) -> dict[str, str]:
+    """Lowercase and strip header names and values of one CSV row."""
+    return {(k or "").strip().lower(): (v or "").strip() for k, v in raw.items() if k is not None}
+
+
+def _read_csv(csv_path: str, encoding: str = "utf-8") -> tuple[list[str], list[dict]]:
+    """Open the CSV once; return (canonical header list, canonical rows).
+
+    Each row keeps its original line number under the key "_line" (first data
+    row is line 2). Raises ValueError on an empty file or duplicate headers,
+    where "duplicate" means two columns whose names differ only in case or
+    surrounding whitespace — those would silently collapse into one key.
+    """
+    with open(csv_path, newline="", encoding=encoding) as fh:
         reader = csv.DictReader(fh)
         if reader.fieldnames is None:
             raise ValueError("CSV is empty or has no header row.")
 
-        missing = [c for c in REQUIRED_COLUMNS if c not in reader.fieldnames]
-        if missing:
-            raise ValueError(f"CSV is missing required column(s): {missing}")
+        seen: dict[str, str] = {}
+        for name in reader.fieldnames:
+            key = (name or "").strip().lower()
+            if not key:
+                raise ValueError("CSV has an empty column name in the header.")
+            if key in seen:
+                raise ValueError(
+                    f"duplicate column '{name}' (also given as '{seen[key]}'); "
+                    "column names are compared case-insensitively"
+                )
+            seen[key] = name
 
+        header = list(seen)
         rows = []
-        for row in reader:
+        for lineno, raw in enumerate(reader, start=2):
+            row = _canon_row(raw)
+            row["_line"] = lineno
+            rows.append(row)
+
+    if not rows:
+        raise ValueError("CSV has a header but no data rows.")
+    return header, rows
+
+
+def load_hierarchy(header: list[str], csv_rows: list[dict]) -> list[dict[str, str]]:
+    """Canonical relation rows from a one-row-per-relation CSV."""
+    missing = [c for c in REQUIRED_COLUMNS if c not in header]
+    if missing:
+        raise ValueError(f"CSV is missing required column(s): {missing}")
+
+    rows = []
+    for row in csv_rows:
+        rows.append(
+            {
+                "parent_kind_of_part": _normalise_kind(row.get("parent_kind_of_part", "")),
+                "parent_serial_number": row.get("parent_serial_number", ""),
+                "child_kind_of_part": _normalise_kind(row.get("child_kind_of_part", "")),
+                "child_serial_number": row.get("child_serial_number", ""),
+                "position": row.get("position", ""),
+            }
+        )
+    return rows
+
+
+def load_module_rows(
+    header: list[str], csv_rows: list[dict]
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """Expand a one-row-per-Module CSV into canonical relation rows.
+
+    Returns (rows, module_details). Every Module with at least one non-empty
+    child cell yields one row per child; the position comes from the column
+    (Module Flex -> "", Hybrid -> "HV" / "LV").
+    """
+    child_columns = [c for c in MODULE_ROW_CHILD_COLUMNS if c in header]
+    if not child_columns:
+        raise ValueError(
+            "no child column found; expected at least one of "
+            f"{', '.join(sorted(set(MODULE_ROW_CHILD_COLUMNS)))}"
+        )
+    if "module_sn" not in header:
+        raise ValueError("missing required column 'module_sn'")
+
+    rows, details, seen = [], [], {}
+    for row in csv_rows:
+        lineno = row["_line"]
+        sn = row.get("module_sn", "")
+        if not sn:
+            continue
+        if sn in seen:
+            raise ValueError(
+                f"line {lineno}: duplicate module_sn '{sn}' (first seen on line {seen[sn]})"
+            )
+        seen[sn] = lineno
+
+        details.append(
+            {
+                "module_sn": sn,
+                "name_label": row.get("name_label", ""),
+                "version": row.get("version", ""),
+                "comment": row.get("comment", ""),
+                "line": lineno,
+            }
+        )
+
+        for column in child_columns:
+            kind, position = MODULE_ROW_CHILD_COLUMNS[column]
+            child_sn = row.get(column, "")
+            if not child_sn:
+                continue
             rows.append(
                 {
-                    "parent_kind_of_part": _normalise_kind(row.get("parent_kind_of_part")),
-                    "parent_serial_number": (row.get("parent_serial_number") or "").strip(),
-                    "child_kind_of_part": _normalise_kind(row.get("child_kind_of_part")),
-                    "child_serial_number": (row.get("child_serial_number") or "").strip(),
-                    "position": (row.get("position") or "").strip(),
+                    "parent_kind_of_part": "Module",
+                    "parent_serial_number": sn,
+                    "child_kind_of_part": kind,
+                    "child_serial_number": child_sn,
+                    "position": position,
                 }
             )
 
     if not rows:
-        raise ValueError("CSV has a header but no data rows.")
-    return rows
+        raise ValueError("no child serial numbers found in any row")
+    return rows, details
+
+
+def load_input(csv_path: str, encoding: str = "utf-8"):
+    """Read either CSV layout.
+
+    Returns (hierarchy_rows, module_details, layout):
+      hierarchy_rows — canonical parent/child rows, ready for validate()
+      module_details — list of {module_sn, name_label, version, comment, line}
+                       for the one-row-per-Module layout, else None
+      layout         — "hierarchy" or "module-rows"
+    """
+    header, csv_rows = _read_csv(csv_path, encoding=encoding)
+    header_set = set(header)
+
+    if "parent_serial_number" in header_set:
+        return load_hierarchy(header, csv_rows), None, "hierarchy"
+
+    if "module_sn" in header_set and any(c in header_set for c in MODULE_ROW_CHILD_COLUMNS):
+        rows, details = load_module_rows(header, csv_rows)
+        return rows, details, "module-rows"
+
+    raise ValueError(
+        "unrecognised CSV layout. Expected either the parent/child header "
+        f"({', '.join(REQUIRED_COLUMNS)}) or one row per Module "
+        "(module_sn,name_label,version,comment,module_flex_sn,hybrid_hv_sn,hybrid_lv_sn)."
+    )
 
 
 # ---------- Missing-SN collection (DB existence check) ----------
@@ -284,6 +435,137 @@ def _check_hybrids(parent_sn: str, group: list[dict[str, str]], out: dict[str, l
         out[parent_sn].append(
             f"two Hybrid children at positions {positions}; required: 'HV' and 'LV'."
         )
+
+
+# ---------- Part sync (Module creation / update) ----------
+
+
+def sync_modules(
+    module_details: list[dict[str, str]],
+    username: str,
+    site: str | None = None,
+    default_comment: str | None = None,
+    access_token: str | None = None,
+    dryrun: bool = False,
+    verbose: bool = True,
+) -> tuple[dict[str, int], dict[str, list[str]]]:
+    """Create missing Module parts, update the details of existing ones.
+
+    Only Modules are synced: the children (Module Flex, Hybrids) are expected
+    to be registered already, and their details are not part of this CSV.
+
+    Returns (sn_to_module_id, summary) where summary has the keys
+    created / updated / unchanged / pending (pending = would be created in a
+    real run, so it only ever fills up under dryrun).
+    """
+    modules, _ = util.get_relevant_parts("Module")
+    by_sn = util.index_parts_by_SN(modules)
+
+    summary: dict[str, list[str]] = {
+        "created": [],
+        "updated": [],
+        "unchanged": [],
+        "pending": [],
+    }
+
+    for detail in module_details:
+        sn = detail["module_sn"]
+        name_label = detail["name_label"] or None
+        version = detail["version"] or None
+        comment = detail["comment"] or None
+        existing = by_sn.get(sn)
+
+        # ---- not in the DB: create -----------------------------------
+        if existing is None:
+            if not name_label:
+                raise RuntimeError(
+                    f"module {sn} (line {detail['line']}) is not in the DB and the "
+                    "CSV has no name_label for it; name_label is required for creation"
+                )
+            if site is None:
+                raise RuntimeError(
+                    f"module {sn} (line {detail['line']}) is not in the DB; pass "
+                    "--site so its location and manufacturer can be resolved"
+                )
+            payload = util.build_part_payload(
+                sn,
+                name_label,
+                version or "",
+                comment or default_comment or "",
+                username,
+                site,
+                kind_of_part="Module",
+            )
+            if verbose:
+                print(f"[new module] {sn}:")
+                print(f"  {payload}")
+            if dryrun:
+                api.post_information(
+                    util.PARTS_ENDPOINT, payload, dryrun=True, existing_token=access_token
+                )
+                summary["pending"].append(sn)
+                continue
+            response = api.post_information(
+                util.PARTS_ENDPOINT, payload, dryrun=False, existing_token=access_token
+            )
+            if str(response)[:2] != "20":
+                raise RuntimeError(f"creation of module {sn} failed: {response}")
+            summary["created"].append(sn)
+            continue
+
+        # ---- in the DB: update only what the CSV actually changes -----
+        wanted = {
+            "name_label": name_label,
+            "version": version,
+            "comment_description": comment,
+        }
+        diff = {
+            field: value
+            for field, value in wanted.items()
+            if value is not None and str(existing.get(field) or "") != str(value)
+        }
+        if not diff:
+            summary["unchanged"].append(sn)
+            continue
+
+        if verbose:
+            print(f"[update module] {sn} (part_id {existing['part_id']}): {diff}")
+        util.update_part(
+            existing,
+            name_label=name_label,
+            version=version,
+            comment=comment,
+            kind_of_part="Module",
+            user=username,
+            dryrun=dryrun,
+            access_token=access_token,
+        )
+        summary["updated"].append(sn)
+
+    # newly created parts were not in `by_sn` — refresh once
+    if summary["created"]:
+        modules, _ = util.get_relevant_parts("Module")
+        by_sn = util.index_parts_by_SN(modules)
+
+    sn_to_id = {sn: p["part_id"] for sn, p in by_sn.items()}
+    return sn_to_id, summary
+
+
+def report_module_sync(summary: dict[str, list[str]], quiet: bool = False) -> None:
+    if quiet:
+        return
+    parts = [
+        f"{len(summary['created'])} created",
+        f"{len(summary['updated'])} updated",
+        f"{len(summary['unchanged'])} unchanged",
+    ]
+    if summary["pending"]:
+        parts.append(f"{len(summary['pending'])} would be created (dry-run)")
+    print("Module parts: " + ", ".join(parts) + ".")
+    for label in ("created", "updated", "pending"):
+        sns = summary[label]
+        if sns:
+            print(f"  {label}: {', '.join(sorted(sns))}")
 
 
 # ---------- DB validation ----------
@@ -532,16 +814,23 @@ def upload_relations(
             r["child_serial_number"],
         ),
     ):
+        kind = row["child_kind_of_part"]
+        key = (
+            f"{row['parent_serial_number']} -> "
+            f"({kind}, {row['child_serial_number']}, '{row['position']}')"
+        )
+
         parent_id = sn_to_module_id.get(row["parent_serial_number"])
         if parent_id is None:
+            # only reachable under --dry-run for a Module that would be created
+            responses[key] = "(parent part_id not resolved: parent does not exist yet)"
             continue
-        kind = row["child_kind_of_part"]
         child_id = sn_to_id_by_kind[kind].get(row["child_serial_number"])
         if child_id is None:
+            responses[key] = f"(child part_id not resolved for kind {kind})"
             continue
 
         payload = build_part_tree_payload(parent_id, child_id, row["position"], user)
-        key = f"{row['parent_serial_number']} -> ({kind}, {row['child_serial_number']}, '{row['position']}')"
         responses[key] = api.post_information(
             "/partstreelist",
             payload,
@@ -644,11 +933,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="bulk_module_assembly",
         description=(
-            "Validate a parent/child part hierarchy CSV against the Module_flex "
-            "and Hybrid position rules, both offline and against the DB, and "
-            "POST the allowed relations. Per-row partial success is supported: "
-            "rows whose child already has a parent in the DB are skipped (and "
-            "reported) so other (still-unwired) parents can still proceed."
+            "Validate a parent/child hierarchy CSV against the Module_flex and "
+            "Hybrid position rules, both offline and against the DB, and POST the "
+            "allowed relations. Accepts two layouts: one row per parent/child "
+            "relation, or one row per Module (module_sn,name_label,version,comment,"
+            "module_flex_sn,hybrid_hv_sn,hybrid_lv_sn), which is expanded into up "
+            "to three relation rows and whose Module is created or updated first. "
+            "Header names are case-insensitive in both layouts."
         ),
     )
     parser.add_argument(
@@ -664,6 +955,31 @@ def build_parser() -> argparse.ArgumentParser:
         dest="userName",
         required=True,
         help="Your CERN user name.",
+    )
+    parser.add_argument(
+        "--site",
+        dest="site",
+        default=None,
+        help=(
+            "site shortname used as location and manufacturer for Modules that "
+            "have to be created (one-row-per-Module layout only). Required if the "
+            "CSV contains a Module that is not yet in the DB."
+        ),
+    )
+    parser.add_argument(
+        "--comment",
+        dest="comment",
+        default=None,
+        help="default comment for created Modules (one-row-per-Module layout only)",
+    )
+    parser.add_argument(
+        "--skip-part-sync",
+        dest="skip_part_sync",
+        action="store_true",
+        help=(
+            "do not create/update Module parts; only upload relations for "
+            "Modules that already exist in the DB"
+        ),
     )
     parser.add_argument(
         "--local-folder",
@@ -685,12 +1001,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--encoding",
         default="utf-8",
-        help="file encoding (default: utf-8)",
+        help="file encoding used to read the CSV (default: utf-8)",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="validate and build payloads but do not POST to the DB",
+        help="validate and build payloads but do not POST or PUT to the DB",
     )
     parser.add_argument(
         "--skip-upload",
@@ -720,15 +1036,47 @@ def main(argv: list[str] | None = None) -> int:
     access_token = api.get_access_token()
 
     try:
-        rows = load_hierarchy(csv_path)
-    except (OSError, ValueError) as exc:
+        rows, module_details, layout = load_input(csv_path, encoding=args.encoding)
+    except (OSError, ValueError, LookupError) as exc:
+        # LookupError covers an unknown --encoding name
         print(f"ERROR: could not read '{csv_path}': {exc}", file=sys.stderr)
         return 2
+
+    print(f"Layout: {layout}; {len(rows)} relation row(s) from {csv_path}.")
+    if module_details is not None:
+        print(f"{len(module_details)} Module row(s) in the CSV.")
+
+    # 0) Create missing Modules / update their details (new layout only).
+    module_sync = None
+    pending_modules: set[str] = set()
+    if module_details is not None and not args.skip_part_sync:
+        try:
+            _, module_sync = sync_modules(
+                module_details,
+                username,
+                site=args.site,
+                default_comment=args.comment,
+                access_token=access_token,
+                dryrun=args.dry_run,
+            )
+        except (
+            requests.exceptions.HTTPError,
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.RequestException,
+            RuntimeError,
+            ValueError,
+        ) as exc:
+            print(f"ERROR: Module sync failed: {exc}", file=sys.stderr)
+            return 3
+        report_module_sync(module_sync, quiet=args.quiet)
+        pending_modules = set(module_sync["pending"])
 
     # 1) Internally consistent CSV (rules 0, 1, 2 + SN pre-flight).
     offline_violations, sn_warnings = validate(rows, allow_malformed_sn=args.allow_malformed_sn)
 
     # 2) Resolve all SN -> part_id once; reuse for missing-SN detection + DB rules.
+    #    Re-fetched after the sync, so newly created Modules are included.
     try:
         modules, _ = util.get_relevant_parts("Module")
         flexes, _ = util.get_relevant_parts("Module Flex")
@@ -749,14 +1097,17 @@ def main(argv: list[str] | None = None) -> int:
     sn_to_hybrid_id = {p["serial_number"]: p["part_id"] for p in hybrids}
 
     # 3) Missing-SN pre-flight: serials in CSV but absent from DB.
-    missing_parents, missing_children = collect_missing_serials(
+    missing_parents_all, missing_children = collect_missing_serials(
         rows, sn_to_module_id, sn_to_flex_id, sn_to_hybrid_id
     )
+    # Modules this run would create are not "missing"; they only exist in dry-run
+    missing_parents = [(sn, kind) for sn, kind in missing_parents_all if sn not in pending_modules]
 
-    # 4) DB-Rules 0, 1, 2 (skips missing SNs). blocked_children captures
-    #    rows that are already wired in the DB and must be skipped at
-    #    upload time but should not block other (still-unwired) parents.
-    db_violations, blocked_children = validate_against_db(rows, missing_parents, missing_children)
+    # 4) DB-Rules 0, 1, 2. Pending Modules are passed in as missing so they are
+    #    skipped from the child-count checks (they have no children yet).
+    db_violations, blocked_children = validate_against_db(
+        rows, missing_parents_all, missing_children
+    )
 
     # 5) Merge: offline + DB.
     merged: dict[str, list[str]] = defaultdict(list)
