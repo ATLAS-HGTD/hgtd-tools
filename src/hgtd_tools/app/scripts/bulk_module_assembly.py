@@ -70,7 +70,7 @@ from collections import defaultdict
 
 import requests
 
-from hgtd_tools import api, data, util
+from hgtd_tools import api, util
 
 REQUIRED_COLUMNS = (
     "parent_kind_of_part",
