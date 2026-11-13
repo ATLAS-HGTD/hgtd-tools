@@ -124,7 +124,7 @@ If you walked through the [install](getting_started/install.md) guide and you ac
     *One row per Module* — when you assemble module by module and want the Module details and its three children in a single line. The Module is **created if missing and updated if its details differ**, then the three relations are uploaded. Leave `module_sn` empty and the script reserves the next free serial number for you, using the same rules as `SN-reservation`:
 
     ```shell
-    bulk-module-assembly -i modules.csv -u <your-username> --site <some-site> --prod M --batch A --dry-run
+    bulk-module-assembly -i modules.csv -u <your-username> --site <some-site> --prod test --batch A --dry-run
     ```
 
     ```csv

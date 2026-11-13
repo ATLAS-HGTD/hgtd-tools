@@ -208,14 +208,14 @@ bulk-module-assembly -i modules.csv -u <username> --site mainz
 Reserve serial numbers for the rows that have none, then create and wire them:
 
 ```
-bulk-module-assembly -i modules.csv -u <username> --site mainz --prod M --batch A --dry-run
-bulk-module-assembly -i modules.csv -u <username> --site mainz --prod M --batch A
+bulk-module-assembly -i modules.csv -u <username> --site mainz --prod test --batch A --dry-run
+bulk-module-assembly -i modules.csv -u <username> --site mainz --prod test --batch A
 ```
 
 Same, but never reuse a skipped counter:
 
 ```
-bulk-module-assembly -i modules.csv -u <username> --site mainz --prod M --batch A --no-fill-holes
+bulk-module-assembly -i modules.csv -u <username> --site mainz --prod test --batch A --no-fill-holes
 ```
 
 Modules are maintained elsewhere; only the relations should be uploaded:
