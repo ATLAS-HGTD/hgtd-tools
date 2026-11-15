@@ -13,9 +13,64 @@ stages:
 pre-commit:
   stage: build
   image: registry.cern.ch/docker.io/library/python:3.12
+  variables:
+    # full history: the rebase fallback below needs a real branch, not a shallow one
+    GIT_DEPTH: "0"
   script:
     - pip install pre-commit
-    - pre-commit run --all-files
+    - |
+      set -u
+      BRANCH="${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-}"
+
+      echo "== pass 1: check the merge result =="
+      pre-commit run --all-files --show-diff-on-failure && exit 0
+      echo "pre-commit reported issues."
+
+      # --- auto-fix is only allowed for MR pipelines of this very project ---
+      if [ "$CI_PIPELINE_SOURCE" != "merge_request_event" ]; then
+        echo "Not a merge request pipeline -> no auto-fix commit."
+        exit 1
+      fi
+      if [ "$CI_MERGE_REQUEST_SOURCE_PROJECT_PATH" != "$CI_PROJECT_PATH" ]; then
+        echo "MR comes from a fork ($CI_MERGE_REQUEST_SOURCE_PROJECT_PATH) -> no auto-fix commit."
+        exit 1
+      fi
+      if [ "$CI_PROJECT_NAMESPACE" != "anstein" ]; then
+        echo "Not the upstream namespace -> no auto-fix commit."
+        exit 1
+      fi
+
+      echo "== pass 2: apply fixes on the MR source branch =="
+      git remote set-url origin \
+        "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+      git config user.name  "gitlab-ci-token"
+      git config user.email "${GITLAB_USER_EMAIL:-gitlab-ci-token@${CI_SERVER_HOST}}"
+
+      # MR pipelines check out a detached merge ref -> switch to the real branch tip
+      git reset --hard
+      git fetch --no-tags origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}"
+      git checkout -B "${BRANCH}" "origin/${BRANCH}"
+
+      pre-commit run --all-files --show-diff-on-failure || true
+
+      if git diff --quiet; then
+        echo "Nothing was auto-fixable - failing as before."
+        exit 1
+      fi
+
+      git add -A
+      git commit -m "chore(pre-commit): apply automatic fixes" -m "[skip ci]"
+
+      if ! git push origin "HEAD:refs/heads/${BRANCH}"; then
+        echo "Push rejected, retrying once on top of the current branch tip."
+        git fetch --no-tags origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}"
+        git rebase "origin/${BRANCH}"
+        git push origin "HEAD:refs/heads/${BRANCH}"
+      fi
+
+      echo "Fixes pushed to ${BRANCH}."
+      # verify the pushed state is clean; fails only if something is not auto-fixable
+      pre-commit run --all-files --show-diff-on-failure
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
