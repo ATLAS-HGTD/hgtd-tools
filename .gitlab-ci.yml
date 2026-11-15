@@ -22,42 +22,65 @@ pre-commit:
       set -u
       BRANCH="${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-}"
       SOURCE_PATH="${CI_MERGE_REQUEST_SOURCE_PROJECT_PATH:-$CI_PROJECT_PATH}"
-      PATCH="pre-commit-fixes.patch"
+      PATCH="$CI_PROJECT_DIR/pre-commit-fixes.patch"
+      MERGEPATCH="$CI_PROJECT_DIR/merge-result-fixes.patch"
       STAT="$CI_PROJECT_DIR/patch-stat.txt"
-      echo "$PATCH" >> .git/info/exclude
+      REPORT="$CI_PROJECT_DIR/pre-commit-report.txt"
+      echo "pre-commit-fixes.patch"        >> .git/info/exclude
+      echo "merge-result-fixes.patch"      >> .git/info/exclude
+
+      log() { echo "$*" | tee -a "$REPORT"; }
+
+      # artifacts must exist even if we die in the first command
+      : > "$PATCH" ; : > "$MERGEPATCH" ; : > "$STAT" ; : > "$REPORT"
+      log "== pre-commit report =="
+      log "pipeline        : ${CI_PIPELINE_ID} (${CI_PIPELINE_SOURCE})"
+      log "mr              : ${CI_MERGE_REQUEST_IID:-<none>} target=${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-<none>}"
+      log "source project  : ${SOURCE_PATH}"
+      log "source branch   : ${BRANCH:-<none>}"
+      log "commit          : ${CI_COMMIT_SHA}"
+      log "namespace       : ${CI_PROJECT_NAMESPACE}"
 
       echo "== pass 1: check the merge result =="
-      pre-commit run --all-files --show-diff-on-failure && exit 0
-      echo "pre-commit reported issues."
+      if pre-commit run --all-files --show-diff-on-failure; then
+        log "RESULT: clean - nothing to fix."
+        exit 0
+      fi
+      log "pass 1: pre-commit reported issues on the merge result."
 
-      # pass 2 needs a branch tip; only MR pipelines have one
+      # what pass 1 wanted to change, target-branch files included
+      git add -A
+      git diff --cached --binary > "$MERGEPATCH"
+      git diff --cached --stat | tee -a "$STAT"
+      log "wrote merge-result-fixes.patch ($(wc -l < "$MERGEPATCH") lines)"
+
       if [ "$CI_PIPELINE_SOURCE" != "merge_request_event" ]; then
-        echo "Not a merge request pipeline -> no auto-fix, no patch."
+        log "RESULT: not a merge request pipeline -> no auto-fix, no branch patch."
         exit 1
       fi
 
-      # --- who may push? everything else runs patch-only ---
       CAN_PUSH=true
       if [ "$SOURCE_PATH" != "$CI_PROJECT_PATH" ]; then
         CAN_PUSH=false
-        echo "MR comes from a fork ($SOURCE_PATH) -> patch-only mode."
+        log "RESULT: MR from fork ($SOURCE_PATH) -> patch-only mode."
       fi
       if [ "$CI_PROJECT_NAMESPACE" != "anstein" ]; then
         CAN_PUSH=false
-        echo "Project namespace is ${CI_PROJECT_NAMESPACE}, not anstein -> patch-only mode."
+        log "RESULT: namespace ${CI_PROJECT_NAMESPACE} != anstein -> patch-only mode."
       fi
 
       echo "== pass 2: apply fixes on the MR source branch (CAN_PUSH=${CAN_PUSH}) =="
-      # fetch from the MR *source* project: in upstream-mode fork pipelines that is the fork
       git remote set-url origin \
         "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${SOURCE_PATH}.git"
       git config user.name  "gitlab-ci-token"
       git config user.email "${GITLAB_USER_EMAIL:-gitlab-ci-token@${CI_SERVER_HOST}}"
 
-      # MR pipelines check out a detached merge ref -> switch to the real branch tip
+      # drop the staged pass-1 state AND files the hooks created, otherwise they
+      # would be committed on top of the branch tip below
       git reset --hard
+      git clean -fdq
       if ! git fetch --no-tags origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}"; then
-        echo "Cannot read ${BRANCH} from ${SOURCE_PATH} (job token has no access) -> no patch."
+        log "RESULT: cannot read ${BRANCH} from ${SOURCE_PATH} (job token has no access)."
         exit 1
       fi
       git checkout -B "${BRANCH}" "origin/${BRANCH}"
@@ -65,35 +88,35 @@ pre-commit:
       pre-commit run --all-files --show-diff-on-failure || true
 
       if [ -z "$(git status --porcelain)" ]; then
-        echo "Nothing was auto-fixable - failing as before."
+        log "RESULT: branch tip is already clean."
+        log "The failures in pass 1 come from the target branch - see merge-result-fixes.patch."
         exit 1
       fi
 
       git add -A
       git commit -m "chore(pre-commit): apply automatic fixes"
-
-      # ---- patch artifact: what pre-commit changed on the source branch ----
-      git diff --stat HEAD~1 HEAD | tee "$STAT"
+      git diff --stat HEAD~1 HEAD | tee -a "$STAT"
       git format-patch -1 HEAD --stdout --binary > "$PATCH"
-      echo "Wrote ${PATCH}: $(wc -l < "$PATCH") lines"
+      log "wrote pre-commit-fixes.patch ($(wc -l < "$PATCH") lines)"
 
       if [ "$CAN_PUSH" != true ]; then
-        echo "Patch-only mode: nothing pushed."
-        echo "Apply ${PATCH} to ${BRANCH} (git am < ${PATCH}) or download it from this job's artifacts."
+        log "RESULT: patch-only mode, nothing pushed. Apply with: git am < pre-commit-fixes.patch"
         exit 1
       fi
 
       if ! git push origin "HEAD:refs/heads/${BRANCH}"; then
-        echo "Push rejected, retrying once on top of the current branch tip."
+        log "push rejected, retrying once on top of the current branch tip."
         git fetch --no-tags origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}"
         git rebase "origin/${BRANCH}"
-        git push origin "HEAD:refs/heads/${BRANCH}"
+        if ! git push origin "HEAD:refs/heads/${BRANCH}"; then
+          log "RESULT: push rejected twice - not fixed."
+          exit 1
+        fi
       fi
+      log "pushed fixes to ${BRANCH}."
 
-      echo "Fixes pushed to ${BRANCH}."
-      # verify the pushed state is clean; fails only if something is not auto-fixable
       if ! pre-commit run --all-files --show-diff-on-failure; then
-        echo "Still dirty -> leaving this pipeline red, nothing cancelled."
+        log "RESULT: still dirty after the fix commit -> red, nothing cancelled."
         exit 1
       fi
 
@@ -117,39 +140,39 @@ pre-commit:
         attempt=$((attempt + 1))
         newer="$(list_active | awk -v me="$CI_PIPELINE_ID" '$1 > me {print $1}' | sort -n)"
         if [ -n "$newer" ]; then
-          echo "new pipeline(s) detected after attempt ${attempt}: $(echo $newer)"
+          log "new pipeline(s) after attempt ${attempt}: $(echo $newer)"
           break
         fi
-        echo "attempt ${attempt}/30: no pipeline newer than ${CI_PIPELINE_ID} yet"
+        log "attempt ${attempt}/30: no pipeline newer than ${CI_PIPELINE_ID} yet"
         sleep 10
       done
 
       if [ -z "$newer" ]; then
-        echo "No new pipeline appeared within 300s - NOT cancelling this pipeline."
+        log "RESULT: fixed and pushed, but no new pipeline within 300s - nothing cancelled."
         exit 0
       fi
 
       keep="$(echo "$newer" | tail -n 1)"
-      echo "keeping pipeline ${keep} (new MR head)"
-
+      log "keeping pipeline ${keep} (new MR head)"
       targets="$(list_active | awk -v me="$CI_PIPELINE_ID" -v keep="$keep" \
                    '$1 != keep {print $1}' | sort -n)"
-      # this pipeline last: the other cancels must land before we kill ourselves
       [ "$keep" = "$CI_PIPELINE_ID" ] || targets="$(printf '%s\n%s\n' "$targets" "$CI_PIPELINE_ID")"
 
       for id in $targets; do
-        echo "cancelling pipeline ${id}"
+        log "cancelling pipeline ${id}"
         curl -sS --request POST --header "JOB-TOKEN: $CI_JOB_TOKEN" \
           "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines/${id}/cancel" >/dev/null \
-          || echo "  cancel of ${id} rejected - see notes (job token permissions)"
+          || log "  cancel of ${id} rejected - see notes (job token permissions)"
         [ "$id" = "$CI_PIPELINE_ID" ] && sleep 10
       done
 
-      echo "Superseded pipelines cancelled; ${keep} is the MR head."
+      log "RESULT: fixed, pushed, superseded pipelines cancelled; ${keep} is the MR head."
   artifacts:
     when: always
     paths:
+      - pre-commit-report.txt
       - pre-commit-fixes.patch
+      - merge-result-fixes.patch
       - patch-stat.txt
     expire_in: 1 week
   rules:
