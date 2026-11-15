@@ -59,7 +59,7 @@ pre-commit:
       fi
 
       git add -A
-      git commit -m "chore(pre-commit): apply automatic fixes" -m "[skip ci]"
+      git commit -m "chore(pre-commit): apply automatic fixes"
 
       if ! git push origin "HEAD:refs/heads/${BRANCH}"; then
         echo "Push rejected, retrying once on top of the current branch tip."
@@ -70,7 +70,56 @@ pre-commit:
 
       echo "Fixes pushed to ${BRANCH}."
       # verify the pushed state is clean; fails only if something is not auto-fixable
-      pre-commit run --all-files --show-diff-on-failure
+      if ! pre-commit run --all-files --show-diff-on-failure; then
+        echo "Still dirty -> leaving this pipeline red, nothing cancelled."
+        exit 1
+      fi
+
+      # ---- superseded pipelines of this MR: cancel everything except the new one ----
+      # prints the pipeline IDs to cancel, with this pipeline always last
+      list_superseded() {
+        curl -sS --header "JOB-TOKEN: $CI_JOB_TOKEN" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID/pipelines?per_page=100" \
+        | python -c '
+      import json, os, sys
+      new_sha = os.environ["NEW_SHA"]
+      me      = int(os.environ["CI_PIPELINE_ID"])
+      active  = [p for p in json.load(sys.stdin)
+                 if p["status"] in ("created", "pending", "running")]
+      mine    = [p for p in active if p["sha"] == new_sha and p["id"] != me]
+      if not mine:
+          print("none")
+          sys.exit()
+      keep = max(p["id"] for p in mine)
+      others = sorted(p["id"] for p in active if p["id"] != keep and p["id"] != me)
+      for pid in others + ([me] if me != keep else []):
+          print(pid)
+      '
+      }
+
+      export NEW_SHA="$(git rev-parse HEAD)"
+      targets=""
+      for _ in $(seq 1 12); do
+        targets="$(list_superseded)"
+        [ -n "$targets" ] && [ "$targets" != "none" ] && break
+        echo "waiting for the pipeline on ${NEW_SHA} ..."
+        sleep 10
+      done
+
+      if [ -z "$targets" ] || [ "$targets" = "none" ]; then
+        echo "No new pipeline appeared within 120s - NOT cancelling this pipeline."
+        exit 0
+      fi
+
+      for id in $targets; do
+        echo "cancelling pipeline ${id}"
+        curl -sS --request POST --header "JOB-TOKEN: $CI_JOB_TOKEN" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines/${id}/cancel" >/dev/null \
+          || echo "cancel of ${id} rejected - see notes (job token permissions)"
+        [ "$id" = "$CI_PIPELINE_ID" ] && sleep 10
+      done
+
+      echo "Superseded pipelines cancelled."
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
