@@ -291,7 +291,7 @@ def select_parts(
         parts = [
             iP
             for iP in parts
-            if str(name_label_does_not_include).lower() in str(iP["name_label"]).lower()
+            if str(name_label_does_include).lower() in str(iP["name_label"]).lower()
         ]
     if name_label_does_not_include is not None:  # case-insensitive
         parts = [
