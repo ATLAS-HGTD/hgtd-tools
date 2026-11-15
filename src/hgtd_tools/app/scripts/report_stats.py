@@ -70,8 +70,7 @@ def main():
                 continue
             if scale not in ("lin", "log"):
                 parser.error(
-                    f"Unknown scale '{raw}', choose from 'lin', 'log' "
-                    "(e.g. --scales lin,log)."
+                    f"Unknown scale '{raw}', choose from 'lin', 'log' (e.g. --scales lin,log)."
                 )
             if scale not in scales:
                 scales.append(scale)
