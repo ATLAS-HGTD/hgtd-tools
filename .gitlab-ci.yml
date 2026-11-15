@@ -18,29 +18,23 @@ pre-commit:
   script:
     - |
       set -u
-      ART="$CI_PROJECT_DIR/ci-artifacts"
-      PATCH="$ART/pre-commit.patch"
+      PATCH="$CI_PROJECT_DIR/pre-commit.patch"
       BRANCH="${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-}"
 
-      # artifacts exist from the first line on, so the upload never warns
-      mkdir -p "$ART"
-      : > "$PATCH"
-      echo "ci-artifacts/" >> .git/info/exclude
+      : > "$PATCH"   # exists even if pip install fails
 
       pip install pre-commit
 
-      echo "== pre-commit on the merge result =="
       if pre-commit run --all-files --show-diff-on-failure; then
         echo "clean - nothing to do."
         exit 0
       fi
 
-      echo "== diff pre-commit asked for (also written to ci-artifacts/pre-commit.patch) =="
-      git add -A
+      echo "== diff pre-commit asked for (also in pre-commit.patch) =="
+      git add -A -- . ':(exclude)pre-commit.patch'
       git diff --cached --binary | tee "$PATCH"
       git reset -q
 
-      # --- push only for MRs inside the anstein namespace of this project ---
       CAN_PUSH=false
       if [ "$CI_PIPELINE_SOURCE" = "merge_request_event" ] \
          && [ "$CI_MERGE_REQUEST_SOURCE_PROJECT_PATH" = "$CI_PROJECT_PATH" ] \
@@ -53,7 +47,6 @@ pre-commit:
         exit 1
       fi
 
-      echo "== applying fixes on ${BRANCH} =="
       git remote set-url origin \
         "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
       git config user.name  "gitlab-ci-token"
@@ -64,12 +57,12 @@ pre-commit:
       git checkout -B "${BRANCH}" "origin/${BRANCH}"
 
       pre-commit run --all-files --show-diff-on-failure || true
-      if [ -z "$(git status --porcelain)" ]; then
+      if [ -z "$(git status --porcelain -- . ':(exclude)pre-commit.patch')" ]; then
         echo "Branch tip is already clean (the failure comes from the target branch)."
         exit 1
       fi
 
-      git add -A
+      git add -A -- . ':(exclude)pre-commit.patch'
       git commit -m "chore(pre-commit): apply automatic fixes"
       git format-patch -1 HEAD --stdout --binary > "$PATCH"
 
@@ -78,7 +71,7 @@ pre-commit:
   artifacts:
     when: always
     paths:
-      - ci-artifacts/
+      - pre-commit.patch
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
