@@ -14,166 +14,71 @@ pre-commit:
   stage: build
   image: registry.cern.ch/docker.io/library/python:3.12
   variables:
-    # full history: the rebase fallback below needs a real branch, not a shallow one
     GIT_DEPTH: "0"
   script:
-    - pip install pre-commit
     - |
       set -u
+      ART="$CI_PROJECT_DIR/ci-artifacts"
+      PATCH="$ART/pre-commit.patch"
       BRANCH="${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-}"
-      SOURCE_PATH="${CI_MERGE_REQUEST_SOURCE_PROJECT_PATH:-$CI_PROJECT_PATH}"
-      PATCH="$CI_PROJECT_DIR/pre-commit-fixes.patch"
-      MERGEPATCH="$CI_PROJECT_DIR/merge-result-fixes.patch"
-      STAT="$CI_PROJECT_DIR/patch-stat.txt"
-      REPORT="$CI_PROJECT_DIR/pre-commit-report.txt"
-      echo "pre-commit-fixes.patch"        >> .git/info/exclude
-      echo "merge-result-fixes.patch"      >> .git/info/exclude
 
-      log() { echo "$*" | tee -a "$REPORT"; }
+      # artifacts exist from the first line on, so the upload never warns
+      mkdir -p "$ART"
+      : > "$PATCH"
+      echo "ci-artifacts/" >> .git/info/exclude
 
-      # artifacts must exist even if we die in the first command
-      : > "$PATCH" ; : > "$MERGEPATCH" ; : > "$STAT" ; : > "$REPORT"
-      log "== pre-commit report =="
-      log "pipeline        : ${CI_PIPELINE_ID} (${CI_PIPELINE_SOURCE})"
-      log "mr              : ${CI_MERGE_REQUEST_IID:-<none>} target=${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-<none>}"
-      log "source project  : ${SOURCE_PATH}"
-      log "source branch   : ${BRANCH:-<none>}"
-      log "commit          : ${CI_COMMIT_SHA}"
-      log "namespace       : ${CI_PROJECT_NAMESPACE}"
+      pip install pre-commit
 
-      echo "== pass 1: check the merge result =="
+      echo "== pre-commit on the merge result =="
       if pre-commit run --all-files --show-diff-on-failure; then
-        log "RESULT: clean - nothing to fix."
+        echo "clean - nothing to do."
         exit 0
       fi
-      log "pass 1: pre-commit reported issues on the merge result."
 
-      # what pass 1 wanted to change, target-branch files included
+      echo "== diff pre-commit asked for (also written to ci-artifacts/pre-commit.patch) =="
       git add -A
-      git diff --cached --binary > "$MERGEPATCH"
-      git diff --cached --stat | tee -a "$STAT"
-      log "wrote merge-result-fixes.patch ($(wc -l < "$MERGEPATCH") lines)"
+      git diff --cached --binary | tee "$PATCH"
+      git reset -q
 
-      if [ "$CI_PIPELINE_SOURCE" != "merge_request_event" ]; then
-        log "RESULT: not a merge request pipeline -> no auto-fix, no branch patch."
+      # --- push only for MRs inside the anstein namespace of this project ---
+      CAN_PUSH=false
+      if [ "$CI_PIPELINE_SOURCE" = "merge_request_event" ] \
+         && [ "$CI_MERGE_REQUEST_SOURCE_PROJECT_PATH" = "$CI_PROJECT_PATH" ] \
+         && [ "${CI_PROJECT_NAMESPACE}" = "anstein" ]; then
+        CAN_PUSH=true
+      fi
+
+      if [ "$CAN_PUSH" != true ]; then
+        echo "No push rights for this pipeline -> patch only."
         exit 1
       fi
 
-      CAN_PUSH=true
-      if [ "$SOURCE_PATH" != "$CI_PROJECT_PATH" ]; then
-        CAN_PUSH=false
-        log "RESULT: MR from fork ($SOURCE_PATH) -> patch-only mode."
-      fi
-      if [ "$CI_PROJECT_NAMESPACE" != "anstein" ]; then
-        CAN_PUSH=false
-        log "RESULT: namespace ${CI_PROJECT_NAMESPACE} != anstein -> patch-only mode."
-      fi
-
-      echo "== pass 2: apply fixes on the MR source branch (CAN_PUSH=${CAN_PUSH}) =="
+      echo "== applying fixes on ${BRANCH} =="
       git remote set-url origin \
-        "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${SOURCE_PATH}.git"
+        "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
       git config user.name  "gitlab-ci-token"
       git config user.email "${GITLAB_USER_EMAIL:-gitlab-ci-token@${CI_SERVER_HOST}}"
 
-      # drop the staged pass-1 state AND files the hooks created, otherwise they
-      # would be committed on top of the branch tip below
       git reset --hard
-      git clean -fdq
-      if ! git fetch --no-tags origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}"; then
-        log "RESULT: cannot read ${BRANCH} from ${SOURCE_PATH} (job token has no access)."
-        exit 1
-      fi
+      git fetch --no-tags origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}"
       git checkout -B "${BRANCH}" "origin/${BRANCH}"
 
       pre-commit run --all-files --show-diff-on-failure || true
-
       if [ -z "$(git status --porcelain)" ]; then
-        log "RESULT: branch tip is already clean."
-        log "The failures in pass 1 come from the target branch - see merge-result-fixes.patch."
+        echo "Branch tip is already clean (the failure comes from the target branch)."
         exit 1
       fi
 
       git add -A
       git commit -m "chore(pre-commit): apply automatic fixes"
-      git diff --stat HEAD~1 HEAD | tee -a "$STAT"
       git format-patch -1 HEAD --stdout --binary > "$PATCH"
-      log "wrote pre-commit-fixes.patch ($(wc -l < "$PATCH") lines)"
 
-      if [ "$CAN_PUSH" != true ]; then
-        log "RESULT: patch-only mode, nothing pushed. Apply with: git am < pre-commit-fixes.patch"
-        exit 1
-      fi
-
-      if ! git push origin "HEAD:refs/heads/${BRANCH}"; then
-        log "push rejected, retrying once on top of the current branch tip."
-        git fetch --no-tags origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}"
-        git rebase "origin/${BRANCH}"
-        if ! git push origin "HEAD:refs/heads/${BRANCH}"; then
-          log "RESULT: push rejected twice - not fixed."
-          exit 1
-        fi
-      fi
-      log "pushed fixes to ${BRANCH}."
-
-      if ! pre-commit run --all-files --show-diff-on-failure; then
-        log "RESULT: still dirty after the fix commit -> red, nothing cancelled."
-        exit 1
-      fi
-
-      # ---- cancel the superseded pipelines of this MR ----
-      # merged results: the new pipeline runs on the temporary merge commit, so its
-      # sha is NOT the pushed commit. Compare pipeline IDs only.
-      list_active() {
-        curl -sS --header "JOB-TOKEN: $CI_JOB_TOKEN" \
-          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID/pipelines?per_page=100" \
-        | python -c '
-      import json, os, sys
-      me = int(os.environ["CI_PIPELINE_ID"])
-      for p in json.load(sys.stdin):
-          if p["status"] in ("created", "pending", "running"):
-              print(p["id"], p["status"], p["sha"][:8], p.get("ref", ""))
-      '
-      }
-
-      newer="" ; attempt=0
-      while [ "$attempt" -lt 30 ]; do
-        attempt=$((attempt + 1))
-        newer="$(list_active | awk -v me="$CI_PIPELINE_ID" '$1 > me {print $1}' | sort -n)"
-        if [ -n "$newer" ]; then
-          log "new pipeline(s) after attempt ${attempt}: $(echo $newer)"
-          break
-        fi
-        log "attempt ${attempt}/30: no pipeline newer than ${CI_PIPELINE_ID} yet"
-        sleep 10
-      done
-
-      if [ -z "$newer" ]; then
-        log "RESULT: fixed and pushed, but no new pipeline within 300s - nothing cancelled."
-        exit 0
-      fi
-
-      keep="$(echo "$newer" | tail -n 1)"
-      log "keeping pipeline ${keep} (new MR head)"
-      targets="$(list_active | awk -v me="$CI_PIPELINE_ID" -v keep="$keep" \
-                   '$1 != keep {print $1}' | sort -n)"
-      [ "$keep" = "$CI_PIPELINE_ID" ] || targets="$(printf '%s\n%s\n' "$targets" "$CI_PIPELINE_ID")"
-
-      for id in $targets; do
-        log "cancelling pipeline ${id}"
-        curl -sS --request POST --header "JOB-TOKEN: $CI_JOB_TOKEN" \
-          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines/${id}/cancel" >/dev/null \
-          || log "  cancel of ${id} rejected - see notes (job token permissions)"
-        [ "$id" = "$CI_PIPELINE_ID" ] && sleep 10
-      done
-
-      log "RESULT: fixed, pushed, superseded pipelines cancelled; ${keep} is the MR head."
+      git push origin "HEAD:refs/heads/${BRANCH}"
+      echo "Fixes pushed to ${BRANCH}."
   artifacts:
     when: always
     paths:
-      - pre-commit-report.txt
-      - pre-commit-fixes.patch
-      - merge-result-fixes.patch
-      - patch-stat.txt
+      - ci-artifacts/
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
