@@ -1,16 +1,14 @@
 import threading
-import tkinter
 from dataclasses import dataclass
-from importlib import metadata
-
-import customtkinter
-import requests
-
 from hgtd_tools import api, data, util
 from hgtd_tools.asset_helpers import (
     load_image_from_assets,
     load_image_from_assets_as_b64,
 )
+import tkinter
+import customtkinter
+import requests
+from importlib import metadata
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
