@@ -4,7 +4,7 @@ Generates the HGTD production **relation validation report** as a Markdown page,
 
 | Property | Value |
 |---|---|
-| **Script** | `app/scripts/order.py` |
+| **Script** | `app/scripts/order.py` (shares `parts_query.py` with `hgtd-count`) |
 | **Entry point** | `order` |
 | **Output** | `validation.md` (+ `validation_<MODE>.md`, pie-chart PNGs) |
 | **Writes to the DB** | No — read-only |
@@ -31,9 +31,11 @@ order --mode-alias "Module Assembly" --dev True --custom-text Preliminary
 | `--merge` | `False` | Do not query the DB. Concatenate the previously generated `validation_ML.md`, `validation_MA.md`, `validation_HY.md` and `validation_SP.md` into `validation.md`. |
 | `--subtitle` | `True` | Add a subtitle with the SN validity category and the `hgtd-tools` commit hash + generation date. |
 | `--custom-text` | `Production Database` | Replaces the "Production Database" label in the plot captions, e.g. `Preliminary` or `Internal`. |
+| `--max-workers` | `4` | Threads used for the per-part `relation_validation` calls. This is a real `type=int` option, so `--max-workers 16` is valid — unlike the `str2bool` flags below. |
 
 !!! warning "Boolean flags take a value"
     `--dev`, `--merge` and `--subtitle` are passed through `util.str2bool()`; they are **not** `store_true` switches. Pass an explicit value (`--dev True`, `--merge true`, `--subtitle 0`). Writing `--dev` alone makes argparse fail with *"expected one argument"*.
+    `--max-workers` is the exception: it is a plain integer option and must **not** be given `True`/`False`.
 
 ---
 
@@ -50,6 +52,34 @@ Each mode picks a category via `util.get_relevant_parts()` and resolves the manu
 
 With `--mode-alias all` the four modes run in the order `Module Loading → Module Assembly → Hybridization → Sensor_Parents` into a single `validation.md`.
 
+## Where the numbers come from
+
+The counting and validation logic lives in `hgtd_tools/parts_query.py`, not in
+`order.py`. `order.py` only renders the result into `templates.*` blocks, the
+per-manufacturer admonitions and the pie charts.
+
+That means the figures in `validation.md` and the figures printed by the
+`hgtd-count` CLI come from one implementation:
+
+```bash
+hgtd-count Module --sites monitored --validate --format csv > count_MA.csv
+order --mode-alias "Module Assembly"
+```
+
+The `valid` column of `count_MA.csv` must equal the sum of the per-manufacturer
+*"Valid Modules (using latest SN spec, ...)"* numbers in `validation_MA.md`, and
+`connected` must equal the sum of *"of which correctly connected with children
+(MF, HY)"*. If they disagree, the bug is in the report rendering, not in the
+counting.
+
+Consequences worth knowing:
+
+- `hgtd-count` can answer "how many, which SNs, per site" without writing any
+  report files, so use it for ad-hoc questions and keep `order` for the
+  published page.
+- The per-mode `data.*_to_monitor` lists are exposed as `--sites monitored` in
+  `hgtd-count`; both CLIs resolve them from `parts_query.MONITORED_SITES`.
+
 ### Part selection
 
 Before any relation is checked, every part is sorted into three buckets with `util.select_parts()`:
@@ -61,7 +91,10 @@ Before any relation is checked, every part is sorted into three buckets with `ut
 | Fake | `check_fake_SN=True` | Counted only, **not** validated. |
 
 !!! note "Digital modules"
-    In `Module Assembly`, modules whose *Name Label* contains `_Digital` are physically valid but must not be assembled. They are moved out of the valid set (via `name_label_does_include="_Digital"`) and counted with the invalid ones. The report states this explicitly in the per-manufacturer note.
+    In `Module Assembly`, modules whose *Name Label* contains `_Digital` are
+    physically valid but must not be assembled. They are moved out of the valid
+    set (via `name_label_does_include="_Digital"`) and counted with the invalid
+    ones. The report states this explicitly in the per-manufacturer note.
 
 ---
 
@@ -144,5 +177,13 @@ order --merge True
 - **Invalid-SN parts are never validated.** A missing failure for a part usually means it fell into the invalid or fake bucket — check the counts in the mode summary first.
 - **`all` is not a valid value for `--single-manufacturer`**, and unknown short names silently yield empty subsets (zero valid parts → the *"Not a single relation validation passed!"* warning).
 - **`--dev` caps at 10 parts per manufacturer**, so the numbers in `validation.md` are not publication-grade.
+- **A failing API call no longer aborts the run.** If `/parentslist/` or
+  `/childslist/` errors for one part, that part is reported as a failure with
+  `API error: <reason>` as its reason, and the rest of the report is still
+  produced. Compare the failure count against a previous run before concluding
+  that a part is mis-assembled.
+- **Validation runs in parallel**, `--max-workers` at a time. Raising it speeds
+  up a full run considerably; the results are order-independent, so the report
+  content does not change.
 
 *Last updated: {{ last_updated }}*

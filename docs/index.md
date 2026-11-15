@@ -53,6 +53,7 @@ The following overview lists the implemented features of `hgtd-tools` and links 
         - automation with Gitlab CI, using the hgtdbot account
         - runner script producing overviews / reports: [yields with CLI script `report-stats`](reporting/report_stats.md), [relation validation with CLI script `order`](reporting/order.md), [detector parts tree recursive traversal with CLI script `tree`](reporting/tree.md)
         - note: all CI scripts can also be used locally!
+    - Ad-hoc counting and relation checks per kind of part [with CLI script `hgtd-count`](use_cases/count.md), sharing its validation logic with `order` (not run in CI, more for quick queries in command line locally)
     - Flex Tail upload [with CLI script `upload-FlexTail-measurements`](use_cases/FT_upload_instructions.md)
     - Module and SU geometry plotting [with CLI script `plot-MO-SU-geo`](use_cases/module_SU_plotting.md)
     - Shipment preparation with recursive part collection [with CLI script `clever-ship`](use_cases/clever_ship.md)
@@ -145,7 +146,6 @@ If you walked through the [install](getting_started/install.md) guide and you ac
     ivcurve-overlay --hybrid-sns "HybridASerialNumber,HybridBSerialNumber" <check-out-the-different-parameters>
     ```
 
-
 ??? tip "Using the `gui` for Part-to-Part relations, starting from module assembly"
 
     If you have done some connections between multi-relation parts, like module assembly, module loading, detector assembly with DUs, PEBs or Flex Tails, or you want to get assistance on what to pick, use the GUI of hgtd-tools.
@@ -213,6 +213,43 @@ If you walked through the [install](getting_started/install.md) guide and you ac
     ```
 
     Without an explicit id or tracking number, the matching shipments are printed as a table and you pick the ones to receive.
+
+??? tip "Using the `hgtd-count` script to count parts and check their relations"
+
+    When you need a number rather than a report — how many Modules a site has built, how many of those have valid serial numbers, how many are correctly connected, or which SNs are the ones that are not — use `hgtd-count`. It loads one kind of part (or all of them), applies the same filters as the reporting scripts, and prints a table. With `--validate` it runs the identical relation check as the nightly [relation validation report](reporting/order.md), so its numbers match that page by construction. Nothing is written to the database. No files are produced, unless requested so. For more information, please read [Parts Count](use_cases/count.md).
+
+    The most common queries:
+
+    ```shell
+    # valid modules per site, and how many of them are correctly connected
+    hgtd-count Module --validate --group-by manufacturer
+
+    # restrict to the sites the nightly report covers
+    hgtd-count Module --sites monitored --validate
+
+    # one site, with the SNs of the connected parts listed
+    hgtd-count Module --manu-shortname ijclab --validate --list connected
+
+    # what is wrong with the others
+    hgtd-count Module --manu-shortname ijclab --validate --list failed
+
+    # overview of every kind, as a Markdown page or a CSV
+    hgtd-count --cats public --format md -o overview.md
+
+    # monitor the total number of valid AA modules and breakdown per site
+    hgtd-count Module --sites monitored --validate \
+      --version-includes-any "ALTIROC A" --version-includes-any "ALTIROCA" \
+      --version-includes-any "ALTIROC-A" --version-includes-any "ALTRIOC A" \
+      --group-by manufacturer
+
+    # output the total number of valid AA modules to csv
+    hgtd-count Module --sites monitored --validate \
+      --version-includes-any "ALTIROC A" --version-includes-any "ALTIROCA" \
+      --version-includes-any "ALTIROC-A" --version-includes-any "ALTRIOC A" \
+      --format csv -o modules_altiroc.csv
+    ```
+
+    Filters compose with AND and cover location, manufacturer, SN substrings, SN characters 10–11, version strings, name labels and whether a part has parents/children of a given kind. `--group-by manufacturer` or `location` adds a per-site breakdown, `--list` appends the serial numbers of one category, and `--format {text,md,csv,json}` controls the output. Use `--dev N` to try a query on a few parts before running it on the full set.
 
 ## Contributing
 

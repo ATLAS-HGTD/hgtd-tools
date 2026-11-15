@@ -75,6 +75,7 @@ nav = [
         "use_cases/module_SU_plotting.md",
         "use_cases/clever_ship.md",
         "use_cases/receive_shipment.md",
+        "use_cases/count.md",
     ]},
     {"Reporting" = [
         "reporting/report_stats.md",
