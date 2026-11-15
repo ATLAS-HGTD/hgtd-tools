@@ -21,8 +21,6 @@ pre-commit:
       PATCH="$CI_PROJECT_DIR/pre-commit.patch"
       BRANCH="${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-}"
 
-      : > "$PATCH"   # exists even if pip install fails
-
       pip install pre-commit
 
       if pre-commit run --all-files --show-diff-on-failure; then
@@ -30,9 +28,14 @@ pre-commit:
         exit 0
       fi
 
-      echo "== diff pre-commit asked for (also in pre-commit.patch) =="
+      # write the patch only if there is something in it
+      echo "== diff pre-commit asked for =="
       git add -A -- . ':(exclude)pre-commit.patch'
-      git diff --cached --binary | tee "$PATCH"
+      if ! git diff --cached --quiet; then
+        git diff --cached --binary | tee "$PATCH"
+      else
+        echo "(empty - not a fixable violation, no patch written)"
+      fi
       git reset -q
 
       CAN_PUSH=false
@@ -68,8 +71,10 @@ pre-commit:
 
       git push origin "HEAD:refs/heads/${BRANCH}"
       echo "Fixes pushed to ${BRANCH}."
+      echo "Failing this pipeline on purpose: it found the problem. The new pipeline on the fix commit is the green one."
+      exit 1
   artifacts:
-    when: always
+    when: on_failure          # a clean run uploads nothing
     paths:
       - pre-commit.patch
     expire_in: 1 week
