@@ -13,9 +13,71 @@ stages:
 pre-commit:
   stage: build
   image: registry.cern.ch/docker.io/library/python:3.12
+  variables:
+    GIT_DEPTH: "0"
   script:
-    - pip install pre-commit
-    - pre-commit run --all-files
+    - |
+      set -u
+      PATCH="$CI_PROJECT_DIR/pre-commit.patch"
+      BRANCH="${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-}"
+
+      pip install pre-commit
+
+      if pre-commit run --all-files --show-diff-on-failure; then
+        echo "clean - nothing to do."
+        exit 0
+      fi
+
+      # write the patch only if there is something in it
+      echo "== diff pre-commit asked for =="
+      git add -A -- . ':(exclude)pre-commit.patch'
+      if ! git diff --cached --quiet; then
+        git diff --cached --binary | tee "$PATCH"
+      else
+        echo "(empty - not a fixable violation, no patch written)"
+      fi
+      git reset -q
+
+      CAN_PUSH=false
+      if [ "$CI_PIPELINE_SOURCE" = "merge_request_event" ] \
+         && [ "$CI_MERGE_REQUEST_SOURCE_PROJECT_PATH" = "$CI_PROJECT_PATH" ] \
+         && [ "${CI_PROJECT_NAMESPACE}" = "anstein" ]; then
+        CAN_PUSH=true
+      fi
+
+      if [ "$CAN_PUSH" != true ]; then
+        echo "No push rights for this pipeline -> patch only."
+        exit 1
+      fi
+
+      git remote set-url origin \
+        "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+      git config user.name  "gitlab-ci-token"
+      git config user.email "${GITLAB_USER_EMAIL:-gitlab-ci-token@${CI_SERVER_HOST}}"
+
+      git reset --hard
+      git fetch --no-tags origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}"
+      git checkout -B "${BRANCH}" "origin/${BRANCH}"
+
+      pre-commit run --all-files --show-diff-on-failure || true
+      if [ -z "$(git status --porcelain -- . ':(exclude)pre-commit.patch')" ]; then
+        echo "Branch tip is already clean (the failure comes from the target branch)."
+        exit 1
+      fi
+
+      git add -A -- . ':(exclude)pre-commit.patch'
+      git commit -m "chore(pre-commit): apply automatic fixes"
+      git format-patch -1 HEAD --stdout --binary > "$PATCH"
+
+      git push origin "HEAD:refs/heads/${BRANCH}"
+      echo "Fixes pushed to ${BRANCH}."
+      echo "Failing this pipeline on purpose: it found the problem. The new pipeline on the fix commit is the green one."
+      exit 1
+  artifacts:
+    when: on_failure          # a clean run uploads nothing
+    paths:
+      - pre-commit.patch
+    expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

@@ -38,10 +38,15 @@ def main():
         default=None,
     )
     parser.add_argument(
-        "--log-axis",
-        dest="logAxis",
-        help="[Optional] Use logarithmic y-axis instead of linear.",
-        default=False,
+        "--scales",
+        dest="scales",
+        nargs="+",
+        metavar="SCALE",
+        help=(
+            "[Optional] Y-axis scale(s) for the report plots: 'lin', 'log', or both "
+            "(comma- or space-separated, e.g. --scales lin,log). Default: lin log."
+        ),
+        default=["lin", "log"],
     )
     args = parser.parse_args()
 
@@ -55,7 +60,22 @@ def main():
     skip_data_prep = util.str2bool(args.skipDataPrep)
     subtitle = util.str2bool(args.subtitle)
     exp_text = args.customText if args.customText is not None else "Production Database"
-    log_axis = util.str2bool(args.logAxis)
+
+    # --scales accepts "lin,log", "lin log" or a single value; dedupe, keep order
+    scales = []
+    for entry in args.scales:
+        for raw in entry.split(","):
+            scale = raw.strip().lower()
+            if not scale:
+                continue
+            if scale not in ("lin", "log"):
+                parser.error(
+                    f"Unknown scale '{raw}', choose from 'lin', 'log' (e.g. --scales lin,log)."
+                )
+            if scale not in scales:
+                scales.append(scale)
+    if not scales:
+        parser.error("--scales needs at least one of 'lin', 'log'.")
 
     interesting_features = [
         "Location",
@@ -193,6 +213,7 @@ def main():
     def batch_yield_plot(
         input_dict,
         postfix="valid",
+        scale="lin",
         title_prefix="Serial Numbers starting with 20W only. ",
     ):
         """
@@ -245,7 +266,7 @@ def main():
                 exp_text,
                 title_prefix,
                 subtitle,
-                log_axis,
+                scale,
                 postfix,
             )
             plotter.plot_categorical_bar_stack(
@@ -257,7 +278,7 @@ def main():
                 exp_text,
                 title_prefix,
                 subtitle,
-                log_axis,
+                scale,
                 postfix,
             )
 
@@ -317,7 +338,7 @@ def main():
                     exp_text,
                     title_prefix + "\n",
                     subtitle,
-                    log_axis,
+                    scale,
                     postfix,
                 )
                 plotter.plot_multi_categorical_time_trend(
@@ -329,25 +350,29 @@ def main():
                     exp_text,
                     title_prefix + "\n",
                     subtitle,
-                    log_axis,
+                    scale,
                     postfix,
                 )
 
-    batch_yield_plot(
-        input_dict=multi_count_dict_invalid,
-        postfix="invalid",
-        title_prefix="Serial Numbers starting with 20W, NOT fulfilling the ATLAS convention. ",
-    )
-    batch_yield_plot(
-        input_dict=multi_count_dict_fakes,
-        postfix="fakes",
-        title_prefix="Serial Numbers NOT starting with 20W. ",
-    )
-    batch_yield_plot(
-        input_dict=multi_count_dict_valid,
-        postfix="valid",
-        title_prefix="Serial Numbers starting with 20W, fulfilling the ATLAS convention. ",
-    )
+    for scale in scales:
+        batch_yield_plot(
+            input_dict=multi_count_dict_invalid,
+            postfix="invalid",
+            scale=scale,
+            title_prefix="Serial Numbers starting with 20W, NOT fulfilling the ATLAS convention. ",
+        )
+        batch_yield_plot(
+            input_dict=multi_count_dict_fakes,
+            postfix="fakes",
+            scale=scale,
+            title_prefix="Serial Numbers NOT starting with 20W. ",
+        )
+        batch_yield_plot(
+            input_dict=multi_count_dict_valid,
+            postfix="valid",
+            scale=scale,
+            title_prefix="Serial Numbers starting with 20W, fulfilling the ATLAS convention. ",
+        )
 
 
 if __name__ == "__main__":
