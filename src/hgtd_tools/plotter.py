@@ -41,6 +41,23 @@ hep.style.use("ATLAS1")
 plt.rcParams["axes.axisbelow"] = True
 
 
+def _apply_y_scale(ax, scale):
+    """
+    Apply the requested y-axis scale ('lin' or 'log') to an axis.
+
+    For 'log', a non-positive lower limit (the default for bars starting at 0) is
+    replaced by a small fraction of the upper limit so that the axis stays valid.
+    """
+    if scale != "log":
+        ax.set_yscale("linear")
+        return
+    ax.set_yscale("log")
+    lower, upper = ax.get_ylim()
+    if lower <= 0:
+        top = upper if upper > 0 else 1.0
+        ax.set_ylim(top * 1e-4, top)
+
+
 def plot_categorical_bar_stack(
     input_array,
     filename_prefix,
@@ -50,7 +67,7 @@ def plot_categorical_bar_stack(
     exp_text,
     title_prefix,
     subtitle,
-    log_axis,
+    scale,
     postfix,
 ):
     plt.rcParams["axes.prop_cycle"] = cycler("color", colors_tab20c + combination_color_sequence)
@@ -108,26 +125,19 @@ def plot_categorical_bar_stack(
         ),
         fontstyle=("italic", "normal", "italic", "normal"),
     )
-    if filename_prefix == "counts":
-        if log_axis:
-            ax.set_yscale("log")
+    _apply_y_scale(ax, scale)
     hep.utils.mpl_magic(ax, soft_fail=True)
     ax.set_xlim(
         ax.get_xlim()[0] - n_categories * 0.025,
         ax.get_xlim()[-1] + n_categories * 0.025,
     )
-    fig.savefig(
-        f"{filename_prefix}_{feature_legend_title}_{postfix}.pdf",
-        bbox_inches="tight",
-        facecolor="white",
-        dpi=300,
-    )
-    fig.savefig(
-        f"{filename_prefix}_{feature_legend_title}_{postfix}.png",
-        bbox_inches="tight",
-        facecolor="white",
-        dpi=300,
-    )
+    for ext in ("pdf", "png"):
+        fig.savefig(
+            f"{filename_prefix}_{feature_legend_title}_{postfix}_{scale}.{ext}",
+            bbox_inches="tight",
+            facecolor="white",
+            dpi=300,
+        )
     plt.close()
 
 
@@ -140,7 +150,7 @@ def plot_multi_categorical_time_trend(
     exp_text,
     title_prefix,
     subtitle,
-    log_axis,
+    scale,
     postfix,
 ):
     plt.rcParams["axes.prop_cycle"] = cycler("color", combination_color_sequence)
@@ -180,29 +190,23 @@ def plot_multi_categorical_time_trend(
         ),
         fontstyle=("italic", "normal", "italic", "normal"),
     )
-    if log_axis:
-        ax.set_yscale("log")
-    ax.set_ylim(
-        8e-1,
-        ax.get_ylim()[-1] * 1.05 * 1.05 * 1.05 * 1.05 * 1.05,
-    )
+    _apply_y_scale(ax, scale)
+    if scale == "log":
+        ax.set_ylim(8e-1, ax.get_ylim()[-1] * 1.05 * 1.05 * 1.05 * 1.05 * 1.05)
+    else:
+        ax.set_ylim(0, ax.get_ylim()[-1] * 1.1)
     ax.set_xlim(
         -1,
         n_all_months_for_x_axis,
     )
     hep.utils.mpl_magic(ax, soft_fail=True, N=20)
-    fig.savefig(
-        f"{filename_prefix}_time_trend_by_KoP_{postfix}.pdf",
-        bbox_inches="tight",
-        facecolor="white",
-        dpi=300,
-    )
-    fig.savefig(
-        f"{filename_prefix}_time_trend_by_KoP_{postfix}.png",
-        bbox_inches="tight",
-        facecolor="white",
-        dpi=300,
-    )
+    for ext in ("pdf", "png"):
+        fig.savefig(
+            f"{filename_prefix}_time_trend_by_KoP_{postfix}_{scale}.{ext}",
+            bbox_inches="tight",
+            facecolor="white",
+            dpi=300,
+        )
     plt.close()
 
 
