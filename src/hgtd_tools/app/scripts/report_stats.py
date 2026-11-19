@@ -88,6 +88,11 @@ def main():
         if os.path.exists("output_invalid.txt"):
             os.remove("output_invalid.txt")
         parts_in_categories = {c: util.get_relevant_parts(c)[0] for c in categories}
+        if not any(parts_in_categories.values()):
+            parser.error(
+                f"No parts found for categories {categories}. "
+                "Check the category selection or your DB access."
+            )
 
         interesting_data_all_cats_invalid = {c: dict() for c in categories}
         interesting_data_all_cats_valid = {c: dict() for c in categories}
@@ -189,9 +194,6 @@ def main():
                 multi_count_dict_valid[c][f] = dict(
                     Counter(interesting_data_all_cats_valid[c][f]).items()
                 )
-                multi_count_dict_valid[c][f] = dict(
-                    Counter(interesting_data_all_cats_valid[c][f]).items()
-                )
                 multi_count_dict_fakes[c][f] = dict(
                     Counter(interesting_data_all_cats_fakes[c][f]).items()
                 )
@@ -234,6 +236,10 @@ def main():
                     )
                 )
             )
+
+            if not all_legend_entries:
+                # no parts in the selected categories -> nothing to plot for this feature
+                continue
 
             # need to fill the set of possible legend entries with new values (old
             # and fill with 0)
@@ -283,19 +289,14 @@ def main():
             )
 
             if feature_legend_title == "Uploaded in YYYY-MM":
-                # set of sorted months
-                if all_legend_entries[-1] == "Unknown":
-                    consecutive_months = (
-                        pd.date_range(all_legend_entries[0], all_legend_entries[-2], freq="MS")
-                        .strftime("%Y-%m")
-                        .tolist()
-                    )
-                else:
-                    consecutive_months = (
-                        pd.date_range(all_legend_entries[0], all_legend_entries[-1], freq="MS")
-                        .strftime("%Y-%m")
-                        .tolist()
-                    )
+                # only real months can be fed into date_range; "Unknown" is not a date
+                months = [m for m in all_legend_entries if m != "Unknown"]
+                if not months:
+                    # only parts without an insertion date -> no time trend
+                    continue
+                consecutive_months = (
+                    pd.date_range(months[0], months[-1], freq="MS").strftime("%Y-%m").tolist()
+                )
 
                 x_values = []
                 newly_uploaded = []

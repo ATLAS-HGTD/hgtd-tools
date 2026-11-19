@@ -1,4 +1,7 @@
+import textwrap
+from collections import Counter
 from datetime import datetime
+from pathlib import Path
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -35,6 +38,15 @@ combination_color_sequence = color_sequence1 + color_sequence2
 
 colors_tab20c = mpl.color_sequences["tab20c"]
 
+#: outline colour of every bar segment in the newer plotting functions
+EDGE_COLOR = "#1a1a1a"
+
+#: default grey for de-emphasised stack segments; override per segment via `shaded`
+SHADED_FACE = "#9aa0a6"
+
+#: horizontal distance (in axes widths) between the frame and an outside legend
+LEGEND_X = 1.07
+
 
 # ATLAS plot style
 hep.style.use("ATLAS1")
@@ -58,6 +70,124 @@ def _apply_y_scale(ax, scale):
         ax.set_ylim(top * 1e-4, top)
 
 
+def _apply_x_scale(ax, scale):
+    """x-axis counterpart of _apply_y_scale."""
+    if scale != "log":
+        ax.set_xscale("linear")
+        return
+    ax.set_xscale("log")
+    lower, upper = ax.get_xlim()
+    if lower <= 0:
+        top = upper if upper > 0 else 1.0
+        ax.set_xlim(top * 1e-4, top)
+
+
+def _exp_label(ax, exp_text, title_prefix="", subtitle=False, loc=4):
+    """'ATLAS HGTD | <exp_text>' label with the optional generation line.
+
+    `loc` is mplhep's placement code (0 = best, 1 = upper right, 2 = upper left,
+    3 = lower left, 4 = lower right); the label always stays inside the frame.
+    """
+    hep.label.exp_text(
+        "ATLAS HGTD",
+        " " + exp_text,
+        (
+            f"{title_prefix}Generated with anstein/hgtd-tools~master on "
+            f"{datetime.today().strftime('%Y-%m-%d')}"
+            if subtitle
+            else ""
+        ),
+        loc=loc,
+        fontsize=(
+            rcParams["font.size"] * 1.3,
+            rcParams["font.size"] * 1.3,
+            rcParams["font.size"],
+            rcParams["font.size"] / 1.7,
+        ),
+        fontstyle=("italic", "normal", "italic", "normal"),
+        ax=ax,
+    )
+
+
+def _selection_text(selection_lines, width=64):
+    """Wrapped corner text from a list of free-text lines."""
+    if not selection_lines:
+        return None
+    return "\n".join(
+        line for chunk in selection_lines for line in textwrap.fill(chunk, width=width).split("\n")
+    )
+
+
+def _draw_selection(fig, selection_lines, width=64):
+    """Print the active selection into the lower left corner of a figure.
+
+    Shrinks the axes first, so the text can never overlap the tick labels or
+    the axis title. The 0.45 cap stops a very long selection from eating the
+    plot; shorten the text instead if you hit it.
+    """
+    text = _selection_text(selection_lines, width=width)
+    if not text:
+        return
+    fontsize = rcParams["font.size"] / 1.9
+    n_lines = text.count("\n") + 1
+    height_in = fig.get_size_inches()[1]
+    needed = (n_lines * fontsize * 1.4 + 10) / (height_in * 72) if height_in else 0.0
+    bottom = min(0.45, max(fig.subplotpars.bottom, needed + 0.08))
+    if bottom > fig.subplotpars.bottom:
+        fig.subplots_adjust(bottom=bottom)
+    fig.text(
+        0.01,
+        0.01,
+        text,
+        ha="left",
+        va="bottom",
+        fontsize=fontsize,
+        color="#333333",
+        linespacing=1.4,
+    )
+
+
+def _stem(filename_prefix, postfix, scale, variant=None):
+    """File stem; the normalisation variant is part of the name so that the
+    counts and the fractions figure of one call cannot overwrite each other."""
+    parts = [filename_prefix]
+    if postfix:
+        parts.append(postfix)
+    parts.append(scale)
+    if variant and variant != "none":
+        parts.append(variant)
+    return "_".join(parts)
+
+
+def _save(fig, stem, outdir=None):
+    """Write pdf + png, creating `outdir` if needed. Returns the stem written."""
+    target = Path(outdir) / stem if outdir else Path(stem)
+    if outdir:
+        target.parent.mkdir(parents=True, exist_ok=True)
+    for ext in ("pdf", "png"):
+        fig.savefig(f"{target}.{ext}", bbox_inches="tight", facecolor="white", dpi=300)
+    plt.close(fig)
+    return str(target)
+
+
+def _outside_legend_kwargs(legend_title, legend_kwargs=None):
+    """Legend to the right of the frame, vertically centred on the axes."""
+    kwargs = {
+        "title": legend_title,
+        "ncol": 1,
+        "fontsize": rcParams["font.size"] / 1.3,
+        "facecolor": "white",
+        "edgecolor": "white",
+        "framealpha": 1,
+        "frameon": True,
+        "loc": "center left",
+        "bbox_to_anchor": (LEGEND_X, 0.5),
+        "borderaxespad": 0.0,
+    }
+    kwargs.update(legend_kwargs or {})
+    return kwargs
+
+
 def plot_categorical_bar_stack(
     input_array,
     filename_prefix,
@@ -70,6 +200,8 @@ def plot_categorical_bar_stack(
     scale,
     postfix,
 ):
+    if not legend_entries:
+        return
     plt.rcParams["axes.prop_cycle"] = cycler("color", colors_tab20c + combination_color_sequence)
     n_categories = len(categories)
     fig, ax = plt.subplots(figsize=(12, 8))
@@ -505,6 +637,575 @@ def pie_chart(
     plt.close()
 
 
+# ------------------------------------------------------------------
+# Generic stacked bars / category counts
+# ------------------------------------------------------------------
+
+
+def plot_stacked_bar_by_category(
+    input_array,
+    categories,
+    legend_entries,
+    filename_prefix,
+    legend_title,
+    exp_text,
+    title_prefix="",
+    subtitle=False,
+    scale="lin",
+    postfix="",
+    normalize="none",
+    shaded=None,
+    xlabel=None,
+    ylabel=None,
+    horizontal=False,
+    annotations=None,
+    annotate_totals=True,
+    rotate_xticks=90,
+    selection_lines=None,
+    figsize=(12, 8),
+    labels_outside=False,
+    exp_text_loc=4,
+    legend_kwargs=None,
+    outdir=None,
+):
+    """Stacked bars with one bar per category and one segment per legend entry.
+
+    Parameters:
+        input_array: shape (len(categories), len(legend_entries)); rows are
+            bars, columns are stack segments.
+        categories: bar labels (one per row).
+        legend_entries: segment labels (one per column), in stack order.
+        filename_prefix: file names become
+            ``{filename_prefix}_{postfix}_{scale}[_{normalize}].{pdf,png}``
+        normalize: "none" keeps counts, "row" divides each row by its sum so
+            the bars show fractions (empty rows stay at zero).
+        shaded: {segment: {"alpha": float, "hatch": str, "color": str}} for
+            segments that should read as a de-emphasised group (grey with
+            increasing alpha and different hatches). Segments not listed use
+            the module colour cycle.
+        annotations: optional text per bar, drawn at the end of the stack.
+        annotate_totals: label each stack with its total when `annotations`
+            is None.
+        horizontal: bars grow to the right instead of upwards; `scale` then
+            applies to the x axis. For horizontal bars the stack offset is
+            passed as `left`, for vertical ones as `bottom`.
+        labels_outside: put the legend to the right of the axes (see
+            `LEGEND_X`), so it does not cover the bars.
+        exp_text_loc: where the 'ATLAS HGTD' label goes; 0 puts it above the
+            axes, any other value is forwarded to mplhep (4 = lower right).
+        selection_lines: free-text lines printed in the lower left corner.
+        outdir: directory for the output files; created if missing.
+
+    The category axis is pinned to the bars and the value axis is set *after*
+    mpl_magic, so neither padding nor the annotations can drift.
+    Returns the file stem that was written, or None when there is nothing to
+    draw. Colours follow ``colors_tab20c + combination_color_sequence``.
+    """
+    array = np.asarray(input_array, dtype=float)
+    if array.ndim != 2 or not array.size:
+        return None
+    if array.shape != (len(categories), len(legend_entries)):
+        raise ValueError(
+            f"input_array has shape {array.shape}, expected "
+            f"({len(categories)}, {len(legend_entries)})"
+        )
+    if not array.any():
+        return None
+
+    totals = array.sum(axis=1)
+    plotted = array
+    if normalize == "row":
+        safe = np.where(totals > 0, totals, 1.0)
+        plotted = array / safe[:, None]
+
+    palette = list(colors_tab20c) + list(combination_color_sequence)
+    shaded = shaded or {}
+    plain_entries = [e for e in legend_entries if e not in shaded]
+
+    plt.rcParams["axes.prop_cycle"] = cycler("color", palette)
+    fig, ax = plt.subplots(figsize=figsize)
+
+    positions = np.arange(len(categories))
+
+    left = np.zeros(len(categories))
+    for j, entry in enumerate(legend_entries):
+        values = plotted[:, j]
+        if not values.any():
+            continue
+        style = shaded.get(entry)
+        kwargs = dict(
+            edgecolor=EDGE_COLOR,
+            linewidth=0.8,
+            label=entry,
+            zorder=2,
+        )
+        if style:
+            kwargs.update(
+                color=style.get("color", SHADED_FACE),
+                alpha=style.get("alpha", 0.4),
+                hatch=style.get("hatch"),
+            )
+        else:
+            kwargs["color"] = palette[plain_entries.index(entry) % len(palette)]
+        # ax.barh stacks with `left=`, ax.bar with `bottom=`. Passing the wrong
+        # one reaches Rectangle.set() and raises AttributeError.
+        if horizontal:
+            ax.barh(positions, values, left=left, height=0.6, **kwargs)
+        else:
+            ax.bar(positions, values, bottom=left, width=0.6, **kwargs)
+        left = left + values
+
+    if annotations is None and annotate_totals:
+        annotations = [f"{t:.1%}" if normalize == "row" else f"{t:.0f}" for t in totals]
+    if annotations is not None:
+        pad = (plotted.max() if plotted.size else 0.0) * 0.012 or 0.01
+        for i, (end, text) in enumerate(zip(left, annotations)):
+            if horizontal:
+                # bars grow to the right: label just past the stack tip
+                ax.text(
+                    end + pad,
+                    positions[i],
+                    " " + str(text),
+                    va="center",
+                    ha="left",
+                    fontsize=rcParams["font.size"] / 1.3,
+                )
+            else:
+                # bars grow upwards: label above the bar, centred on it
+                ax.text(
+                    positions[i],
+                    end + pad,
+                    str(text),
+                    va="bottom",
+                    ha="center",
+                    fontsize=rcParams["font.size"] / 1.3,
+                )
+
+    if horizontal:
+        ax.set_yticks(positions, categories)
+        ax.set_ylabel(ylabel or "Category")
+        ax.set_xlabel(xlabel or ("Fraction" if normalize == "row" else "Number"))
+        ax.grid(axis="x", alpha=0.5)
+        ax.grid(axis="x", which="minor", alpha=0.25)
+    else:
+        ax.set_xticks(positions, categories)
+        ax.set_xlabel(xlabel or "Category")
+        ax.set_ylabel(ylabel or ("Fraction" if normalize == "row" else "Number"))
+        for tick in ax.get_xticklabels():
+            tick.set_rotation(rotate_xticks)
+        ax.grid(axis="y", alpha=0.5)
+        ax.grid(axis="y", which="minor", alpha=0.25)
+    ax.set_axisbelow(True)
+
+    if labels_outside:
+        ax.legend(**_outside_legend_kwargs(legend_title, legend_kwargs))
+    else:
+        kwargs = {
+            "title": legend_title,
+            "ncol": 2,
+            "fontsize": rcParams["font.size"] / 1.3,
+            "facecolor": "white",
+            "edgecolor": "white",
+            "framealpha": 1,
+            "frameon": True,
+        }
+        kwargs.update(legend_kwargs or {})
+        ax.legend(**kwargs)
+
+    _exp_label(ax, exp_text, title_prefix, subtitle, loc=exp_text_loc)
+
+    _draw_selection(fig, selection_lines)
+    hep.utils.mpl_magic(ax, soft_fail=True)
+
+    # limits last: mpl_magic must not re-introduce padding around the bars
+    upper = float(left.max()) if left.max() > 0 else 1.0
+    if horizontal:
+        _apply_x_scale(ax, scale)
+        ax.set_xlim(ax.get_xlim()[0] if scale == "log" else 0, upper * 1.10)
+        ax.set_ylim(-0.5, len(categories) - 0.5)
+    else:
+        _apply_y_scale(ax, scale)
+        ax.set_ylim(ax.get_ylim()[0] if scale == "log" else 0, upper * 1.10)
+        ax.set_xlim(-0.5, len(categories) - 0.5)
+
+    return _save(fig, _stem(filename_prefix, postfix, scale, normalize), outdir=outdir)
+
+
+def plot_stacked_bars_from_counts(
+    counts_by_category,
+    filename_prefix,
+    legend_title,
+    exp_text,
+    segment_order=None,
+    category_order=None,
+    segment_totals=None,
+    title_prefix="",
+    subtitle=False,
+    scale="lin",
+    postfix="",
+    shaded=None,
+    xlabel=None,
+    ylabel=None,
+    horizontal=False,
+    rotate_xticks=90,
+    annotations=None,
+    selection_lines=None,
+    legend_kwargs=None,
+    outdir=None,
+    normalize=("none",),
+    figsize=(12, 8),
+    labels_outside=False,
+    exp_text_loc=4,
+):
+    """Draw one stacked bar per category from nested count dicts.
+
+    Takes the shape the CLIs actually have — ``{category: {segment: count}}`` —
+    builds the matrix, orders both axes and writes the requested variants, so a
+    caller never assembles a numpy array by hand.
+
+    Parameters:
+        counts_by_category: {category: {segment: count}}. Missing segments are
+            zero; missing categories are skipped.
+        segment_order / category_order: explicit orders. None sorts by total,
+            descending, ties alphabetically.
+        segment_totals: optional {segment: total} used only for ordering, e.g.
+            segments known from another figure.
+        normalize: variants to write; "none" (counts) and "row" (fractions
+            within each bar). Each variant gets its own file name.
+        labels_outside / exp_text_loc / figsize: forwarded to
+            plot_stacked_bar_by_category.
+        All other parameters are forwarded to plot_stacked_bar_by_category.
+
+    Returns the list of file stems written (empty when there is nothing to draw).
+    """
+    counts_by_category = {
+        category: dict(counts) for category, counts in (counts_by_category or {}).items()
+    }
+    if not counts_by_category:
+        return []
+
+    categories = list(category_order or [])
+    if not categories:
+        totals = Counter({cat: sum(counts.values()) for cat, counts in counts_by_category.items()})
+        categories = sorted(totals, key=lambda c: (-totals[c], c))
+    if not categories:
+        return []
+
+    if segment_order is not None:
+        segments = list(segment_order)
+    else:
+        totals = Counter()
+        for counts in counts_by_category.values():
+            totals.update(counts)
+        if segment_totals:
+            totals.update(segment_totals)
+        segments = sorted(totals, key=lambda s: (-totals[s], s))
+    if not segments:
+        return []
+
+    matrix = np.zeros((len(categories), len(segments)))
+    for i, category in enumerate(categories):
+        counts = counts_by_category.get(category) or {}
+        for j, segment in enumerate(segments):
+            matrix[i, j] = counts.get(segment, 0)
+    if not matrix.any():
+        return []
+
+    written = []
+    for variant in normalize:
+        stem = plot_stacked_bar_by_category(
+            matrix,
+            categories,
+            segments,
+            filename_prefix,
+            legend_title,
+            exp_text,
+            title_prefix=title_prefix,
+            subtitle=subtitle,
+            scale=scale,
+            postfix=postfix,
+            normalize=variant,
+            shaded=shaded,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            horizontal=horizontal,
+            annotations=annotations,
+            rotate_xticks=rotate_xticks,
+            selection_lines=selection_lines,
+            legend_kwargs=legend_kwargs,
+            figsize=figsize,
+            labels_outside=labels_outside,
+            exp_text_loc=exp_text_loc,
+            outdir=outdir,
+        )
+        if stem:
+            written.append(stem)
+    return written
+
+
+def plot_grouped_stacked_bars(
+    input_array,
+    categories,
+    group_labels,
+    legend_entries,
+    filename_prefix,
+    legend_title,
+    exp_text,
+    title_prefix="",
+    subtitle=False,
+    scale="lin",
+    postfix="",
+    normalize="none",
+    shaded=None,
+    xlabel=None,
+    ylabel=None,
+    annotations=None,
+    bar_height=0.42,
+    group_gap=0.02,
+    site_spacing=1.35,
+    separators=True,
+    exp_text_loc=0,
+    selection_lines=None,
+    figsize=(12, 8),
+    legend_kwargs=None,
+    color_keys=None,
+    outdir=None,
+):
+    """Two (or more) stacked bars per category, drawn side by side.
+
+    Used when the same category (a site) carries two populations that should be
+    compared visually — e.g. modules produced there vs hybrids stored there —
+    without merging them into a single stack.
+
+    Parameters:
+        input_array: shape (len(categories), len(group_labels), len(legend_entries)).
+            Rows are categories, the middle axis selects the bar inside the
+            group, the last axis is the stack segment.
+        categories: bar-group labels (one per row), used as y tick labels.
+        group_labels: labels of the bars inside a group, bottom to top.
+        legend_entries: segment labels (one per column), in stack order.
+        normalize: "none" keeps counts, "row" normalises each bar to itself.
+        shaded: {segment: {"alpha": float, "hatch": str, "color": str}} for
+            de-emphasised segments (grey, increasing alpha, distinct hatches).
+        annotations: per-bar text, shape (len(categories), len(group_labels)).
+        bar_height / group_gap: thickness of one bar and the gap between the
+            bars of one group; a small `group_gap` keeps the pair together.
+        site_spacing: distance between categories. Raising it (or lowering
+            `bar_height`) widens the gap between sites relative to the gap
+            inside a pair.
+        separators: draw a faint line between consecutive categories.
+        exp_text_loc: 0 (default) puts the 'ATLAS HGTD' label above the axes.
+        selection_lines: free-text lines printed in the lower left corner.
+        color_keys: one colour key per legend entry; entries sharing a key share
+            a colour. Defaults to the labels themselves.
+        outdir: directory for the output files; created if missing.
+
+    The legend always sits outside, to the right of the frame. Every segment is
+    outlined in `EDGE_COLOR`, in both bars.
+    Returns the file stem written, or None when there is nothing to draw.
+    """
+    array = np.asarray(input_array, dtype=float)
+    if array.ndim != 3 or not array.size:
+        return None
+    if array.shape != (len(categories), len(group_labels), len(legend_entries)):
+        raise ValueError(
+            f"input_array has shape {array.shape}, expected "
+            f"({len(categories)}, {len(group_labels)}, {len(legend_entries)})"
+        )
+    if not array.any():
+        return None
+
+    totals = array.sum(axis=2)  # (n_categories, n_groups)
+    plotted = array
+    if normalize == "row":
+        safe = np.where(totals > 0, totals, 1.0)
+        plotted = array / safe[..., None]
+
+    palette = list(colors_tab20c) + list(combination_color_sequence)
+    shaded = shaded or {}
+
+    if color_keys is None:
+        color_keys = list(legend_entries)
+    if len(color_keys) != len(legend_entries):
+        raise ValueError(
+            f"color_keys has {len(color_keys)} entries, expected {len(legend_entries)}"
+        )
+    key_weights = {}
+    for j, key in enumerate(color_keys):
+        key_weights[key] = key_weights.get(key, 0.0) + float(array[:, :, j].sum())
+    ordered_keys = sorted(key_weights, key=lambda k: (-key_weights[k], str(k)))
+    color_of = {key: palette[i % len(palette)] for i, key in enumerate(ordered_keys)}
+
+    plt.rcParams["axes.prop_cycle"] = cycler("color", palette)
+    fig, ax = plt.subplots(figsize=figsize)
+
+    positions = np.arange(len(categories)) * site_spacing
+    n_groups = len(group_labels)
+    spacing = bar_height + group_gap
+    offsets = (np.arange(n_groups) - (n_groups - 1) / 2.0) * spacing
+
+    left = np.zeros((len(categories), n_groups))
+    labeled = set()
+    for j, entry in enumerate(legend_entries):
+        shade = shaded.get(entry)
+        for g in range(n_groups):
+            values = plotted[:, g, j]
+            if not values.any():
+                continue
+            kwargs = dict(
+                height=bar_height,
+                left=left[:, g],  # horizontal bars: the stack offset is `left`
+                label=entry if entry not in labeled else None,
+                edgecolor=EDGE_COLOR,
+                linewidth=0.8,
+                zorder=2,
+            )
+            if shade:
+                kwargs.update(
+                    color=shade.get("color", SHADED_FACE),
+                    alpha=shade.get("alpha", 0.4),
+                    hatch=shade.get("hatch"),
+                )
+            else:
+                kwargs["color"] = color_of[color_keys[j]]
+            ax.barh(positions + offsets[g], values, **kwargs)
+            labeled.add(entry)
+            left[:, g] = left[:, g] + values
+
+    if annotations is None:
+        annotations = [
+            [
+                f"{group_labels[g]}: {totals[i, g]:.1%}"
+                if normalize == "row"
+                else f"{group_labels[g]}: {totals[i, g]:.0f}"
+                for g in range(n_groups)
+            ]
+            for i in range(len(categories))
+        ]
+    # pad relative to the data range, so fractions (max 1.0) get a visible gap too
+    pad = (plotted.max() if plotted.size else 0.0) * 0.015 or 0.01
+    for i in range(len(categories)):
+        for g in range(n_groups):
+            ax.text(
+                left[i, g] + pad,
+                positions[i] + offsets[g],
+                str(annotations[i][g]),
+                va="center",
+                ha="left",
+                fontsize=rcParams["font.size"] / 1.5,
+            )
+
+    if separators and len(categories) > 1:
+        for i in range(len(categories) - 1):
+            ax.axhline(
+                positions[i] + site_spacing / 2.0,
+                color="0.85",
+                linewidth=0.6,
+                zorder=1,
+            )
+
+    ax.set_yticks(positions, categories)
+    ax.set_ylim(
+        positions[0] - site_spacing / 2.0,
+        positions[-1] + site_spacing / 2.0,
+    )
+    ax.set_ylabel(ylabel or "Site")
+    ax.set_xlabel(xlabel or ("Fraction" if normalize == "row" else "Number"))
+    ax.grid(axis="x", alpha=0.5)
+    ax.grid(axis="x", which="minor", alpha=0.25)
+    ax.set_axisbelow(True)
+
+    ax.legend(**_outside_legend_kwargs(legend_title, legend_kwargs))
+
+    _exp_label(ax, exp_text, title_prefix, subtitle, loc=exp_text_loc)
+
+    _draw_selection(fig, selection_lines)
+    hep.utils.mpl_magic(ax, soft_fail=True)
+
+    # limits last, same reason as in plot_stacked_bar_by_category
+    upper = float(left.max()) if left.max() > 0 else 1.0
+    _apply_x_scale(ax, scale)
+    ax.set_xlim(ax.get_xlim()[0] if scale == "log" else 0, upper * 1.15)
+    ax.set_ylim(
+        positions[0] - site_spacing / 2.0,
+        positions[-1] + site_spacing / 2.0,
+    )
+
+    return _save(fig, _stem(filename_prefix, postfix, scale, normalize), outdir=outdir)
+
+
+def plot_category_counts(
+    labels,
+    values,
+    filename_prefix,
+    exp_text,
+    xlabel=None,
+    ylabel=None,
+    title_prefix="",
+    subtitle=False,
+    scale="lin",
+    postfix="",
+    color=None,
+    annotate=True,
+    rotate_xticks=90,
+    selection_lines=None,
+    figsize=(12, 8),
+    exp_text_loc=4,
+    outdir=None,
+):
+    """Single-colour bar chart of one number per label.
+
+    Used for "which categories exist, and how many of each" — the caller decides
+    the labels (SN prefixes, kinds of part, ...) and their order.
+    Returns the file stem that was written, or None when there is nothing to draw.
+    """
+    if not len(labels):
+        return None
+
+    plt.rcParams["axes.prop_cycle"] = cycler("color", combination_color_sequence)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.bar(
+        list(labels),
+        list(values),
+        color=color or color_sequence1[0],
+        edgecolor=EDGE_COLOR,
+        linewidth=0.8,
+        zorder=2,
+    )
+    if annotate:
+        for x, value in enumerate(values):
+            ax.text(
+                x,
+                value,
+                str(value),
+                ha="center",
+                va="bottom",
+                fontsize=rcParams["font.size"] / 1.3,
+            )
+
+    ax.set_xlabel(xlabel or "Category")
+    ax.set_ylabel(ylabel or "Number of parts")
+    for tick in ax.get_xticklabels():
+        tick.set_rotation(rotate_xticks)
+    ax.grid(axis="y", alpha=0.5)
+    ax.grid(axis="y", which="minor", alpha=0.25)
+    ax.set_axisbelow(True)
+
+    _exp_label(ax, exp_text, title_prefix, subtitle, loc=exp_text_loc)
+    _draw_selection(fig, selection_lines)
+    hep.utils.mpl_magic(ax, soft_fail=True)
+
+    # limits last, and only enough headroom for the annotations
+    _apply_y_scale(ax, scale)
+    top = max(values) if len(values) and max(values) > 0 else 1.0
+    if scale == "log":
+        ax.set_ylim(max(ax.get_ylim()[0], 0.8), top * 1.20)
+    else:
+        ax.set_ylim(0, top * 1.12)
+
+    return _save(fig, _stem(filename_prefix, postfix, scale), outdir=outdir)
+
+
 if __name__ == "__main__":
     # test pie chart plotter
     pie_chart(
@@ -514,4 +1215,44 @@ if __name__ == "__main__":
         "Experiment",
         True,
         "Extra text. ",
+    )
+    # test grouped stacked bars with shaded segments
+    plot_grouped_stacked_bars(
+        [
+            [[10, 2, 1], [4, 0, 2]],
+            [[5, 5, 0], [3, 1, 0]],
+            [[1, 0, 0], [0, 0, 1]],
+        ],
+        ["site_a", "site_b", "site_c"],
+        ["modules", "hybrids at location"],
+        ["20WHNNC", "20WHNND", "0 hybrids"],
+        "test",
+        "Hybrid SN prefix",
+        "Internal",
+        postfix="test",
+        shaded={"0 hybrids": {"alpha": 0.25, "hatch": "//"}},
+        selection_lines=["sites: monitored", 'version contains: "ALTIROC A"'],
+    )
+    # test the counts-dict wrapper (vertical bars, both variants)
+    plot_stacked_bars_from_counts(
+        {
+            "20WHNNC": {"ihep": 12, "mainz": 3},
+            "20WHNND": {"ihep": 4, "cern": 9},
+            "20WHNMI": {"mainz": 7},
+        },
+        "test_locations",
+        "Hybrid location",
+        "Internal",
+        normalize=("none", "row"),
+        labels_outside=True,
+        exp_text_loc=0,
+        postfix="test",
+    )
+    plot_category_counts(
+        ["20WHNNC", "20WHNDC", "20WHNMI"],
+        [120, 80, 5],
+        "test_prefixes",
+        "Internal",
+        exp_text_loc=0,
+        postfix="test",
     )

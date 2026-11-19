@@ -53,6 +53,7 @@ upload-FlexTail-measurement = "hgtd_tools.app.scripts.upload_FlexTail_measuremen
 plot-MO-SU-geo = "hgtd_tools.app.scripts.plot_module_SU_geometry:main"
 order = "hgtd_tools.app.scripts.order:main"
 hgtd-count = "hgtd_tools.app.scripts.count:main"
+module-sites-hybrids = "hgtd_tools.app.scripts.module_sites_hybrids:main"
 report-stats = "hgtd_tools.app.scripts.report_stats:main"
 hgtd-tree = "hgtd_tools.app.scripts.tree:main"
 clever-ship = "hgtd_tools.app.scripts.clever_ship:main"

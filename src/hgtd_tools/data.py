@@ -71,7 +71,9 @@ relevant_location_IDs_by_shortname = {
     "mainz": 1481,
     "mascir": 1581,
     "ustc": 1441,
-    "cern": 1541,  # clean room, where tests are done
+    "cern-cleanroom": 1541,  # clean room, where tests are done
+    "cern": 900,  # somewhere
+    "jsi": 1601,
     "test": 1521,
 }
 ### human-readable manufacturers map to ID
@@ -98,10 +100,6 @@ MO_site_id = {
     "ustc": "U",
     "test": "T",
 }
-ML_sites_to_monitor = ["ifae", "ihep", "lpnhe", "mainz", "mascir"]
-MA_sites_to_monitor = ["ifae", "ihep", "ijclab", "mainz", "mascir"]
-HY_sites_to_monitor = ["ifae", "ihep"]
-S_W_manus_to_monitor = ["IHEP-IME", "USTC-IME"]
 ### defintion of chars in MO SNs: prod
 MO_prod_id = {
     "prod": "M",  # main production
@@ -110,6 +108,17 @@ MO_prod_id = {
     "test": "T",  # test
     "other": "O",  # other
 }
+### known Hybrid prefixes and their human-readable names
+hybrid_SN_human_map = {
+    "20WHPMI": "PacTech",
+    "20WHNNN": "NCAP / NCAP",
+    "20WHNNI": "NCAP / IFAE",
+}
+## items for monitoring
+ML_sites_to_monitor = ["ifae", "ihep", "lpnhe", "mainz", "mascir"]
+MA_sites_to_monitor = ["ifae", "ihep", "ijclab", "mainz", "mascir"]
+HY_sites_to_monitor = ["ifae", "ihep"]
+S_W_manus_to_monitor = ["IHEP-IME", "USTC-IME"]
 ## Slots and their graphical representation
 ### define module geometry for canvas - not to scale!!!
 modLongSide = 80
