@@ -95,6 +95,10 @@ assert len(VBD_BIN_LABELS) == len(VBD_BIN_LOWER_EDGES), (
     "VBD_BIN_LABELS and VBD_BIN_LOWER_EDGES must have the same length; "
     "the last label is the open-ended bin for vbd >= VBD_BIN_LOWER_EDGES[-1]."
 )
+assert VBD_IGNORE_BELOW >= VBD_BIN_LOWER_EDGES[0], (
+    "VBD_IGNORE_BELOW must be >= the lowest bin edge, otherwise values "
+    "between the two would be clipped into the first bin instead of ignored."
+)
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -374,8 +378,12 @@ def assign_vbd_bin(part_record):
     # vbd >= edges[-1] lands in the open-ended ">190V" bin rather than
     # overflowing.
     idx = int(np.searchsorted(edges, vbd, side="right")) - 1
-    idx = max(0, min(idx, len(VBD_BIN_LABELS) - 1))
-    return ("bin", VBD_BIN_LABELS[idx])
+    if idx < 0:
+        return (
+            "ignore",
+            f"VBD ({vbd} V) is below the lowest bin edge {edges[0]} V; excluded from pairing",
+        )
+    return ("bin", VBD_BIN_LABELS[min(idx, len(VBD_BIN_LABELS) - 1)])
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -386,19 +394,25 @@ def assign_vbd_bin(part_record):
 # plus the flat ignored-VBD list, which the caller merges into the
 # main ignored_parts report.
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-def run_pairing_grouped_by_vbd_bin(kept_parts_and_scoring, algorithm):
+def group_by_vbd_bin(kept_parts_and_scoring):
+    """Split kept records into VBD bins.
+
+    Returns (grouped_by_bin, ignored_vbd, kept_in_bins). `kept_in_bins` is the
+    authoritative kept list: records not in it are in `ignored_vbd`, never both.
+    """
     grouped_by_bin = {label: [] for label in VBD_BIN_LABELS}
     ignored_vbd = []
-
     for rec in kept_parts_and_scoring:
         kind, payload = assign_vbd_bin(rec)
         if kind == "ignore":
-            ignored_vbd.append(
-                [rec[0], rec[1], payload]  # same [part_id, part_SN, reason] shape as other ignores
-            )
+            ignored_vbd.append([rec[0], rec[1], payload])
         else:
             grouped_by_bin[payload].append(rec)
+    kept_in_bins = [rec for label in VBD_BIN_LABELS for rec in grouped_by_bin[label]]
+    return grouped_by_bin, ignored_vbd, kept_in_bins
 
+
+def pair_within_vbd_bins(grouped_by_bin, algorithm):
     group_results = []
     for label in VBD_BIN_LABELS:
         parts_in_bin = grouped_by_bin[label]
@@ -412,8 +426,7 @@ def run_pairing_grouped_by_vbd_bin(kept_parts_and_scoring, algorithm):
                 "leftover": leftover,
             }
         )
-
-    return group_results, ignored_vbd
+    return group_results
 
 
 def hybridmatch(
@@ -496,6 +509,19 @@ def hybridmatch(
     # algorithm-ignored parts in the same flat list.
     ignored_parts = manual_ignored_parts + ignored_parts
 
+    # Bin BEFORE reporting: a part leaves the kept list at the same moment it
+    # enters the ignored list, so the two reports stay disjoint.
+    grouped_by_bin, ignored_vbd, kept_in_bins = group_by_vbd_bin(kept_parts_and_scoring)
+    ignored_parts = ignored_parts + ignored_vbd
+    kept_parts_and_scoring = kept_in_bins
+
+    stats = {
+        "n_manual": len(manual_ignored_parts),
+        "n_vbd": len(ignored_vbd),
+        "n_algo": len(ignored_parts) - len(manual_ignored_parts) - len(ignored_vbd),
+        "n_kept": len(kept_parts_and_scoring),
+    }
+
     if printouts:
         print("\nIgnored parts:\n")
         for ip in ignored_parts:
@@ -506,38 +532,22 @@ def hybridmatch(
         print("\n" + "%" * 80)
         print("\n>>> 3. Running pairing algorithm (grouped by VBD bin)...\n")
 
-    # Guard: no parts survived all filters -> skip pairing entirely and
-    # tell the operator why the pool is empty, instead of crashing in
-    # numpy with an IndexError on arr[:, 2].
     if not kept_parts_and_scoring:
-        n_manual = len(manual_ignored_parts)
-        n_algo = len(ignored_parts) - n_manual
-        n_total_seen = len(manual_ignored_parts) + len(kept_parts_and_scoring) + n_algo
         if printouts:
             print(
                 "No parts survived for pairing.\n"
-                f"  - Candidates seen after prepare_parts: {n_total_seen}\n"
-                f"  - Filtered out by --manual_ignore_hybrid_sns: {n_manual}\n"
-                f"  - Filtered out by the matching algorithm: {n_algo}\n"
-                f"  - Surviving candidates: {len(kept_parts_and_scoring)}\n"
+                f"  - Filtered out by --manual_ignore_hybrid_sns: {stats['n_manual']}\n"
+                f"  - Filtered out by VBD < {VBD_IGNORE_BELOW} V / unbinnable VBD: {stats['n_vbd']}\n"
+                f"  - Filtered out by the matching algorithm: {stats['n_algo']}\n"
                 "Skipping pairing. See 'Ignored parts' above for reasons."
             )
-        # In the empty-pool case, return the same shape but with empty
-        # grouped results so the markdown generator doesn't have to
-        # special-case it.
         empty_group_results = [
             {"label": label, "n": 0, "pairs": [], "total": 0.0, "leftover": []}
             for label in VBD_BIN_LABELS
         ]
-        return ignored_parts, kept_parts_and_scoring, empty_group_results, 0.0, []
+        return ignored_parts, kept_parts_and_scoring, empty_group_results, 0.0, [], stats
 
-    # Group by VBD bin and pair within each bin.
-    group_results, ignored_vbd = run_pairing_grouped_by_vbd_bin(
-        kept_parts_and_scoring, algorithm=mode_alias
-    )
-    # Fold the VBD-ignored parts into the main ignored-parts list so the
-    # operator sees them with the same reporting style.
-    ignored_parts = ignored_parts + ignored_vbd
+    group_results = pair_within_vbd_bins(grouped_by_bin, algorithm=mode_alias)
 
     # Aggregate across bins for the console summary.
     all_pairs = [p for gr in group_results for p in gr["pairs"]]
@@ -565,11 +575,11 @@ def hybridmatch(
             print(pairing)
         print()
 
-    return ignored_parts, kept_parts_and_scoring, group_results, total, leftover
+    return ignored_parts, kept_parts_and_scoring, group_results, total, leftover, stats
 
 
 def main():
-    (ignored_parts, kept_parts_and_scoring, group_results, total, leftover) = hybridmatch(
+    (ignored_parts, kept_parts_and_scoring, group_results, total, leftover, stats) = hybridmatch(
         mode_alias,
         location,
         dev,
@@ -630,22 +640,15 @@ def main():
         # Reproduce the same breakdown the console prints so the markdown
         # tells the operator why the pool is empty without them having to
         # re-run the script with verbose output.
-        n_manual = sum(
-            1 for ip in ignored_parts if len(ip) > 2 and "Manually ignored" in str(ip[2])
-        )
-        n_vbd = sum(
-            1
-            for ip in ignored_parts
-            if len(ip) > 2 and isinstance(ip[2], str) and "below" in ip[2] and "V" in ip[2]
-        )
-        n_algo = len(ignored_parts) - n_manual - n_vbd
         n_total_seen = len(ignored_parts) + len(kept_parts_and_scoring)
         md_content += "**No parts survived for pairing; pairing step was skipped.**\n\n"
         md_content += f"- Candidates seen after `prepare_parts`: {n_total_seen}\n"
-        md_content += f"- Filtered out by `--manual_ignore_hybrid_sns`: {n_manual}\n"
-        md_content += f"- Filtered out by VBD < `{VBD_IGNORE_BELOW}` V: {n_vbd}\n"
-        md_content += f"- Filtered out by the matching algorithm: {n_algo}\n"
-        md_content += f"- Surviving candidates: {len(kept_parts_and_scoring)}\n\n"
+        md_content += f"- Filtered out by `--manual_ignore_hybrid_sns`: {stats['n_manual']}\n"
+        md_content += (
+            f"- Filtered out by VBD < `{VBD_IGNORE_BELOW}` V / unbinnable VBD: {stats['n_vbd']}\n"
+        )
+        md_content += f"- Filtered out by the matching algorithm: {stats['n_algo']}\n"
+        md_content += f"- Surviving candidates: {stats['n_kept']}\n\n"
     else:
         # Per-bin sections, then an aggregated summary.
         for gr in group_results:
