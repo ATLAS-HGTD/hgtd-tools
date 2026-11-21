@@ -467,8 +467,8 @@ class App(customtkinter.CTk):
             ),
             ("ProdDB Documentation", "https://hgtd-database.docs.cern.ch/"),
             (
-                "ProdDB Mattermost",
-                "https://mattermost.web.cern.ch/atlas/channels/hgtd-production-database",
+                "HGTD Tools Support",
+                "https://mattermost.web.cern.ch/atlas-hgtd/channels/hgtd-tools-support",
             ),
             ("ProdDB Meetings", "https://indico.cern.ch/category/9458/"),
             ("hgtd-tools gitlab", "https://gitlab.cern.ch/anstein/hgtd-tools"),

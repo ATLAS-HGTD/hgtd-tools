@@ -40,8 +40,8 @@ identified instead of silently disappearing.
 Examples
 --------
     module-sites-hybrids
-    module-sites-hybrids --version-includes-any "ALTIROC A" \
-                         --version-includes-any "ALTIROCA"
+    module-sites-hybrids --version-includes-any "some version" \
+                         --version-includes-any "another"
     module-sites-hybrids --locations monitored --prefix-len 8
     module-sites-hybrids --subtitle False
     module-sites-hybrids --dump-json cache.json

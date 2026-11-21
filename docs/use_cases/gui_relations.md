@@ -101,7 +101,7 @@ contains the actual user input and buttons to perform the parts tree operations.
 
     ![error_API.png](../images/for_user/hgtd-tools/error_API.png)
 
-    Should you get any API errors mentioning something like `Internal Server Error`, or something that is clearly not related to your own connection to the web, please inform the ProdDB team. A link to the mattermost is available on the hgtd-tools GUI sidebar.
+    Should you get any API errors mentioning something like `Internal Server Error`, or something that is clearly not related to your own connection to the web, please inform the ProdDB team. A link to the [mattermost support channel](https://mattermost.web.cern.ch/atlas-hgtd/channels/hgtd-tools-support){target="_blank"} is available on the hgtd-tools GUI sidebar.
 
     **Useful links**
 

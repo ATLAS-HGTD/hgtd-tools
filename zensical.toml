@@ -79,6 +79,7 @@ nav = [
     ]},
     {"Reporting" = [
         "reporting/report_stats.md",
+        "reporting/module_sites_hybrids.md",
         "reporting/order.md",
         "reporting/tree.md",
     ]},

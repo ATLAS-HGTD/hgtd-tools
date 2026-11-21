@@ -1,6 +1,6 @@
 """Shared read/validate layer for the HGTD CLIs.
 
-Used by ``cli_count.py`` (tables, CSV, JSON) and by ``order.py`` (the relation
+Used by ``count.py`` (tables, CSV, JSON) and by ``order.py`` (the relation
 validation report). Everything here is read-only: no part, shipment or tree
 record is ever written.
 

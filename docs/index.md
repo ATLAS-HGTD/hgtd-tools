@@ -51,7 +51,7 @@ The following overview lists the implemented features of `hgtd-tools` and links 
     - IV curve plotting [with CLI script `ivcurve-overlay`](use_cases/ivcurve_plotting.md)
     - Reporting
         - automation with Gitlab CI, using the hgtdbot account
-        - runner script producing overviews / reports: [yields with CLI script `report-stats`](reporting/report_stats.md), [relation validation with CLI script `order`](reporting/order.md), [detector parts tree recursive traversal with CLI script `tree`](reporting/tree.md)
+        - runner script producing overviews / reports: [yields with CLI script `report-stats`](reporting/report_stats.md), [module/hybrid accounting per site with CLI script `module-sites-hybrids`](reporting/module_sites_hybrids.md), [relation validation with CLI script `order`](reporting/order.md), [detector parts tree recursive traversal with CLI script `tree`](reporting/tree.md)
         - note: all CI scripts can also be used locally!
     - Ad-hoc counting and relation checks per kind of part [with CLI script `hgtd-count`](use_cases/count.md), sharing its validation logic with `order` (not run in CI, more for quick queries in command line locally)
     - Flex Tail upload [with CLI script `upload-FlexTail-measurements`](use_cases/FT_upload_instructions.md)
@@ -255,7 +255,7 @@ If you walked through the [install](getting_started/install.md) guide and you ac
 
 If you are planning to contribute, check out the [developer instructions](development/dev.md).
 
-For any problems, do not hesitate to ask on [mattermost](https://mattermost.web.cern.ch/atlas/channels/hgtd-production-database){target="_blank"} or open an [Issue](https://gitlab.cern.ch/anstein/hgtd-tools/-/issues){target="_blank"} after checking the existing issues.
+For any problems, do not hesitate to ask on [mattermost](https://mattermost.web.cern.ch/atlas-hgtd/channels/hgtd-tools-support){target="_blank"} or open an [Issue](https://gitlab.cern.ch/anstein/hgtd-tools/-/issues){target="_blank"} after checking the existing issues.
 
 ### Open points requiring implementation
 New features, bugs, compatibility improvements and other items are collected with the [Issues](https://gitlab.cern.ch/anstein/hgtd-tools/-/issues){target="_blank"} on gitlab.
