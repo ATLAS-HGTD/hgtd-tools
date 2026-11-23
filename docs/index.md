@@ -46,7 +46,7 @@ The following overview lists the implemented features of `hgtd-tools` and links 
 
 ??? success "Additional tools / scripts / automation"
     - Serial Number reservation for module assembly, either by count or from a CSV of serial numbers [with CLI script `SN-reservation`](use_cases/SN_reservation.md)
-    - Hybrid matching for module assembly [with CLI script `hybridmatch`](use_cases/hybrid_matching.md)
+    - Hybrid matching for module assembly, by location or from an explicit list of serial numbers [with CLI script `hybridmatch`](use_cases/hybrid_matching.md)
     - Bulk module assembly relation upload including consistency validation, accepting either one row per relation or one row per Module (with Module registration and serial number reservation) [with CLI script `bulk-module-assembly`](use_cases/bulk_module_assembly.md)
     - IV curve plotting [with CLI script `ivcurve-overlay`](use_cases/ivcurve_plotting.md)
     - Reporting
@@ -97,11 +97,24 @@ If you walked through the [install](getting_started/install.md) guide and you ac
 
     When doing module assembly, you may want to get the "optimal" pairing of hybrids (e.g. for a new week of module production) that optimizes the total sum of paired breakdown voltage differences. For more information on the hybrid matching process, please read [Hybrid Matching](use_cases/hybrid_matching.md).
 
-    Execute the following:
+    By default the candidates come from a location. You can also hand over the serial numbers you already picked — from anywhere, or restricted to the site:
 
     ```shell
+    # everything available at your site
     hybridmatch --location <your-site>
+
+    # exactly these hybrids, wherever they currently are
+    hybridmatch --hybrid-sns 20WH...01,20WH...02
+    hybridmatch --hybrid-sns ./this_week.txt
+
+    # only those of them that are also at the site (default when both are given)
+    hybridmatch --location <your-site> --hybrid-sns ./this_week.txt
+
+    # those hybrids wherever they are, plus the rest of the site
+    hybridmatch --location <your-site> --hybrid-sns ./this_week.txt --location-or-sns
     ```
+
+    A file is one SN per line, `#` starts a comment. Every supplied SN is checked (exists as a Hybrid, valid SN spec, unassembled, and — in the default mode — actually at the site) and any rejection is reported with its reason rather than dropped silently; add `--strict-sns` to turn a rejection into a non-zero exit code, e.g. in CI.
 
 ??? tip "Using the `bulk-module-assembly` script for multiple relation upload including validation"
 

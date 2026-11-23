@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 from argparse import ArgumentParser
 from datetime import UTC, datetime
@@ -23,10 +24,60 @@ parser.add_argument(
 parser.add_argument(
     "--location",
     dest="location",
-    help="Location short name for which to run hybrid matching recommendation.",
+    help="Location short name for which to run hybrid matching recommendation. "
+    "Optional when --hybrid-sns is given; combining both is an intersection "
+    "by default (see --location-or-sns).",
     default=None,
     choices=data.MA_sites_to_monitor,
-    required=True,
+)
+parser.add_argument(
+    "--hybrid-sns",
+    dest="hybrid_sns",
+    help=(
+        "Explicit list of Hybrid SNs to pair, instead of selecting by location. "
+        "Accepted as: (a) a single SN, (b) multiple comma-separated SNs "
+        "(e.g. '20WH...1,20WH...2'), or (c) a path to a .txt-like file with "
+        "one SN per line ('#' starts a comment, blank lines are ignored). "
+        "Duplicates are removed. Every SN is checked against the DB: it must "
+        "exist as a Hybrid, pass the latest SN spec and have no Module parent "
+        "yet (plus the location check when --location is also given). Rejected "
+        "SNs are reported with the reason instead of being dropped silently."
+    ),
+    default=None,
+)
+scope = parser.add_mutually_exclusive_group()
+scope.add_argument(
+    "--location-and-sns",
+    dest="location_scope",
+    action="store_const",
+    const="and",
+    help=(
+        "With both --location and --hybrid-sns: pair only the listed SNs that "
+        "are also at that location (intersection). This is the default; the "
+        "flag exists to make scripts explicit."
+    ),
+)
+scope.add_argument(
+    "--location-or-sns",
+    dest="location_scope",
+    action="store_const",
+    const="or",
+    help=(
+        "With both --location and --hybrid-sns: pair the listed SNs (wherever "
+        "they are) together with every other Hybrid at that location (union). "
+        "The SNs themselves are still checked, just not for their location."
+    ),
+)
+parser.set_defaults(location_scope="and")
+parser.add_argument(
+    "--strict-sns",
+    dest="strict_sns",
+    action="store_true",
+    help=(
+        "[Optional] Exit non-zero if any SN passed via --hybrid-sns was "
+        "rejected and did not make it into the pairing set. The logbook is "
+        "still written. (Default: %(default)s)"
+    ),
 )
 parser.add_argument(
     "--manual_ignore_hybrid_sns",
@@ -70,6 +121,14 @@ parser.add_argument(
     type=int,
 )
 args = parser.parse_args()
+
+if args.location is None and not args.hybrid_sns:
+    parser.error("pass --location, --hybrid-sns, or both")
+if args.location_scope == "or" and not (args.location and args.hybrid_sns):
+    parser.error(
+        "--location-or-sns needs both --location and --hybrid-sns; "
+        "with only one of them the scope is already unambiguous"
+    )
 
 mode_alias = args.mode_alias
 location = args.location
@@ -135,7 +194,7 @@ DESIGN_UNKNOWN_REASON = (
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# Resolve --manual_ignore_hybrid_sns into a clean list of unique SN strings.
+# Resolve --hybrid-sns & --manual_ignore_hybrid_sns into a clean list of unique SN strings.
 # Accepts either an inline value (single SN or comma-separated) or a path
 # to a text file with one SN per line.
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -143,14 +202,15 @@ def _looks_like_file_path(s):
     return os.path.sep in s or s.lower().endswith((".txt", ".list", ".ignore", ".sn", ".sns"))
 
 
-def _parse_manual_ignore_hybrid_sns(raw):
+def _parse_sn_list(raw, flag_name):
+    """Inline SNs (single or comma-separated) or a path to a file of SNs."""
     if raw is None:
         return []
     if os.path.isfile(raw):
         with open(raw) as f:
             sns = [line.strip() for line in f if line.strip() and not line.lstrip().startswith("#")]
     elif _looks_like_file_path(raw):
-        raise FileNotFoundError(f"--manual_ignore_hybrid_sns: file not found: {raw}")
+        raise FileNotFoundError(f"{flag_name}: file not found: {raw}")
     elif "," in raw:
         sns = [s.strip() for s in raw.split(",") if s.strip()]
     else:
@@ -165,24 +225,123 @@ def _parse_manual_ignore_hybrid_sns(raw):
     return deduped
 
 
-manual_ignore_hybrid_sns = _parse_manual_ignore_hybrid_sns(args.manual_ignore_hybrid_sns)
+manual_ignore_hybrid_sns = _parse_sn_list(
+    args.manual_ignore_hybrid_sns, "--manual_ignore_hybrid_sns"
+)
+hybrid_sns = _parse_sn_list(args.hybrid_sns, "--hybrid-sns")
+location_scope = args.location_scope
 dev = util.str2bool(args.dev)
+
+
+SN_REJECT_UNKNOWN = "not found in the DB as a Hybrid (typo, or not registered yet)"
+SN_REJECT_INVALID = "SN does not pass the latest SN spec"
+SN_REJECT_ASSEMBLED = "already has a Module parent (already assembled into a Module)"
+SN_REJECT_LOCATION = "not at the requested location ({location})"
+
+
+def _location_ids(shortname):
+    """Location ids for a shortname; the table may hold a scalar or a sequence."""
+    ids = data.relevant_location_IDs_by_shortname.get(shortname)
+    if ids is None:
+        return set()
+    if isinstance(ids, (list, tuple, set)):
+        return {str(i) for i in ids}
+    return {str(ids)}
+
+
+def resolve_hybrid_sns(hybrids, hybrid_sns, location=None, check_location=True):
+    """Select the requested Hybrids from an already-loaded Hybrid list.
+
+    Every requested SN ends up either in the returned parts list or in
+    `rejected` with a reason, so a typo cannot silently shrink the pairing
+    set. Returns (parts, rejected), rejected entries of the form
+    [sn, reason].
+
+    Checks, in order (cheapest and most fundamental first, so an out-of-scope
+    part costs no API call):
+      1. SN present among the Hybrids loaded from the DB
+      2. SN passes the latest SN spec
+      3. currently at `location`, if `check_location` and a location is given
+      4. no Module parent yet
+
+    "Is a Hybrid" needs no separate test: the list handed in is the Hybrid
+    list, so a non-Hybrid SN simply fails check 1.
+    """
+    by_sn = {}
+    for part in hybrids:
+        by_sn.setdefault(str(part.get("serial_number") or "").strip(), part)
+
+    wanted_ids = _location_ids(location) if (check_location and location is not None) else None
+    parts, rejected = [], []
+    for sn in hybrid_sns:
+        part = by_sn.get(sn)
+        if part is None:
+            rejected.append([sn, SN_REJECT_UNKNOWN])
+            continue
+        if not util.check_SN_valid(sn)[0]:
+            rejected.append([sn, SN_REJECT_INVALID])
+            continue
+        if wanted_ids is not None:
+            part_loc = str((part.get("location") or {}).get("location_id"))
+            if part_loc not in wanted_ids:
+                rejected.append([sn, SN_REJECT_LOCATION.format(location=location)])
+                continue
+        if util.get_parents(part["part_id"], ofKind="Module")[0]:
+            rejected.append([sn, SN_REJECT_ASSEMBLED])
+            continue
+        parts.append(part)
+    return parts, rejected
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Filter Hybrid parts for matching.
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-def prepare_parts(location, dev):
-    parts = util.get_relevant_parts("Hybrid")[0]
-    parts = util.select_parts(
-        parts,
-        location_shortname=location,
-        check_valid_SN_latest_spec=True,
-        no_parents_ofKind="Module",
-    )
+def prepare_parts(location, dev, hybrid_sns=None, location_scope="and"):
+    """Hybrids to pair, in one of three selection modes.
+
+    * only --location        -> the existing location filter, unchanged
+    * only --hybrid-sns      -> exactly the listed SNs, no location check
+    * both, scope "and"      -> listed SNs that are also at the location
+    * both, scope "or"       -> listed SNs (wherever) + everything else at
+                                the location
+
+    Returns (parts, rejected_sns); rejected_sns is empty whenever no SN list
+    is involved, and never contains a SN that made it into `parts`.
+    """
+    hybrids = util.get_relevant_parts("Hybrid")[0]
+
+    if not hybrid_sns:
+        parts = util.select_parts(
+            hybrids,
+            location_shortname=location,
+            check_valid_SN_latest_spec=True,
+            no_parents_ofKind="Module",
+        )
+        rejected_sns = []
+    else:
+        check_location = location is not None and location_scope == "and"
+        parts, rejected_sns = resolve_hybrid_sns(
+            hybrids, hybrid_sns, location=location, check_location=check_location
+        )
+        if location is not None and location_scope == "or":
+            at_location = util.select_parts(
+                hybrids,
+                location_shortname=location,
+                check_valid_SN_latest_spec=True,
+                no_parents_ofKind="Module",
+            )
+            seen = {int(p["part_id"]) for p in parts}
+            parts += [p for p in at_location if int(p["part_id"]) not in seen]
+            # A SN rejected above can still be a legitimate member of the
+            # location population (e.g. rejected for its location in "and"
+            # mode, which "or" does not test). Do not report a part as
+            # rejected while it is being paired.
+            present = {str(p.get("serial_number") or "").strip() for p in parts}
+            rejected_sns = [r for r in rejected_sns if r[0] not in present]
+
     if dev:
         parts = parts[:2]
-    return parts
+    return parts, rejected_sns
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -491,6 +650,9 @@ def hybridmatch(
     manual_ignore_hybrid_sns=[],
     max_workers=4,
     allow_mixed_sensor_designs=False,
+    hybrid_sns=None,
+    location_scope="and",
+    strict_sns=False,
 ):
     if printouts:
         print(
@@ -515,6 +677,9 @@ def hybridmatch(
         print(">>> Settings:")
         print(f"- {mode_alias=}")
         print(f"- {location=}")
+        print(f"- {hybrid_sns=}")
+        print(f"- {location_scope=}")
+        print(f"- {strict_sns=}")
         print(f"- {dev=}")
         print(f"- {manual_ignore_hybrid_sns=}")
         print(f"- {max_workers=}")
@@ -529,8 +694,16 @@ def hybridmatch(
             )
 
         print("\n" + "%" * 80 + "\n")
-        print(">>> 1. Preparing relevant Hybrids at your location...\n")
-    parts = prepare_parts(location, dev)
+        print(">>> 1. Preparing relevant Hybrids ...\n")
+    parts, rejected_sns = prepare_parts(
+        location, dev, hybrid_sns=hybrid_sns, location_scope=location_scope
+    )
+
+    if printouts and rejected_sns:
+        print(f"Rejected SNs from --hybrid-sns ({len(rejected_sns)}):\n")
+        for sn, reason in rejected_sns:
+            print(f"  {sn}: {reason}")
+        print()
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # Apply --manual_ignore_hybrid_sns before any DB work.
@@ -586,6 +759,10 @@ def hybridmatch(
         "n_kept": len(kept_parts_and_scoring),
         "allow_mixed_sensor_designs": allow_mixed_sensor_designs,
         "n_by_design": n_by_design,
+        "hybrid_sns": list(hybrid_sns or []),
+        "location_scope": location_scope,
+        "n_sns_rejected": len(rejected_sns),
+        "rejected_sns": rejected_sns,
     }
 
     if printouts:
@@ -603,6 +780,7 @@ def hybridmatch(
         if printouts:
             print(
                 "No parts survived for pairing.\n"
+                f"  - Rejected before selection (--hybrid-sns): {stats['n_sns_rejected']}\n"
                 f"  - Filtered out by --manual_ignore_hybrid_sns: {stats['n_manual']}\n"
                 f"  - Filtered out by VBD < {VBD_IGNORE_BELOW} V / unbinnable VBD / unknown design: {stats['n_vbd']}\n"
                 f"  - Filtered out by the matching algorithm: {stats['n_algo']}\n"
@@ -657,12 +835,17 @@ def main():
         manual_ignore_hybrid_sns=manual_ignore_hybrid_sns,
         max_workers=max_workers,
         allow_mixed_sensor_designs=allow_mixed_sensor_designs,
+        hybrid_sns=hybrid_sns,
+        location_scope=location_scope,
+        strict_sns=args.strict_sns,
     )
     dt = datetime.now(UTC)
 
     md_content = f"# Hybridmatch logbook\n\nDate / time in UTC: {dt}\n\n## Settings\n\n"
     md_content += f"- `mode_alias` = `{mode_alias}`\n"
-    md_content += f"- `location` = `{location}`\n"
+    md_content += f"- `location` = `{location}`\n" if location else "- `location` = *(not used)*\n"
+    md_content += f"- `hybrid_sns` = `{hybrid_sns}`\n"
+    md_content += f"- `location_scope` = `{location_scope}`\n"
     md_content += f"- `dev` = `{dev}`\n"
     md_content += f"- `manual_ignore_hybrid_sns` = `{manual_ignore_hybrid_sns}`\n"
     md_content += f"- `max_workers` = `{max_workers}`\n"
@@ -680,12 +863,38 @@ def main():
             f"`{list(SENSOR_DESIGN_AXIS)}`\n\n"
         )
 
-    md_content += "## Step 1: Preparing relevant Hybrids at your location\n\n"
-    md_content += (
-        "Hybrids were selected from the DB via `prepare_parts` "
-        "(location filter, latest-SN-spec validity, no Module parents; "
-        "`dev` mode truncates to 2 parts).\n\n"
-    )
+    md_content += "## Step 1: Preparing relevant Hybrids\n\n"
+    if hybrid_sns and location and location_scope == "or":
+        md_content += (
+            f"Union of two populations: the `{len(hybrid_sns)}` requested SNs "
+            f"(wherever they are, still checked for SN spec and an existing "
+            f"Module parent) and every valid, not-yet-assembled Hybrid at "
+            f"location `{location}`. Duplicates are paired once. "
+            "`dev` mode truncates to 2 parts.\n\n"
+        )
+    elif hybrid_sns:
+        md_content += (
+            f"Hybrids were taken from the explicit SN list (`{len(hybrid_sns)}` "
+            "unique SNs after de-duplication)"
+            + (f", restricted to location `{location}`" if location else "")
+            + "; each SN was checked for existence, SN spec and an existing "
+            "Module parent. `dev` mode truncates to 2 parts.\n\n"
+        )
+    else:
+        md_content += (
+            "Hybrids were selected from the DB via `prepare_parts` "
+            "(location filter, latest-SN-spec validity, no Module parents; "
+            "`dev` mode truncates to 2 parts).\n\n"
+        )
+
+    if hybrid_sns:
+        if stats["rejected_sns"]:
+            md_content += "### Rejected SNs from `--hybrid-sns`\n\n"
+            for sn, reason in stats["rejected_sns"]:
+                md_content += f"- `{sn}`: {reason}\n"
+            md_content += "\n"
+        else:
+            md_content += "All requested SNs were accepted.\n\n"
 
     md_content += "## Step 2: Preparing data sources for pairing\n\n"
 
@@ -758,9 +967,22 @@ def main():
         md_content += f"Aggregated total distance: `{total}`\n\n"
 
     suffix = "_mixeddesigns" if allow_mixed_sensor_designs else ""
-    with open(f"pairings_{mode_alias}_{location}{suffix}.md", "w") as f:
+    if hybrid_sns:
+        suffix += f"_sns{len(hybrid_sns)}"
+        if location:
+            suffix += f"_{location_scope}"
+    with open(f"pairings_{mode_alias}_{location or 'sns'}{suffix}.md", "w") as f:
         f.write(md_content)
+
+    if args.strict_sns and stats["rejected_sns"]:
+        print(
+            f"\n[error] {len(stats['rejected_sns'])} SN(s) from --hybrid-sns were "
+            f"rejected (see above); exiting non-zero because of --strict-sns.",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

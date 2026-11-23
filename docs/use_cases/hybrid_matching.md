@@ -2,10 +2,12 @@
 
 ## Data sources
 
-We restrict to Hybrids
+We restrict to Hybrids that are
 
-- at a given site (checking the Location field in DB!),
-- not yet connected to a Module.
+- not yet connected to a Module, and
+- selected either by their **location** (the `Location` field in the DB), by an
+  **explicit list of serial numbers**, or a combination of the two — see
+  [Choosing which Hybrids to pair](#choosing-which-hybrids-to-pair).
 
 For these, in the present implementation, the connection to Sensors (and to Wafer) is checked to obtain data for matching
 
@@ -25,6 +27,68 @@ For the algorithm in the current implementation, we pair by `VBD` of the Sensor.
 - Hybrids for which neither of these techniques yield a score, have to be ignored for the pairing algorithm.
 
 Alongside the `VBD` score, each surviving Hybrid carries the **sensor design** it belongs to (see below), which decides which group it is paired in.
+
+## Choosing which Hybrids to pair
+
+`--location` and `--hybrid-sns` define the candidate pool. At least one of them
+is required; how they combine is controlled by `--location-and-sns` (default)
+and `--location-or-sns`, which are mutually exclusive.
+
+| `--location` | `--hybrid-sns` | scope | pairing pool |
+|---|---|---|---|
+| ✓ | – | – | every valid, unassembled Hybrid currently at that location (the historical behaviour) |
+| – | ✓ | – | exactly the listed SNs; **no location check at all** |
+| ✓ | ✓ | `and` *(default)* | the listed SNs that are also currently at that location |
+| ✓ | ✓ | `or` | the listed SNs (wherever they are) **plus** every valid, unassembled Hybrid at that location |
+
+```shell
+# only by location (unchanged)
+hybridmatch --location mainz
+
+# only by SN, from anywhere
+hybridmatch --hybrid-sns 20W12345678901,20W12345678902
+
+# both, intersection (default) - the SNs must currently be in Mainz
+hybridmatch --location mainz --hybrid-sns ./this_week.txt
+
+# both, union - the SNs wherever they are, plus the rest of Mainz
+hybridmatch --location mainz --hybrid-sns ./this_week.txt --location-or-sns
+```
+
+`--location-and-sns` is the default and changes nothing on its own; it exists so
+that a script which relies on the intersection says so explicitly, and so both
+options appear side by side in `--help`. Passing `--location-or-sns` with only
+one of the two selectors is a usage error, since the union of one population is
+that population.
+
+### Checks on supplied SNs
+
+Every SN passed via `--hybrid-sns` is checked before pairing, cheapest test
+first, so an out-of-scope part costs no API call:
+
+| Check | Rejection reason in the logbook |
+|---|---|
+| present in the DB as a `Hybrid` | `not found in the DB as a Hybrid (typo, or not registered yet)` |
+| passes the latest SN spec | `SN does not pass the latest SN spec` |
+| currently at `--location` *(only in `and` mode)* | `not at the requested location (<location>)` |
+| no `Module` parent yet | `already has a Module parent (already assembled into a Module)` |
+
+A rejected SN never disappears silently: it is listed in the CLI output and in
+its own section of the markdown logbook, and it is counted in the empty-pool
+breakdown. `--strict-sns` turns any rejection into a non-zero exit code (the
+logbook is still written) — useful in CI, where a hand-edited SN list that lost
+entries should fail loudly instead of quietly pairing fewer parts.
+
+Note what is *not* checked at selection time: the Sensor child, the Wafer parent,
+the `VBD` value and the sensor design are resolved in Step 2, exactly as in
+location mode. A supplied SN can therefore still end up in `Ignored parts` with a
+`VBD`- or relation-related reason — the difference is only that its selection was
+explicit.
+
+In `or` mode the two populations are merged by `part_id`, with the SN-resolved
+parts first, so a hand-picked Hybrid that also sits at the location is paired
+once. Rejections that the union would re-admit anyway are dropped from the
+rejected list, so nothing is ever reported as rejected while being paired.
 
 ## Sensor design axis: IHEP vs USTC
 
@@ -94,11 +158,74 @@ conda activate hgtd # or another method with which you activate your environment
 hybridmatch --location <your-site>
 ```
 
-This shows the pairing algorithm results in the CLI, but also stores a report for further use as markdown document using the pattern `pairings_Only_Sensor_VBD_closest_{location}.md`.
+The location is optional: `hybridmatch --hybrid-sns <SN[,SN…]|file>` pairs an explicit list instead, and `--location` together with `--hybrid-sns` narrows or widens that list (see [Choosing which Hybrids to pair](#choosing-which-hybrids-to-pair)).
+
+This shows the pairing algorithm results in the CLI, but also stores a report for further use as markdown document using the pattern `pairings_Only_Sensor_VBD_closest_{location}.md` — or `pairings_Only_Sensor_VBD_closest_sns{N}.md` when no location was given.
 
 ## Optional arguments
 
 The `hybridmatch` script accepts several optional arguments to control which parts are considered and how the data is fetched.
+
+### `--hybrid-sns`
+
+Explicit list of Hybrid SNs to pair, instead of (or in addition to) selecting by
+location. Accepted as:
+
+- A single SN.
+  ```shell
+  hybridmatch --location mainz --hybrid-sns 20W12345678901
+  ```
+- Multiple SNs, comma-separated.
+  ```shell
+  hybridmatch --hybrid-sns 20W12345678901,20W12345678902,20W12345678903
+  ```
+- A path to a `.txt`-like file with one SN per line. Blank lines are ignored,
+  lines starting with `#` are comments, duplicates are collapsed.
+  ```shell
+  hybridmatch --location mainz --hybrid-sns ./this_week.txt
+  ```
+
+  ```text
+  # Hybrids for the Monday assembly slot
+  20W12345678901
+  20W12345678902
+  ```
+
+Same parsing as `--manual_ignore_hybrid_sns`, including the file-vs-inline
+detection. Every SN is validated (see [Checks on supplied SNs](#checks-on-supplied-sns)).
+`--location` is optional when this flag is given; without it, the SNs are paired
+regardless of where they currently sit.
+
+### `--location-and-sns` / `--location-or-sns`
+
+How `--location` and `--hybrid-sns` combine. Mutually exclusive, default `and`.
+
+| flag | effect with both selectors |
+|---|---|
+| `--location-and-sns` *(default)* | intersection: only the listed SNs that are also at that location |
+| `--location-or-sns` | union: the listed SNs wherever they are, plus every other Hybrid at that location |
+
+```shell
+hybridmatch --location mainz --hybrid-sns ./this_week.txt                  # intersection
+hybridmatch --location mainz --hybrid-sns ./this_week.txt --location-or-sns # union
+```
+
+`--location-or-sns` requires both selectors — combining it with only one is a
+usage error, because the union of one population is that population. Neither flag
+is needed when only one selector is used.
+
+### `--strict-sns`
+
+Exit non-zero if any SN from `--hybrid-sns` was rejected and did not make it into
+the pairing set. The markdown logbook is written either way, so the reasons are
+still available.
+
+```shell
+hybridmatch --location mainz --hybrid-sns ./this_week.txt --strict-sns
+```
+
+Without it, a misspelled SN is reported loudly but the run continues on the rest;
+with it, a CI job fails instead of silently producing a smaller pairing.
 
 ### `--allow-mixed-sensor-designs`
 
@@ -145,7 +272,7 @@ Accepted as:
 
 Manually-ignored parts are reported in the output with the reason `Manually ignored by user via --manual_ignore_hybrid_sns` and excluded from the pairing step. They do not consume any DB calls during scoring (the filter runs after `prepare_parts` and before the per-part data-source lookups).
 
-If a SN listed here does not exist at the chosen `--location` (or was already filtered out by `prepare_parts` for another reason), it is silently skipped.
+If a SN listed here does not exist in the candidate pool — not a valid unassembled Hybrid, not at the chosen `--location`, or not among the SNs passed via `--hybrid-sns` — it is silently skipped. This flag only ever removes parts; it cannot add one that the selectors did not provide. It is applied after `prepare_parts` and before any per-part DB work, so it behaves identically in all three selection modes.
 
 ### `--dev`
 
@@ -172,8 +299,8 @@ Notes:
 
 The script prints the full pipeline to the CLI:
 
-1. **Settings** — the values of `--mode-alias`, `--location`, `--dev`, `--manual_ignore_hybrid_sns`, `--max-workers`, `--allow-mixed-sensor-designs`, the active VBD-bin configuration (`VBD_IGNORE_BELOW` plus the list of bin labels), and an explicit line stating whether the sensor designs are mixed or enforced (with the list of designs).
-2. **Step 1** — relevant Hybrids at the chosen location.
+1. **Settings** — the values of `--mode-alias`, `--location` (or a note that it is not used), `--hybrid-sns`, the effective `location_scope` (`and` / `or`), `--dev`, `--manual_ignore_hybrid_sns`, `--max-workers`, `--allow-mixed-sensor-designs`, `--strict-sns`, the active VBD-bin configuration (`VBD_IGNORE_BELOW` plus the list of bin labels), and an explicit line stating whether the sensor designs are mixed or enforced (with the list of designs).
+2. **Step 1** — the candidate Hybrids: selected by location, from the explicit SN list, or the union of both. In SN mode the section states how many unique SNs were requested and lists every rejection with its reason; `All requested SNs were accepted.` is printed when there are none.
 3. **Step 2** — per-part decision: either in `Ignored parts` (with reason) or in `Kept parts for matching` (with the `VBD` score that will be used for pairing, and the resolved sensor design). A short `Kept parts per sensor design: {...}` line summarises how many parts each design contributed.
 4. **Step 3** — pairing algorithm, run per group. For each group in `(design, label)` order, the CLI prints:
 
@@ -184,17 +311,27 @@ The script prints the full pipeline to the CLI:
 
     After the per-group detail, an aggregated summary is printed: the per-group leftovers (across any odd-count groups), the aggregated total distance, and the aggregated list of optimal pairings.
 
-A markdown report is also written next to the script, using the pattern `pairings_<mode-alias>_<location>.md`, or `pairings_<mode-alias>_<location>_mixeddesigns.md` when `--allow-mixed-sensor-designs` is set. It contains the same information in a structured form. The markdown includes:
+A markdown report is also written next to the script, using the pattern `pairings_<mode-alias>_<location>.md`. Without `--location` the location part becomes `sns<N>`, with `N` the number of unique SNs. The suffix chain grows with the options, in this order:
+
+| Option | Suffix |
+|---|---|
+| `--allow-mixed-sensor-designs` | `_mixeddesigns` |
+| `--hybrid-sns` | `_sns<N>` with `N` = number of unique SNs |
+| `--hybrid-sns` together with `--location` | `_<scope>`, i.e. `_and` or `_or` |
+
+So `hybridmatch --location mainz --hybrid-sns ./w46.txt --location-or-sns` writes `pairings_Only_Sensor_VBD_closest_mainz_sns12_or.md`, and a run without `--location` writes `pairings_Only_Sensor_VBD_closest_sns12.md`. The report contains the same information as the CLI in a structured form. The markdown includes:
 
 - the `Ignored parts` list (covering parts excluded by `VBD < VBD_IGNORE_BELOW`, by an undeterminable sensor design, and by the matching algorithm) and the `Kept parts for matching` list;
 - a `Kept parts per sensor design` breakdown;
+- a `Rejected SNs from --hybrid-sns` section when an SN list was used, or `All requested SNs were accepted.`;
 - one section per group, titled with the group name (e.g. `### Group \`IHEP | 150-160V\` (7 parts)`), with its own leftover (if any), total distance, and optimal pairings;
 - an aggregated section summarising the totals and leftover across all groups;
 - the empty-pool breakdown if no part survived.
 
 ## Guardrails
 
-- If the candidate pool is empty after filtering, the pairing step is skipped and a clear explanation is printed (candidates seen, filtered out by `--manual_ignore_hybrid_sns`, filtered out by the matching algorithm, survivors). The markdown logbook is still produced, with every group present and empty so the structure stays comparable between runs.
+- Every SN passed via `--hybrid-sns` is either paired or reported: unknown, failing the SN spec, at the wrong location (`and` mode only) or already assembled all produce a named reason in the CLI and the logbook. With `--strict-sns` the run then exits non-zero, after the logbook has been written.
+- If the candidate pool is empty after filtering, the pairing step is skipped and a clear explanation is printed (candidates seen, rejected `--hybrid-sns` entries, filtered out by `--manual_ignore_hybrid_sns`, filtered out by the matching algorithm, survivors). The markdown logbook is still produced, with every group present and empty so the structure stays comparable between runs.
 - If a Hybrid's sensor design cannot be determined from either the Sensor or the Wafer SN, it is reported in `Ignored parts` with the reason `Sensor design (IHEP/USTC) could not be determined from the Sensor/Wafer SN; …` and excluded — because non-mixed pairing needs the design to place the part in a group. With `--allow-mixed-sensor-designs` such a part is kept instead, since the design no longer gates pairing.
 - If a per-part lookup raises an unhandled exception, it is converted into an `Ignored parts` entry with reason `Unhandled exception during scoring: <ExceptionType>: <message>`, so a single bad row does not abort the whole run.
 
