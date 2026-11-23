@@ -234,6 +234,7 @@ def select_parts(
     sn_does_include_any=None,
     sn_chars_9_to_10_eq=None,
     version_does_include_any=None,  # search for things like ["ALTIROC A", "ALTIROCA"]
+    comment_does_include_any=None,
     name_label_does_include=None,  # case-insensitive
     name_label_does_not_include=None,  # case-insensitive
     check_valid_SN_latest_spec=False,
@@ -296,6 +297,17 @@ def select_parts(
         alts = [str(alt) for alt in version_does_include_any if str(alt).strip()]
         if alts:
             parts = [iP for iP in parts if any(alt in str(iP["version"]) for alt in alts)]
+    if comment_does_include_any is not None:  # case-insensitive, OR over alternatives
+        # A bare string is a single alternative and is NOT split on commas or
+        # whitespace: free-text comments contain both, so splitting would
+        # silently turn one phrase into several unrelated substring matches.
+        if isinstance(comment_does_include_any, str):
+            alts = [comment_does_include_any]
+        else:
+            alts = list(comment_does_include_any)
+        alts = [str(alt).strip().lower() for alt in alts if str(alt).strip()]
+        if alts:
+            parts = [iP for iP in parts if any(alt in part_comment(iP).lower() for alt in alts)]
     if name_label_does_include is not None:  # case-insensitive
         parts = [
             iP

@@ -29,6 +29,7 @@ hgtd-count Module                                     # one Kind of Part
 hgtd-count Module --validate --group-by manufacturer   # + relation check, per site
 hgtd-count --cats public                               # every public kind
 hgtd-count Module --version-includes-any "ALTIROC A"      # version filter
+hgtd-count Hybrid --comment-includes-any "do not use"     # comment filter
 ```
 
 ### What is counted
@@ -140,6 +141,7 @@ expected position, otherwise the part is *failed*.
 | `--sn-includes-any TEXT` | SN contains any of these whitespace-separated substrings |
 | `--sn-chars-9-10 N` | SN characters 10 and 11 equal `N` (SNs shorter than 11 chars are dropped) |
 | `--version-includes-any TEXT` | `version` contains `TEXT`; repeat the flag for several alternatives |
+| `--comment-includes-any TEXT` | `comment_description` contains `TEXT`, case-insensitive; repeat the flag for several alternatives |
 | `--name-label-includes TEXT` | `name_label` contains `TEXT`, case-insensitive |
 | `--name-label-excludes TEXT` | `name_label` does **not** contain `TEXT`, case-insensitive |
 | `--no-parents-of-kind KOP` | has no parent of Kind of Part `KOP` |
@@ -211,7 +213,7 @@ Some      4120      3811   3620       61   130
 
 | format | content |
 |---|---|
-| `text` | aligned table, plus the `Sites:` / `Filters:` header and any `--list` output |
+| `text` | aligned table, plus the `Sites:` / `Filters:` header (naming every active filter, including `comment_does_include_any`) and any `--list` output |
 | `md` | the same as a Markdown table under a `# HGTD parts count` heading |
 | `csv` | the table only, for spreadsheets and diffs |
 | `json` | the whole report structure, including the part records and the raw validation results |
@@ -267,27 +269,47 @@ Some      4120      3811   3620       61   130
       --version-includes-any "ALTIROC-A" --version-includes-any "ALTRIOC A" \
       --format csv -o modules_altiroc.csv
 
+    # modules flagged in the comment field, e.g. for rework
+    hgtd-count Module --comment-includes-any "do not use" --comment-includes-any "broken"
+
+    # modules reserved for a specific task, per site, with relation check
+    hgtd-count Module --sites monitored --validate --group-by manufacturer \
+        --comment-includes-any reserved
+
     # quick smoke test before a long run
     hgtd-count Hybrid --validate --dev 10
 ```
 
 ## Behaviour notes
 
-!!! warning "`--version-includes-any` takes values verbatim"
-    Unlike `--sn-includes-any`, the version filter does **not** split on
-    whitespace or commas, because a version string may contain a space
-    (`ALTIROC A`). Each flag occurrence is one alternative:
+!!! warning "`--version-includes-any` and `--comment-includes-any` take values verbatim"
+    Unlike `--sn-includes-any`, neither filter splits on whitespace or commas,
+    because a version string or a free-text comment may contain a space
+    (`ALTIROC A`, `do not use`). Each flag occurrence is one alternative:
 
     ```bash
     hgtd-count Module --version-includes-any "ALTIROC A"                        # one alternative
     hgtd-count Module --version-includes-any "ALTIROC A" --version-includes-any ALTIROCA
     hgtd-count Module --version-includes-any "ALTIROC A,ALTIROCA"               # one literal, matches nothing
+    hgtd-count Hybrid --comment-includes-any "do not use" --comment-includes-any reserved
     ```
 
     Passing a comma-joined value in a single flag is therefore a silent
-    no-match, not an error. The match is a case-sensitive substring test, so
-    `ALTIROC A` does not match `ALTIROCA` or `ALTIROC-A`; dump the distinct
-    values first (see Examples) when the result is unexpectedly empty.
+    no-match, not an error.
+
+    **The two differ in case sensitivity.** `--version-includes-any` is a
+    case-sensitive substring test, so `ALTIROC A` does not match `ALTIROCA` or
+    `ALTIROC-A`; dump the distinct values first (see Examples) when the result
+    is unexpectedly empty. `--comment-includes-any` is **case-insensitive**, so
+    `do not use` also matches `Do not use` and `DO NOT USE`. Comments are
+    free text typed by hand, and the capitalisation varies between them.
+
+!!! note "`--comment-includes-any` matches substrings, not words"
+    The test is `TEXT in comment_description`, so `broken` matches `not broken`
+    as well as `broken`. To exclude, negate at the shell level or narrow with
+    another filter — there is no `--comment-excludes` counterpart. Parts with no
+    comment at all (empty or absent `comment_description`) never match, so this
+    filter removes them from the count.
 
 !!! note "`--sites` filters by manufacturer, not by location"
     For sensors the monitored list holds manufacturer names (`IHEP-IME`,

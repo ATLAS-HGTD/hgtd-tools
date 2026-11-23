@@ -23,8 +23,9 @@ Examples
     hgtd-count Module --validate --group-by manufacturer
     hgtd-count "Detector Unit" --sites monitored --validate
     hgtd-count Hybrid --sn-includes-any "20WHY 20WHM" --list valid
-    hgtd-count ASIC --version-includes-any "ALTIROC A"
-    hgtd-count ASIC --version-includes-any "ALTIROC A" --version-includes-any ALTIROCA
+    hgtd-count Module --version-includes-any "ALTIROC A"
+    hgtd-count Module --version-includes-any "ALTIROC A" --version-includes-any ALTIROCA
+    hgtd-count Hybrid --comment-includes-any reserved --comment-includes-any "do not use"
     hgtd-count --cats public --format md -o overview.md
 """
 
@@ -296,6 +297,16 @@ def _add_filter_arguments(parser):
         "verbatim: no whitespace or comma splitting.",
     )
     parser.add_argument(
+        "--comment-includes-any",
+        action="append",
+        default=None,
+        metavar="TEXT",
+        help="Case-insensitive: keep parts whose 'comment_description' contains "
+        "any of these substrings. Repeat the flag for alternatives containing "
+        "spaces, e.g. --comment-includes-any 'do not use'. Values are taken "
+        "verbatim: no whitespace or comma splitting.",
+    )
+    parser.add_argument(
         "--name-label-includes",
         default=None,
         metavar="TEXT",
@@ -429,6 +440,7 @@ def build_filters(args):
         "sn_does_include_any": args.sn_includes_any,
         "sn_chars_9_to_10_eq": args.sn_chars_9_10,
         "version_does_include_any": args.version_includes_any,
+        "comment_does_include_any": args.comment_includes_any,
         "name_label_does_include": args.name_label_includes,
         "name_label_does_not_include": args.name_label_excludes,
         "no_parents_ofKind": args.no_parents_of_kind,

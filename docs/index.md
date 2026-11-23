@@ -249,7 +249,7 @@ If you walked through the [install](getting_started/install.md) guide and you ac
       --format csv -o modules_altiroc.csv
     ```
 
-    Filters compose with AND and cover location, manufacturer, SN substrings, SN characters 10–11, version strings, name labels and whether a part has parents/children of a given kind. `--group-by manufacturer` or `location` adds a per-site breakdown, `--list` appends the serial numbers of one category, and `--format {text,md,csv,json}` controls the output. Use `--dev N` to try a query on a few parts before running it on the full set.
+    Filters compose with AND and cover location, manufacturer, SN substrings, SN characters 10–11, version strings, name labels, comment substrings and whether a part has parents/children of a given kind. `--version-includes-any` and `--comment-includes-any` are repeatable for alternatives containing spaces, but they differ in case sensitivity: version matching is case-sensitive, comment matching is not. `--group-by manufacturer` or `location` adds a per-site breakdown, `--list` appends the serial numbers of one category, and `--format {text,md,csv,json}` controls the output. Use `--dev N` to try a query on a few parts before running it on the full set.
 
 ## Contributing
 

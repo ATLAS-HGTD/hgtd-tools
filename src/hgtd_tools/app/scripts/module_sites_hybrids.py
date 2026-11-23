@@ -27,8 +27,9 @@ first part of the file name, so a run writes e.g.
     fractions_hybrid_prefix_by_location_7chars_monitored_lin.pdf
     hybrid_sn_prefixes_7chars_monitored_lin.pdf
 
-The active selection (sites, version / name_label / SN filters, valid-SN rule)
-is printed in the lower left corner and stored in the JSON cache. Figures go
+The active selection (sites, version / comment / name_label / SN filters, valid-SN rule)
+is printed in the lower left corner and stored in the JSON cache; the prefix census,
+which applies none of these filters, says so instead. Figures go
 into a directory named after the selection, e.g.
 ``plots/validSNs_sitesMonitored_locAll_versionALTIROC_A/``.
 
@@ -44,6 +45,8 @@ Examples
                          --version-includes-any "another"
     module-sites-hybrids --locations monitored --prefix-len 8
     module-sites-hybrids --subtitle False
+    module-sites-hybrids --comment-includes-any "whatever comment" \
+                         --comment-includes-any "or another one"
     module-sites-hybrids --dump-json cache.json
     module-sites-hybrids --from-json cache.json
 """
@@ -251,6 +254,7 @@ def hybrid_location_census(
     prefix_len=7,
     only_valid=True,
     version_alternatives=None,
+    comment_alternatives=None,
     info=None,
 ):
     """Hybrids grouped by the LOCATION they are currently at.
@@ -270,6 +274,8 @@ def hybrid_location_census(
     hybrids, loaded = parts_query.load_parts(HYBRID_KIND)
     if version_alternatives:
         hybrids = util.select_parts(hybrids, version_does_include_any=version_alternatives)
+    if comment_alternatives:
+        hybrids = util.select_parts(hybrids, comment_does_include_any=comment_alternatives)
     if only_valid:
         hybrids, _, _ = parts_query.split_by_sn(hybrids, MODE_HYBRID)
 
@@ -311,12 +317,20 @@ def _site_index(parts, sites):
     return index
 
 
-def _hybrid_prefixes(module_part_id, prefix_len, version_alternatives, only_valid):
+def _hybrid_prefixes(
+    module_part_id,
+    prefix_len,
+    version_alternatives,
+    only_valid,
+    comment_alternatives=None,
+):
     """SN prefixes of a module's Hybrid children (optionally filtered)."""
     records, _ = util.get_children(module_part_id, onlyNonDeleted=True, ofKind=HYBRID_KIND)
     nodes = [r["part"] for r in records if isinstance(r.get("part"), dict)]
     if version_alternatives:
         nodes = util.select_parts(nodes, version_does_include_any=version_alternatives)
+    if comment_alternatives:
+        nodes = util.select_parts(nodes, comment_does_include_any=comment_alternatives)
     if only_valid:
         nodes, _, _ = parts_query.split_by_sn(nodes, MODE_HYBRID)
     return [_prefix(n.get("serial_number"), prefix_len) for n in nodes]
@@ -327,6 +341,7 @@ def fetch_records(
     sites="monitored",
     filters=None,
     hybrid_version_alternatives=None,
+    hybrid_comment_alternatives=None,
     only_valid=True,
     dev=None,
     workers=4,
@@ -358,6 +373,7 @@ def fetch_records(
                 prefix_len,
                 hybrid_version_alternatives,
                 only_valid,
+                comment_alternatives=hybrid_comment_alternatives,
             )
             error = None
         except parts_query.API_ERRORS as exc:
@@ -522,6 +538,15 @@ def selection_lines(args):
         lines.append(f'name_label contains: "{args.name_label_includes}"')
     if args.name_label_excludes:
         lines.append(f'name_label excludes: "{args.name_label_excludes}"')
+    if args.comment_includes_any:
+        lines.append(
+            "module comment contains: " + ", ".join(f'"{v}"' for v in args.comment_includes_any)
+        )
+    if args.hybrid_comment_includes_any:
+        lines.append(
+            "hybrid comment contains: "
+            + ", ".join(f'"{v}"' for v in args.hybrid_comment_includes_any)
+        )
     if args.sn_includes_any:
         lines.append(f'serial number contains: "{args.sn_includes_any}"')
     lines.append("SNs valid only" if args.only_valid else "including invalid / fake SNs")
@@ -529,6 +554,19 @@ def selection_lines(args):
         "locations: all known" if args.locations == "all" else "locations: monitored sites only"
     )
     return lines
+
+
+def census_selection_lines(args):
+    """Corner text for the prefix census.
+
+    Figure 3 counts every hybrid in the DB (hybrid_census applies no filters),
+    so printing the module / hybrid filters there would advertise effects they
+    do not have. Only what actually shapes the figure is listed.
+    """
+    return [
+        "all hybrids in the DB, no part filters applied",
+        f"SN prefix: first {args.prefix_len} characters",
+    ]
 
 
 # === Output: directory
@@ -565,6 +603,12 @@ def output_dir_name(args):
         tokens.append("label" + util.sanitize(args.name_label_includes))
     if args.name_label_excludes:
         tokens.append("nolabel" + util.sanitize(args.name_label_excludes))
+    if args.comment_includes_any:
+        tokens.append("comment" + "_".join(util.sanitize(v) for v in args.comment_includes_any))
+    if args.hybrid_comment_includes_any:
+        tokens.append(
+            "hyComment" + "_".join(util.sanitize(v) for v in args.hybrid_comment_includes_any)
+        )
     if args.sn_includes_any:
         tokens.append("sn" + util.sanitize(args.sn_includes_any))
     if args.prefix_len != 7:
@@ -626,11 +670,29 @@ def build_parser():
         "--version-includes-any 'ALTIROC A'. Values are verbatim.",
     )
     parser.add_argument(
+        "--comment-includes-any",
+        action="append",
+        default=None,
+        metavar="TEXT",
+        help="Case-insensitive: keep modules whose 'comment_description' contains "
+        "any of these substrings. Repeat the flag for alternatives containing "
+        "spaces, e.g. --comment-includes-any 'do not use'. Values are taken "
+        "verbatim: no whitespace or comma splitting.",
+    )
+    parser.add_argument(
         "--hybrid-version-includes-any",
         action="append",
         default=None,
         metavar="TEXT",
         help="Same filter, applied to the Hybrid children instead.",
+    )
+    parser.add_argument(
+        "--hybrid-comment-includes-any",
+        action="append",
+        default=None,
+        metavar="TEXT",
+        help="Same filter on 'comment_description', applied to the Hybrid "
+        "children and to the hybrids in the location census.",
     )
     parser.add_argument(
         "--name-label-includes",
@@ -732,6 +794,7 @@ def build_filters(args):
     """Keyword arguments for util.select_parts (None values are no-ops)."""
     return {
         "version_does_include_any": args.version_includes_any,
+        "comment_does_include_any": args.comment_includes_any,
         "name_label_does_include": args.name_label_includes,
         "name_label_does_not_include": args.name_label_excludes,
         "sn_does_include_any": args.sn_includes_any,
@@ -766,13 +829,16 @@ def main(argv=None):
                 args.hybrid_version_includes_any,
                 args.name_label_includes,
                 args.name_label_excludes,
+                args.comment_includes_any,
+                args.hybrid_comment_includes_any,
                 args.sn_includes_any,
             ]
         ):
             info(
                 "[warn] filters are applied when the cache is written, not when it "
-                "is read - the --version/--name-label/--sn filters are ignored for "
-                "--from-json. Re-run without --from-json to change the selection."
+                "is read - the --version / --comment / --name-label / --sn filters "
+                "(and their --hybrid-* variants) are ignored for --from-json. "
+                "Re-run without --from-json to change the selection."
             )
         if not hybrid_by_site:
             info(
@@ -800,6 +866,7 @@ def main(argv=None):
             args.prefix_len,
             only_valid=args.only_valid,
             version_alternatives=args.hybrid_version_includes_any,
+            comment_alternatives=args.hybrid_comment_includes_any,
             info=info,
         )
 
@@ -808,6 +875,7 @@ def main(argv=None):
             sites=args.sites,
             filters=filters,
             hybrid_version_alternatives=args.hybrid_version_includes_any,
+            hybrid_comment_alternatives=args.hybrid_comment_includes_any,
             only_valid=args.only_valid,
             dev=args.dev,
             workers=args.max_workers,
@@ -999,7 +1067,7 @@ def main(argv=None):
             postfix=postfix,
             rotate_xticks=90,
             exp_text_loc=0,
-            selection_lines=plot_selection,
+            selection_lines=census_selection_lines(args),
             outdir=outdir,
         )
         if stem:

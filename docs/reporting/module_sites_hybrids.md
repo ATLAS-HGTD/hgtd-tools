@@ -6,6 +6,8 @@ Module and hybrid counts come from the same read layer that `hgtd-count` and the
 
 Classification is purely serial-number based, as everywhere else: hybrids and modules are split with `parts_query.split_by_sn()`, and only *valid* serial numbers are used unless `--all-parts` is given. A module is then categorised by the SN prefix of its two Hybrid children — same prefix gives that prefix, two different prefixes give a `A + B` entry of their own. Modules with 0, 1 or more than two hybrids cannot be assigned a prefix and land in three grey hatched buckets.
 
+The prefix census figure is the one exception: it counts every hybrid in the DB and applies no filter at all, which its corner text states.
+
 | Property | Value |
 |---|---|
 | **Script** | `hgtd_tools/app/scripts/module_sites_hybrids.py` |
@@ -22,6 +24,7 @@ Classification is purely serial-number based, as everywhere else: hybrids and mo
 module-sites-hybrids                                    # monitored sites, all known locations, valid SNs
 module-sites-hybrids --locations monitored              # restrict the location universe to the monitored sites
 module-sites-hybrids --version-includes-any "some version" --version-includes-any "another"
+module-sites-hybrids --comment-includes-any reserved --comment-includes-any "do not use"
 module-sites-hybrids --prefix-len 8 --scale log
 module-sites-hybrids --hide-non-two                     # drop the 0 / 1 / >2 hybrid buckets
 module-sites-hybrids --no-plots                         # tables only, no figures
@@ -36,7 +39,9 @@ module-sites-hybrids --from-json cache.json --postfix somethingcustom
 | `--sites` | `monitored` | `monitored` (the site list `data` defines for the Module Assembly mode) or comma-separated manufacturer shortnames, e.g. `ihep,mainz`. |
 | `--locations` | `all` | Location universe of the per-prefix figure: `all` uses every shortname in `data.relevant_location_IDs_by_shortname`, `monitored` only the monitored sites. |
 | `--version-includes-any` | *(none)* | Keep modules whose `version` contains any of these substrings. Repeat the flag for alternatives containing spaces. Values are verbatim (case-sensitive). |
+| `--comment-includes-any` | *(none)* | Case-insensitive: keep modules whose `comment_description` contains any of these substrings. Repeat the flag for alternatives containing spaces. |
 | `--hybrid-version-includes-any` | *(none)* | Same filter, applied to the Hybrid children instead. |
+| `--hybrid-comment-includes-any` | *(none)* | Case-insensitive: same filter on `comment_description`, applied to the Hybrid children **and** to the hybrids in the location census. |
 | `--name-label-includes` | *(none)* | Case-insensitive substring filter on `name_label`. |
 | `--name-label-excludes` | *(none)* | Case-insensitive negative substring filter on `name_label`. |
 | `--sn-includes-any` | *(none)* | Keep modules whose SN contains any of these whitespace-separated substrings. |
@@ -66,6 +71,19 @@ module-sites-hybrids --from-json cache.json --postfix somethingcustom
 !!! note "`--all-parts` is a negated flag"
     The internal name is `only_valid`, defaulting to `True`. The flag only ever *widens* the selection; there is no `--only-valid` counterpart.
 
+!!! warning "`--version-includes-any` and `--comment-includes-any` take values verbatim"
+    Neither splits on whitespace or commas — a version string or a comment may
+    contain both. Each flag occurrence is one alternative:
+
+    ```bash
+    module-sites-hybrids --comment-includes-any "do not use" --comment-includes-any reserved
+    module-sites-hybrids --comment-includes-any "do not use, reserved"   # one literal, matches nothing
+    ```
+
+    `--version-includes-any` is a case-sensitive substring test;
+    `--comment-includes-any` is **case-insensitive**, because comments are typed
+    by hand and their capitalisation varies.
+
 ---
 
 ## What is counted
@@ -74,11 +92,22 @@ Three independent populations feed the three figures:
 
 | Population | Source | Filtered by |
 |---|---|---|
-| Hybrid census | every `Hybrid` part in the DB | `--hybrid-version-includes-any`, valid-SN rule |
-| Hybrids by location | every `Hybrid` part with a known location | `--hybrid-version-includes-any`, valid-SN rule, `--locations` |
-| Modules by site | `Module` parts of the resolved sites | `--version-includes-any`, `--name-label-*`, `--sn-includes-any`, `--dev`, valid-SN rule |
+| Hybrid census | every `Hybrid` part in the DB | **nothing** — no part filter, no valid-SN rule |
+| Hybrids by location | every `Hybrid` part with a known location | `--hybrid-version-includes-any`, `--hybrid-comment-includes-any`, valid-SN rule, `--locations` |
+| Modules by site | `Module` parts of the resolved sites | `--version-includes-any`, `--comment-includes-any`, `--name-label-*`, `--sn-includes-any`, `--dev`, valid-SN rule |
 
-The module's own category comes from its Hybrid children, which are fetched per module and filtered with `--hybrid-version-includes-any` and the valid-SN rule.
+The module's own category comes from its Hybrid children, which are fetched per module and filtered with `--hybrid-version-includes-any`, `--hybrid-comment-includes-any` and the valid-SN rule.
+
+!!! note "The prefix census is deliberately unfiltered"
+    `hybrid_sn_prefixes` answers *how many hybrids of each prefix exist*, so it
+    ignores every selection flag, including `--sites`, `--locations`,
+    `--all-parts` and both `--hybrid-*` filters. Its corner text says
+    `all hybrids in the DB, no part filters applied` and names only the prefix
+    length — the figures 1 and 2 corner texts list the full selection.
+
+    A consequence worth knowing: the census total is generally **larger** than
+    the sum of the bars in `counts_hybrid_prefix_by_location`. The difference is
+    the hybrids with invalid/fake SNs and those outside the location universe.
 
 ### Module categories
 
@@ -116,7 +145,9 @@ plots/allSNs_sitesihep_mainz_locMonitored_prefix8_onlyTwoHY/
 | `sitesMonitored` / `sites<list>` | `--sites` |
 | `locAll` / `locMonitored` | `--locations` |
 | `version…` | `--version-includes-any` |
+| `comment…` | `--comment-includes-any` |
 | `hyVersion…` | `--hybrid-version-includes-any` |
+| `hyComment…` | `--hybrid-comment-includes-any` |
 | `label…` / `nolabel…` | `--name-label-includes` / `--name-label-excludes` |
 | `sn…` | `--sn-includes-any` |
 | `prefix<N>` | `--prefix-len`, only when not 7 |
@@ -141,7 +172,7 @@ Five figures per run, each written as `.pdf` and `.png`, all ending in the postf
 | `fractions_site_modules_vs_hybrids_at_location` | Same, each bar normalised to itself. |
 | `counts_hybrid_prefix_by_location` | Vertical bars, one per prefix, stacked by location; total above each bar. |
 | `fractions_hybrid_prefix_by_location` | Same, each bar normalised to itself. |
-| `hybrid_sn_prefixes` | Single-series bar, hybrids per prefix (all hybrids in the DB). |
+| `hybrid_sn_prefixes` | Single-series bar, hybrids per prefix (**all** hybrids in the DB, no filter applied). |
 
 Concrete examples:
 
@@ -200,7 +231,10 @@ Both runs fit in one job because their subdirectories differ, and the nested lay
 
 - **The file names do not encode the filters.** Only the prefix length, the site scope and the scale appear in the filename; everything else lives in the directory name. Two filtered runs with `--no-subdir` — or with the same `--postfix` — overwrite each other's figures.
 - **`--postfix` changes the directory too.** It overrides both the filename postfix *and* the selection-specific subdirectory name, so a fixed postfix in CI collapses all selections into one directory.
-- **`--from-json` ignores the filters.** `--version-includes-any`, `--hybrid-version-includes-any`, `--name-label-*` and `--sn-includes-any` are applied when the cache is *written*. Re-run without `--from-json` to change the selection; the script prints a warning to that effect.
+- **`--from-json` ignores the filters.** `--version-includes-any`, `--comment-includes-any`, the two `--hybrid-*` variants, `--name-label-*` and `--sn-includes-any` are applied when the cache is *written*. Re-run without `--from-json` to change the selection; the script prints a warning to that effect.
+- **`--hybrid-comment-includes-any` has two consumers.** It filters the Hybrid children of each module *and* the standalone hybrid list behind the location census. Both are fed from the same flag on purpose: filtering only the former would let a module show `0 hybrids` next to a full bar in the right-hand column of figure 1.
+- **A hybrid comment filter does not remove modules.** The children are filtered *before* the 0/1/>2 classification, so a module with two hybrids of which one carries the comment becomes a `1 hybrid` module in the hatched bucket — it is not dropped. If you want "no modules using a flagged hybrid", negate the filter or exclude the module separately.
+- **The census is unfiltered, including by the hybrid filters.** See the note under *What is counted*; do not use `hybrid_sn_prefixes` as a denominator for a filtered figure 2.
 - **`--locations monitored` changes the first figure as well.** The universe feeds both the hybrid segments of the per-site bars and the per-prefix figure, so hybrids at non-monitored locations move into the `elsewhere` listing instead of the bars.
 - **`--dev` truncates modules only.** Hybrids are counted in full, so the module/hybrid ratio in a `--dev` run is meaningless. Use it with `--no-plots`.
 - **`--hide-non-two` affects the figure, not the tables.** The grey buckets stay in the printed matrices; only the bars lose them.
