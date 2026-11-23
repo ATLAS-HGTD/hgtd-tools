@@ -114,6 +114,22 @@ hybrid_SN_human_map = {
     "20WHNNN": "NCAP / NCAP",
     "20WHNNI": "NCAP / IFAE",
 }
+### Sensor / Wafer design (manufacturer) inferred from SN characters
+### Sensor SN: 20WS<M>... -> M=1,2 IHEP-IME (pre-production, production),
+###                          M=3,4 USTC-IME (pre-production, production)
+sensor_design_by_manu_char = {
+    "1": "IHEP",
+    "2": "IHEP",
+    "3": "USTC",
+    "4": "USTC",
+}
+### Wafer SN: 20WS0<M>... -> M=0 IHEP-IME, M=1 USTC-IME
+wafer_design_by_manu_char = {
+    "0": "IHEP",
+    "1": "USTC",
+}
+### The design axis used for grouping (order matters: it defines report order)
+SENSOR_DESIGNS = ("IHEP", "USTC")
 ## items for monitoring
 ML_sites_to_monitor = ["ifae", "ihep", "lpnhe", "mainz", "mascir"]
 MA_sites_to_monitor = ["ifae", "ihep", "ijclab", "mainz", "mascir"]

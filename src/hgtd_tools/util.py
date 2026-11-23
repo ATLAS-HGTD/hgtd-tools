@@ -1671,6 +1671,50 @@ def check_SN_valid(snIn, debug=False):
     return True, ""
 
 
+def get_sensor_design_from_SN(sn):
+    """'IHEP' or 'USTC' from the manufacturer digit of a Sensor SN, else None.
+
+    Sensor SNs are 20WS<M><type><batch><wafer><loc>; M in {1,2} is IHEP-IME
+    (pre-production / production), M in {3,4} is USTC-IME. Wafers
+    (20WS0...), Support Units (20WSU...) and everything else return None,
+    because their manufacturer digit means something different.
+    """
+    s = str(sn or "").strip().upper()
+    if len(s) != 14 or s[:4] != "20WS" or s[4] in ("0", "U"):
+        return None
+    return data.sensor_design_by_manu_char.get(s[4])
+
+
+def get_wafer_design_from_SN(sn):
+    """'IHEP' or 'USTC' from the manufacturer digit of a Wafer SN, else None.
+
+    Wafer SNs are 20WS0<M>...; M=0 is IHEP-IME, M=1 is USTC-IME.
+    """
+    s = str(sn or "").strip().upper()
+    if len(s) != 14 or s[:5] != "20WS0":
+        return None
+    return data.wafer_design_by_manu_char.get(s[5])
+
+
+def resolve_sensor_design(sensor_SN, wafer_SN=None):
+    """(design, "") from the Sensor SN, falling back to the Wafer SN.
+
+    Returns (None, reason) when neither SN yields a known design; the caller
+    decides whether that is fatal (non-mixed pairing) or tolerable.
+    """
+    design = get_sensor_design_from_SN(sensor_SN)
+    if design is not None:
+        return design, ""
+    if wafer_SN is not None:
+        design = get_wafer_design_from_SN(wafer_SN)
+        if design is not None:
+            return design, ""
+    return None, (
+        f"could not determine sensor design (IHEP/USTC) from Sensor SN "
+        f"{sensor_SN!r} nor Wafer SN {wafer_SN!r}"
+    )
+
+
 def get_vbd_for_sensor_via_wafer(sensor_SN, wafer_SN, metric="VBD_AVERAGE"):
     vbd, _ = api.fetch_information(f"/sensorvbdv2view?serial_number={wafer_SN}")
     available_vbd_meas_per_sensor = []

@@ -14,10 +14,10 @@ parser.add_argument(
     help="Matching algorithm mode alias. (Default: %(default)s)",
     default="Only_Sensor_VBD_closest",
     choices=[
-        "Only_Sensor_VBD_closest",  # default: 1D sorting, Sensor-Wafer info only, if VBD not stored, fallback manual calc from sensor IV
-        # "Only_Hybrid_IV_VBD_closest",  # alternative: 1D sorting, Hybrid info only
-        # "Sensor_VBD_closest_Fallback_Hybrid_IV_VBD_closest",  # alternative: Sensor-Wafer info, or if not available, Hybrid info
-        # "Sensor_VBD_closest_AND_Hybrid_IV_VBD_closest_2D_DeltaR",  # alternative: both Sensor-Wafer info and Hybrid info, like CA-Clustering
+        "Only_Sensor_VBD_closest",
+        # "Only_Hybrid_IV_VBD_closest",
+        # "Sensor_VBD_closest_Fallback_Hybrid_IV_VBD_closest",
+        # "Sensor_VBD_closest_AND_Hybrid_IV_VBD_closest_2D_DeltaR",
     ],
 )
 parser.add_argument(
@@ -42,6 +42,18 @@ parser.add_argument(
     default=None,
 )
 parser.add_argument(
+    "--allow-mixed-sensor-designs",
+    dest="allow_mixed_sensor_designs",
+    help=(
+        "[Optional] Allow pairing IHEP-IME and USTC-IME sensors with each other. "
+        "By default the two sensor designs are never mixed: every VBD bin is "
+        "built once per design (IHEP and USTC) and pairing runs inside each of "
+        "those groups separately. Passing this flag drops the design axis, so "
+        "each bin holds both designs. (Default: %(default)s)"
+    ),
+    action="store_true",
+)
+parser.add_argument(
     "--dev",
     dest="dev",
     help="[Optional] Developer mode. Limit number of parts to process.",
@@ -62,6 +74,7 @@ args = parser.parse_args()
 mode_alias = args.mode_alias
 location = args.location
 max_workers = args.max_workers
+allow_mixed_sensor_designs = args.allow_mixed_sensor_designs
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # VBD-bin configuration for the grouped pairing step.
@@ -100,6 +113,26 @@ assert VBD_IGNORE_BELOW >= VBD_BIN_LOWER_EDGES[0], (
     "between the two would be clipped into the first bin instead of ignored."
 )
 
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Sensor design axis.
+#
+# Hybrids are paired per sensor design (IHEP-IME / USTC-IME) by default, so
+# every group below (currently: every VBD bin) exists once per design.
+# `--allow-mixed-sensor-designs` collapses the axis: the same code path then
+# produces one group per bin, holding both designs.
+#
+# Any future grouping (2D DeltaR, fallback chains, ...) should keep this
+# shape: the design axis stays the OUTER key, and the algorithm-specific
+# grouping happens INSIDE a single design group.
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+SENSOR_DESIGN_AXIS = tuple(data.SENSOR_DESIGNS)
+
+DESIGN_UNKNOWN_REASON = (
+    "Sensor design (IHEP/USTC) could not be determined from the Sensor/Wafer SN; "
+    "excluded because pairing across designs is disabled by default "
+    "(pass --allow-mixed-sensor-designs to keep such parts)"
+)
+
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Resolve --manual_ignore_hybrid_sns into a clean list of unique SN strings.
@@ -114,21 +147,15 @@ def _parse_manual_ignore_hybrid_sns(raw):
     if raw is None:
         return []
     if os.path.isfile(raw):
-        # Path to an existing file: one SN per line.
-        # Strip whitespace, drop blank lines and '#'-comment lines.
         with open(raw) as f:
             sns = [line.strip() for line in f if line.strip() and not line.lstrip().startswith("#")]
     elif _looks_like_file_path(raw):
-        # Looks like a path but the file is missing -> fail loud, don't
-        # silently treat the bad path as an SN.
         raise FileNotFoundError(f"--manual_ignore_hybrid_sns: file not found: {raw}")
     elif "," in raw:
         sns = [s.strip() for s in raw.split(",") if s.strip()]
     else:
         sns = [raw.strip()] if raw.strip() else []
 
-    # De-duplicate while preserving order, so a SN listed in both the
-    # inline value and a file (or twice in the file) is reported once.
     seen = set()
     deduped = []
     for sn in sns:
@@ -147,10 +174,6 @@ dev = util.str2bool(args.dev)
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 def prepare_parts(location, dev):
     parts = util.get_relevant_parts("Hybrid")[0]
-    # Hybrids for pairing must be located at the selected MA-site
-    # and have a valid SN according to our latest SN specs
-    # and not be connected yet to a Module
-    # select_parts is already parallelized (in util)
     parts = util.select_parts(
         parts,
         location_shortname=location,
@@ -183,71 +206,59 @@ def prepare_parts(location, dev):
 ## d. Sensor_VBD_closest_AND_Hybrid_IV_VBD_closest_2D_DeltaR:
 ### Only_Sensor_VBD_closest AND Only_Hybrid_IV_VBD_closest -> calculate 2D pairing
 ### if this fails anywhere in the process -> ignore Hybrid
+#
+## Kept records always have the shape
+##   [part_id, part_SN, vbd_value, sensor_design_or_None]
+## so the design travels with the part through grouping, pairing and reporting.
 
 
 def get_decision_scores_only_Sensor_VBD_closest(p):
     part_id = p["part_id"]
     part_SN = p["serial_number"]
+
     children_S = util.get_children(part_id, ofKind="Sensor")[0]
     rel_val_result, rel_val_reason = relation_validation.validate_HY_chi_S(children_S)
     if not rel_val_result:
-        # Not a valid connection to Sensor child.
-        # Must ignore this Hybrid for matching.
         return False, [part_id, part_SN, rel_val_reason]
-    else:
-        # Sensor child exists, valid connection.
-        # We know it is exactly one Sensor child (@ index 0) at empty position.
-        # Now check sensor parent Wafer.
-        child_S_part_id = children_S[0]["part"]["part_id"]
-        child_S_part_SN = children_S[0]["part"]["serial_number"]
-        parents_W = util.get_parents(child_S_part_id, ofKind="Wafer")[0]
-        rel_val_result, rel_val_reason = relation_validation.validate_S_par_W(parents_W)
-        if not rel_val_result:
-            # Not a valid connection to Wafer parent.
-            # Must ignore this Hybrid for matching.
+
+    # Sensor child exists, valid connection: exactly one, at empty position.
+    child_S = children_S[0]["part"]
+    child_S_part_id = child_S["part_id"]
+    child_S_part_SN = child_S["serial_number"]
+
+    parents_W = util.get_parents(child_S_part_id, ofKind="Wafer")[0]
+    rel_val_result, rel_val_reason = relation_validation.validate_S_par_W(parents_W)
+    if not rel_val_result:
+        return False, [
+            part_id,
+            part_SN,
+            f"Relation to Sensor is valid, but problem with Sensor: {rel_val_reason}",
+        ]
+
+    parent_W_part_SN = parents_W[0]["part_parent"]["serial_number"]
+
+    vbd_value, vbd_reason = util.get_vbd_for_sensor_via_wafer(
+        child_S_part_SN, parent_W_part_SN, metric="VBD_AVERAGE"
+    )
+    if vbd_reason != "":
+        # Fallback: obtain IV curves for the pads and calculate VBD manually.
+        vbd_value, vbd_reason = util.get_vbd_for_sensor_via_iv(child_S_part_SN)
+        if vbd_reason != "":
             return False, [
                 part_id,
                 part_SN,
-                f"Relation to Sensor is valid, but problem with Sensor: {rel_val_reason}",
+                (
+                    f"Relation to Sensor is valid, relation to Wafer is valid, but problem with VBD retrieval, "
+                    f"after already falling back to manual calculation of VBD from IV because VBD value not stored in DB: {vbd_reason}"
+                ),
             ]
-        else:
-            # Wafer parent exists, valid connection.
-            # We know it is exactly one Wafer parent (@ index 0).
-            # Now check Wafer-Sensor VBD table.
-            parent_W_part_SN = parents_W[0]["part_parent"]["serial_number"]
-            vbd_value, vbd_reason = util.get_vbd_for_sensor_via_wafer(
-                child_S_part_SN, parent_W_part_SN, metric="VBD_AVERAGE"
-            )
-            if vbd_reason != "":
-                # VBD could not be retrieved from sensorvbdv2view.
-                # Fallback solution: obtain IV curves for pads if they exist and calculate VBD manually.
-                vbd_value, vbd_reason = util.get_vbd_for_sensor_via_iv(child_S_part_SN)
-                if vbd_reason != "":
-                    # Must ignore this Hybrid for matching.
-                    return False, [
-                        part_id,
-                        part_SN,
-                        (
-                            f"Relation to Sensor is valid, relation to Wafer is valid, but problem with VBD retrieval, "
-                            f"after already falling back to manual calculation of VBD from IV because VBD value not stored in DB: {vbd_reason}"
-                        ),
-                    ]
-                else:
-                    # All relations valid.
-                    # Can put this part into the list for matching, with the manually calculated vbd_value as a score.
-                    return True, [
-                        part_id,
-                        part_SN,
-                        vbd_value,
-                    ]
-            else:
-                # All relations valid.
-                # Can put this part into the list for matching, with the already uploaded vbd_value as a score.
-                return True, [
-                    part_id,
-                    part_SN,
-                    vbd_value,
-                ]
+
+    # Design is resolved here, next to the SNs it is derived from, but NOT
+    # enforced here: whether an unknown design is fatal depends on
+    # --allow-mixed-sensor-designs, which is applied at grouping time.
+    sensor_design, _design_reason = util.resolve_sensor_design(child_S_part_SN, parent_W_part_SN)
+
+    return True, [part_id, part_SN, vbd_value, sensor_design]
 
 
 def get_decision_scores_only_Sensor_VBD_closest_safe(p):
@@ -265,16 +276,9 @@ def get_decision_scores_only_Sensor_VBD_closest_safe(p):
 
 
 def prepare_data_sources(mode_alias, parts, max_workers=4):
-    # this will hold all Hybrids we have to ignore given the matching algorithm
-    # and the reason why it can not be matched
-    ignored_parts = []  # list of lists
-    # this holds all Hybrids that passed matchable criteria
-    # and the scores by which to match them
-    kept_parts_and_scoring = []  # list of lists
+    ignored_parts = []
+    kept_parts_and_scoring = []
     if mode_alias == "Only_Sensor_VBD_closest":
-        # I/O-bound fan-out (multiple DB lookups per part): threading is
-        # appropriate and matches the pattern of util.parallel_keeps.
-        # Use the *_safe variant so one bad part doesn't abort the run.
         kept_parts_and_scoring, ignored_parts = util.parallel_partition(
             parts,
             get_decision_scores_only_Sensor_VBD_closest_safe,
@@ -308,14 +312,12 @@ def get_optimal_pairs_with_leftover_1D_On2(parts_scores, at_column=2):
 
     at_column: which column of inner lists to calc diff with
     """
-    # Guard: empty pool -> no pairs, no leftover, total distance = 0.
-    # Without this, np.array([], dtype=object) is 1-D and arr[:, 2]
-    # would raise IndexError("too many indices for array").
     if not parts_scores:
         return [], 0.0, []
 
     arr = np.array(parts_scores, dtype=object)
-    order = np.argsort(arr[:, 2].astype(float), kind="mergesort")
+    # sort by the comparison column (was hardcoded to 2 before)
+    order = np.argsort(arr[:, at_column].astype(float), kind="mergesort")
     sarr = arr[order]
 
     n = len(sarr)
@@ -326,7 +328,6 @@ def get_optimal_pairs_with_leftover_1D_On2(parts_scores, at_column=2):
     best_j = -1
     best_pairs = []
     for j in range(n):
-        # remove j, pair the rest
         remain = np.delete(sarr, j, axis=0)
         pairs, tot = get_pairs_totaldiff_via_chunking(remain, at_column)
         if tot < best_total:
@@ -338,9 +339,6 @@ def get_optimal_pairs_with_leftover_1D_On2(parts_scores, at_column=2):
 
 def run_pairing(parts, algorithm):
     if algorithm == "Only_Sensor_VBD_closest":
-        # Guard: nothing survived filtering. Return the canonical
-        # (empty_pairs, 0.0, empty_leftover) shape so callers can rely
-        # on unpacking the triple unconditionally.
         if not parts:
             return [], 0.0, []
         return get_optimal_pairs_with_leftover_1D_On2(parts)
@@ -351,76 +349,132 @@ def run_pairing(parts, algorithm):
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # VBD-bin assignment.
 #
-# Given a kept part of the form [part_id, part_SN, vbd_value], return:
+# Given a kept part of the form [part_id, part_SN, vbd_value, design], return:
 #   ("ignore", reason_string)   if vbd < VBD_IGNORE_BELOW
-#   ("bin",    bin_label)       otherwise
+#   ("group",  bin_label)       otherwise
 #
 # Bin convention: [lower_edge_i, lower_edge_{i+1}), except the last bin
-# which is open-ended (>= last edge). The check on VBD_BIN_LOWER_EDGES
-# uses np.searchsorted with side="right" so the lower edge is inclusive.
+# which is open-ended (>= last edge).
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 def assign_vbd_bin(part_record):
-    _, _, vbd_value = part_record
+    # record is [part_id, part_SN, vbd_value, design]; never unpack the whole
+    # thing positionally, the design field is optional for older callers.
+    vbd_value = part_record[2]
     try:
         vbd = float(vbd_value)
     except (TypeError, ValueError):
-        # If VBD is not a valid number for some reason, fall back to the
-        # ignore path with a clear reason so the operator notices.
         return ("ignore", f"VBD value is not a valid number: {vbd_value!r}")
 
     if vbd < VBD_IGNORE_BELOW:
         return ("ignore", f"VBD ({vbd} V) is below {VBD_IGNORE_BELOW} V; excluded from pairing")
 
     edges = np.asarray(VBD_BIN_LOWER_EDGES, dtype=float)
-    # np.searchsorted(side="right") returns the insertion index AFTER
-    # any equal values, so for vbd in [edge_i, edge_{i+1}) the result is
-    # i+1. Subtract 1 to get the bin index. Clip to the last bin so
-    # vbd >= edges[-1] lands in the open-ended ">190V" bin rather than
-    # overflowing.
     idx = int(np.searchsorted(edges, vbd, side="right")) - 1
     if idx < 0:
         return (
             "ignore",
             f"VBD ({vbd} V) is below the lowest bin edge {edges[0]} V; excluded from pairing",
         )
-    return ("bin", VBD_BIN_LABELS[min(idx, len(VBD_BIN_LABELS) - 1)])
+    return ("group", VBD_BIN_LABELS[min(idx, len(VBD_BIN_LABELS) - 1)])
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# Run pairing within each VBD bin independently.
+# Grouping, with the sensor design as the OUTER key.
 #
-# Returns a list of per-bin result dicts:
-#   {"label": str, "n": int, "pairs": [...], "total": float, "leftover": [...]}
-# plus the flat ignored-VBD list, which the caller merges into the
-# main ignored_parts report.
+# A group is identified by (design, label):
+#   design = "IHEP" / "USTC"  -> non-mixed default
+#   design = None             -> --allow-mixed-sensor-designs (single set of
+#                                labels holding both designs)
+#
+# `group_parts` is generic on purpose: it takes the label space and the
+# key function, so a future algorithm only has to supply its own
+# `group_key_fn` (returning ("ignore", reason) or ("group", label)) and the
+# design axis keeps working without touching the rest of the pipeline.
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-def group_by_vbd_bin(kept_parts_and_scoring):
-    """Split kept records into VBD bins.
+def _group_keys(allow_mixed_sensor_designs, labels=None):
+    """Ordered list of (design, label) keys defining report order."""
+    labels = list(labels or VBD_BIN_LABELS)
+    if allow_mixed_sensor_designs:
+        return [(None, label) for label in labels]
+    return [(design, label) for design in SENSOR_DESIGN_AXIS for label in labels]
 
-    Returns (grouped_by_bin, ignored_vbd, kept_in_bins). `kept_in_bins` is the
-    authoritative kept list: records not in it are in `ignored_vbd`, never both.
+
+def group_title(design, label):
+    """Human-readable group name, e.g. 'IHEP | 150-160V' or '150-160V'."""
+    return f"{design} | {label}" if design else label
+
+
+def group_parts(
+    records,
+    allow_mixed_sensor_designs=False,
+    group_key_fn=None,
+    group_labels=None,
+):
+    """Split kept records into (sensor design, label) groups.
+
+    group_key_fn(record) -> ("ignore", reason) | ("group", label).
+    Defaults to `assign_vbd_bin` over `VBD_BIN_LABELS`.
+
+    Returns (grouped, ignored, kept_in_groups). `kept_in_groups` is the
+    authoritative kept list: every record is either in it or in `ignored`,
+    never both.
     """
-    grouped_by_bin = {label: [] for label in VBD_BIN_LABELS}
-    ignored_vbd = []
-    for rec in kept_parts_and_scoring:
-        kind, payload = assign_vbd_bin(rec)
+    group_key_fn = group_key_fn or assign_vbd_bin
+    grouped = {key: [] for key in _group_keys(allow_mixed_sensor_designs, group_labels)}
+    ignored = []
+    for rec in records:
+        design = rec[3] if len(rec) > 3 else None
+        if design is None and not allow_mixed_sensor_designs:
+            ignored.append([rec[0], rec[1], DESIGN_UNKNOWN_REASON])
+            continue
+        kind, payload = group_key_fn(rec)
         if kind == "ignore":
-            ignored_vbd.append([rec[0], rec[1], payload])
-        else:
-            grouped_by_bin[payload].append(rec)
-    kept_in_bins = [rec for label in VBD_BIN_LABELS for rec in grouped_by_bin[label]]
-    return grouped_by_bin, ignored_vbd, kept_in_bins
+            ignored.append([rec[0], rec[1], payload])
+            continue
+        key = (None if allow_mixed_sensor_designs else design, payload)
+        if key not in grouped:  # be robust against unexpected labels
+            grouped[key] = []
+        grouped[key].append(rec)
+    kept_in_groups = [rec for key in grouped for rec in grouped[key]]
+    return grouped, ignored, kept_in_groups
 
 
-def pair_within_vbd_bins(grouped_by_bin, algorithm):
+def group_by_vbd_bin(kept_parts_and_scoring, allow_mixed_sensor_designs=False):
+    """VBD binning, once per sensor design unless mixing is allowed."""
+    return group_parts(
+        kept_parts_and_scoring,
+        allow_mixed_sensor_designs=allow_mixed_sensor_designs,
+        group_key_fn=assign_vbd_bin,
+        group_labels=VBD_BIN_LABELS,
+    )
+
+
+def empty_group_results(allow_mixed_sensor_designs=False, labels=None):
+    return [
+        {
+            "design": design,
+            "label": label,
+            "title": group_title(design, label),
+            "n": 0,
+            "pairs": [],
+            "total": 0.0,
+            "leftover": [],
+        }
+        for design, label in _group_keys(allow_mixed_sensor_designs, labels)
+    ]
+
+
+def pair_within_groups(grouped_by_bin, algorithm):
+    """Run the pairing algorithm inside every (design, label) group."""
     group_results = []
-    for label in VBD_BIN_LABELS:
-        parts_in_bin = grouped_by_bin[label]
-        pairs, total, leftover = run_pairing(parts_in_bin, algorithm=algorithm)
+    for (design, label), parts_in_group in grouped_by_bin.items():
+        pairs, total, leftover = run_pairing(parts_in_group, algorithm=algorithm)
         group_results.append(
             {
+                "design": design,
                 "label": label,
-                "n": len(parts_in_bin),
+                "title": group_title(design, label),
+                "n": len(parts_in_group),
                 "pairs": pairs,
                 "total": total,
                 "leftover": leftover,
@@ -436,6 +490,7 @@ def hybridmatch(
     printouts=False,
     manual_ignore_hybrid_sns=[],
     max_workers=4,
+    allow_mixed_sensor_designs=False,
 ):
     if printouts:
         print(
@@ -463,21 +518,22 @@ def hybridmatch(
         print(f"- {dev=}")
         print(f"- {manual_ignore_hybrid_sns=}")
         print(f"- {max_workers=}")
+        print(f"- {allow_mixed_sensor_designs=}")
         print(f"- VBD-bin grouping: ignore below {VBD_IGNORE_BELOW} V, bins = {VBD_BIN_LABELS}")
+        if allow_mixed_sensor_designs:
+            print("- Sensor designs: IHEP and USTC are MIXED within each bin (opt-in)")
+        else:
+            print(
+                f"- Sensor designs: NOT mixed, every bin exists once per design "
+                f"({list(SENSOR_DESIGN_AXIS)})"
+            )
 
         print("\n" + "%" * 80 + "\n")
         print(">>> 1. Preparing relevant Hybrids at your location...\n")
     parts = prepare_parts(location, dev)
 
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    # Apply --manual_ignore_hybrid_sns:
-    # Pull the listed SNs out of the pool BEFORE prepare_data_sources
-    # so we don't waste DB calls on parts the user already told us to skip,
-    # and record them with an explicit reason so they show up in the
-    # ignored-parts reporting together with algorithm-ignored parts.
-    #
-    # This is pure Python set/list work, not I/O -> sequential is fine,
-    # threading would just add overhead.
+    # Apply --manual_ignore_hybrid_sns before any DB work.
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     manual_ignored_parts = []
     if manual_ignore_hybrid_sns:
@@ -505,21 +561,31 @@ def hybridmatch(
     )
     print(f"prepare_data_sources took {time.perf_counter() - t0:.2f}s with {max_workers} workers")
 
-    # Prepend manual ignores so the operator sees them together with the
-    # algorithm-ignored parts in the same flat list.
     ignored_parts = manual_ignored_parts + ignored_parts
 
     # Bin BEFORE reporting: a part leaves the kept list at the same moment it
-    # enters the ignored list, so the two reports stay disjoint.
-    grouped_by_bin, ignored_vbd, kept_in_bins = group_by_vbd_bin(kept_parts_and_scoring)
+    # enters the ignored list, so the two reports stay disjoint. The design
+    # axis is applied here, i.e. every bin is created once per design.
+    grouped_by_bin, ignored_vbd, kept_in_bins = group_by_vbd_bin(
+        kept_parts_and_scoring,
+        allow_mixed_sensor_designs=allow_mixed_sensor_designs,
+    )
     ignored_parts = ignored_parts + ignored_vbd
     kept_parts_and_scoring = kept_in_bins
+
+    n_by_design = {}
+    for rec in kept_in_bins:
+        design = rec[3] if len(rec) > 3 else None
+        key = design or "unknown"
+        n_by_design[key] = n_by_design.get(key, 0) + 1
 
     stats = {
         "n_manual": len(manual_ignored_parts),
         "n_vbd": len(ignored_vbd),
         "n_algo": len(ignored_parts) - len(manual_ignored_parts) - len(ignored_vbd),
         "n_kept": len(kept_parts_and_scoring),
+        "allow_mixed_sensor_designs": allow_mixed_sensor_designs,
+        "n_by_design": n_by_design,
     }
 
     if printouts:
@@ -529,47 +595,51 @@ def hybridmatch(
         print("\nKept parts for matching:\n")
         for kp in kept_parts_and_scoring:
             print(kp)
+        print(f"\nKept parts per sensor design: {n_by_design}")
         print("\n" + "%" * 80)
-        print("\n>>> 3. Running pairing algorithm (grouped by VBD bin)...\n")
+        print("\n>>> 3. Running pairing algorithm (grouped by sensor design and VBD bin)...\n")
 
     if not kept_parts_and_scoring:
         if printouts:
             print(
                 "No parts survived for pairing.\n"
                 f"  - Filtered out by --manual_ignore_hybrid_sns: {stats['n_manual']}\n"
-                f"  - Filtered out by VBD < {VBD_IGNORE_BELOW} V / unbinnable VBD: {stats['n_vbd']}\n"
+                f"  - Filtered out by VBD < {VBD_IGNORE_BELOW} V / unbinnable VBD / unknown design: {stats['n_vbd']}\n"
                 f"  - Filtered out by the matching algorithm: {stats['n_algo']}\n"
                 "Skipping pairing. See 'Ignored parts' above for reasons."
             )
-        empty_group_results = [
-            {"label": label, "n": 0, "pairs": [], "total": 0.0, "leftover": []}
-            for label in VBD_BIN_LABELS
-        ]
-        return ignored_parts, kept_parts_and_scoring, empty_group_results, 0.0, [], stats
+        return (
+            ignored_parts,
+            kept_parts_and_scoring,
+            empty_group_results(allow_mixed_sensor_designs),
+            0.0,
+            [],
+            stats,
+        )
 
-    group_results = pair_within_vbd_bins(grouped_by_bin, algorithm=mode_alias)
+    group_results = pair_within_groups(grouped_by_bin, algorithm=mode_alias)
 
-    # Aggregate across bins for the console summary.
     all_pairs = [p for gr in group_results for p in gr["pairs"]]
     total = sum(gr["total"] for gr in group_results)
     leftover = [lo for gr in group_results for lo in gr["leftover"]]
 
     if printouts:
-        # Per-bin detail first, then the aggregated summary.
         for gr in group_results:
-            print(f"\n--- Bin {gr['label']} ({gr['n']} parts) ---")
+            print(f"\n--- Group {gr['title']} ({gr['n']} parts) ---")
             if gr["leftover"]:
                 print(
-                    f"  Odd count in bin, optimal leftover to minimize total distance: {gr['leftover']}"
+                    f"  Odd count in group, optimal leftover to minimize total distance: {gr['leftover']}"
                 )
-            print(f"  Total distance for optimal pairing in this bin: {gr['total']}")
-            print("  Optimal pairings in this bin:")
+            print(f"  Total distance for optimal pairing in this group: {gr['total']}")
+            print("  Optimal pairings in this group:")
             for pairing in gr["pairs"]:
                 print(f"    {pairing}")
 
         if leftover:
-            print(f"\nOdd-count bins -> aggregated optimal leftovers (sum across bins): {leftover}")
-        print(f"\nAggregated total distance across all bins: {total}")
+            print(
+                f"\nOdd-count groups -> aggregated optimal leftovers (sum across groups): {leftover}"
+            )
+        print(f"\nAggregated total distance across all groups: {total}")
         print(f"\nAggregated optimal pairings ({len(all_pairs)} pairs):\n")
         for pairing in all_pairs:
             print(pairing)
@@ -586,6 +656,7 @@ def main():
         printouts=True,
         manual_ignore_hybrid_sns=manual_ignore_hybrid_sns,
         max_workers=max_workers,
+        allow_mixed_sensor_designs=allow_mixed_sensor_designs,
     )
     dt = datetime.now(UTC)
 
@@ -595,13 +666,20 @@ def main():
     md_content += f"- `dev` = `{dev}`\n"
     md_content += f"- `manual_ignore_hybrid_sns` = `{manual_ignore_hybrid_sns}`\n"
     md_content += f"- `max_workers` = `{max_workers}`\n"
+    md_content += f"- `allow_mixed_sensor_designs` = `{allow_mixed_sensor_designs}`\n"
     md_content += (
-        f"- VBD-bin grouping: ignore below `{VBD_IGNORE_BELOW}` V, bins = `{VBD_BIN_LABELS}`\n\n"
+        f"- VBD-bin grouping: ignore below `{VBD_IGNORE_BELOW}` V, bins = `{VBD_BIN_LABELS}`\n"
     )
+    if allow_mixed_sensor_designs:
+        md_content += (
+            "- Sensor design axis: **dropped** (IHEP and USTC mixed inside each bin, opt-in)\n\n"
+        )
+    else:
+        md_content += (
+            f"- Sensor design axis: **enforced**, every bin exists once per design "
+            f"`{list(SENSOR_DESIGN_AXIS)}`\n\n"
+        )
 
-    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    # Step 1
-    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     md_content += "## Step 1: Preparing relevant Hybrids at your location\n\n"
     md_content += (
         "Hybrids were selected from the DB via `prepare_parts` "
@@ -609,9 +687,6 @@ def main():
         "`dev` mode truncates to 2 parts).\n\n"
     )
 
-    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    # Step 2 — Ignored parts and Kept parts, mirroring the console printout.
-    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     md_content += "## Step 2: Preparing data sources for pairing\n\n"
 
     md_content += "### Ignored parts\n\n"
@@ -630,39 +705,38 @@ def main():
     else:
         md_content += "_None._\n\n"
 
-    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    # Step 3 — Pairing results (or empty-pool explanation).
-    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    md_content += "## Step 3: Running pairing algorithm (grouped by VBD bin)\n\n"
+    if stats.get("n_by_design"):
+        md_content += "### Kept parts per sensor design\n\n"
+        for design, count in stats["n_by_design"].items():
+            md_content += f"- `{design}`: {count}\n"
+        md_content += "\n"
 
-    # Empty-pool case: mirror the console breakdown.
+    md_content += "## Step 3: Running pairing algorithm (grouped by sensor design and VBD bin)\n\n"
+
     if not kept_parts_and_scoring:
-        # Reproduce the same breakdown the console prints so the markdown
-        # tells the operator why the pool is empty without them having to
-        # re-run the script with verbose output.
         n_total_seen = len(ignored_parts) + len(kept_parts_and_scoring)
         md_content += "**No parts survived for pairing; pairing step was skipped.**\n\n"
         md_content += f"- Candidates seen after `prepare_parts`: {n_total_seen}\n"
         md_content += f"- Filtered out by `--manual_ignore_hybrid_sns`: {stats['n_manual']}\n"
         md_content += (
-            f"- Filtered out by VBD < `{VBD_IGNORE_BELOW}` V / unbinnable VBD: {stats['n_vbd']}\n"
+            f"- Filtered out by VBD < `{VBD_IGNORE_BELOW}` V / unbinnable VBD / "
+            f"unknown sensor design: {stats['n_vbd']}\n"
         )
         md_content += f"- Filtered out by the matching algorithm: {stats['n_algo']}\n"
         md_content += f"- Surviving candidates: {stats['n_kept']}\n\n"
     else:
-        # Per-bin sections, then an aggregated summary.
         for gr in group_results:
-            md_content += f"### Bin `{gr['label']}` ({gr['n']} parts)\n\n"
+            md_content += f"### Group `{gr['title']}` ({gr['n']} parts)\n\n"
             if gr["leftover"]:
                 md_content += (
-                    "Odd number of parts in this bin, optimal leftover to minimize "
+                    "Odd number of parts in this group, optimal leftover to minimize "
                     "the total distance:\n\n"
                 )
                 for lo in gr["leftover"]:
                     md_content += "- `[" + "  |  ".join(str(x) for x in lo) + "]`\n"
                 md_content += "\n"
-            md_content += f"Total distance in this bin: `{gr['total']}`\n\n"
-            md_content += "Optimal pairings in this bin:\n\n"
+            md_content += f"Total distance in this group: `{gr['total']}`\n\n"
+            md_content += "Optimal pairings in this group:\n\n"
             if gr["pairs"]:
                 for pairing in gr["pairs"]:
                     l_pairing = list(pairing)
@@ -673,15 +747,18 @@ def main():
             else:
                 md_content += "_None._\n\n"
 
-        md_content += "### Aggregated across all bins\n\n"
+        md_content += "### Aggregated across all groups\n\n"
         if leftover:
-            md_content += "Odd-count bins -> aggregated optimal leftovers (sum across bins):\n\n"
+            md_content += (
+                "Odd-count groups -> aggregated optimal leftovers (sum across groups):\n\n"
+            )
             for lo in leftover:
                 md_content += "- `[" + "  |  ".join(str(x) for x in lo) + "]`\n"
             md_content += "\n"
         md_content += f"Aggregated total distance: `{total}`\n\n"
 
-    with open(f"pairings_{mode_alias}_{location}.md", "w") as f:
+    suffix = "_mixeddesigns" if allow_mixed_sensor_designs else ""
+    with open(f"pairings_{mode_alias}_{location}{suffix}.md", "w") as f:
         f.write(md_content)
 
 
