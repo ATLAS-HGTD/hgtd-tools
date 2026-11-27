@@ -28,6 +28,8 @@ For the algorithm in the current implementation, we pair by `VBD` of the Sensor.
 
 Alongside the `VBD` score, each surviving Hybrid carries the **sensor design** it belongs to (see below), which decides which group it is paired in.
 
+The same data source is used by **both** matching modes (see [Matching modes](#matching-modes)). The modes differ only in the order of the two steps: binning and pairing.
+
 ## Choosing which Hybrids to pair
 
 `--location` and `--hybrid-sns` define the candidate pool. At least one of them
@@ -105,17 +107,120 @@ The design is read off the SN, using the same decoding as `check_SN_valid`:
 
 The Sensor SN is authoritative; the Wafer SN is only used as a fallback if the Sensor SN does not decode (e.g. unexpected manufacturer digit). This is implemented as `util.resolve_sensor_design(sensor_SN, wafer_SN)`, backed by the maps `data.sensor_design_by_manu_char` and `data.wafer_design_by_manu_char`.
 
-The design is the **outer** axis of the grouping: every bin exists once per design, so the default run produces `len(SENSOR_DESIGNS) × len(VBD_BIN_LABELS)` groups (currently 2 × 5 = 10). Empty groups are reported with `n = 0`, the same way empty VBD bins already were.
+The design is the **outer** axis of the grouping: in bin-before-pairing mode every bin exists once per design, so the default run produces `len(SENSOR_DESIGNS) × len(VBD_BIN_LABELS)` groups (currently 2 × 5 = 10). Empty groups are reported with `n = 0`, the same way empty VBD bins already were.
 
 Passing `--allow-mixed-sensor-designs` drops the design axis entirely: each bin then holds both designs and pairing runs across them. Use this only when you deliberately want mixed-design modules.
 
 Any future grouping (2D `DeltaR`, fallback chains, …) should keep this shape — the design axis stays outside, the algorithm-specific grouping happens inside a single design group. `group_parts` takes a `group_key_fn` and a label list for exactly this reason, so a new algorithm only has to supply its own key function.
 
+## Matching modes
+
+The script knows two matching modes, selected with `--mode-alias`. Both use the
+same data source and the same pairing algorithm; they differ in whether the
+`VBD` bins are built **before** or **after** pairing.
+
+| `--mode-alias` | Binning | Pairing | Report file |
+|---|---|---|---|
+| `Only_Sensor_VBD_closest` *(default, alias)* | before pairing | inside every `(design, bin)` | `pairings_Only_Sensor_VBD_closest_…md` |
+| `Only_Sensor_VBD_bin_before_pairing` | before pairing | inside every `(design, bin)` | `pairings_Only_Sensor_VBD_bin_before_pairing_…md` |
+| `Only_Sensor_VBD_pair_before_binning` | after pairing | across the whole design population | `pairings_Only_Sensor_VBD_pair_before_binning_…md` |
+
+`Only_Sensor_VBD_closest` is kept purely as an alias for
+`Only_Sensor_VBD_bin_before_pairing`: the two names run the identical code and
+produce identical pairings. Because the report file is named after the mode alias
+*as typed*, existing scripts that use the old name keep producing the old
+filename and never overwrite a report from the canonical name.
+
+### `Only_Sensor_VBD_bin_before_pairing` (default)
+
+The kept parts are split into VBD bins (once per sensor design), and pairing runs
+independently inside each bin. A pair is therefore **intra-bin by construction**:
+both of its parts are always in the bin they are reported in. This prevents a
+low-VBD Hybrid from being matched against a high-VBD one, which would inflate the
+total pairing distance.
+
+Leftovers (the odd part of an odd-sized group) are reported per bin, as before.
+
+### `Only_Sensor_VBD_pair_before_binning`
+
+Pairing runs across the **whole** `VBD` range of a sensor design first — exactly
+as it would if all bins were one — and the resulting pairs are binned afterwards.
+The final bin of a pair is decided by `--pair-binning-submode`:
+
+| sub-mode | Rule | Purpose |
+|---|---|---|
+| `min` *(default)* | the **lower** `VBD` of the two paired Hybrids determines the final bin (strict) | the pair is never reported in a bin that neither of its parts occupies |
+| `average` | the **average** of the two paired Hybrids must be in the bin | symmetric; the pair may land in a bin that neither part occupies |
+
+Worked example at the 160 V edge:
+
+| pair | `min` | `average` |
+|---|---|---|
+| 158 V + 163 V | `150-160V` | `160-170V` |
+| 155 V + 185 V | `150-160V` | `170-180V` (neither part's bin) |
+| 190 V + 200 V | `>190V` | `>190V` |
+
+What the rules do and do not guarantee:
+
+- **`min` (strict)**: the assigned bin is always the bin of the lower part, so the
+  assigned bin is always occupied by at least one part, and both parts are ≥ the
+  bin's lower edge. It is conservative on the **lower** edge: a 158 V + 189 V pair
+  is reported in `150-160V`, even though the upper part is far above it.
+- **`average`**: symmetric around the pair, but the assigned bin can be occupied
+  by neither part.
+- **Neither rule** keeps both parts inside the assigned bin. Pairs that straddle
+  an individual bin edge are possible in both sub-modes and are counted in the
+  logbook (`n_straddling_pairs`), so the frequency is visible. Under `min`, the
+  count of pairs whose assigned bin is occupied by neither part
+  (`n_unoccupied_bin_pairs`) is provably zero; under `average` it can be non-zero.
+- If "both parts must be in the same bin" is the requirement, that is not a
+  bin-assignment rule at all — it is `Only_Sensor_VBD_bin_before_pairing`, which
+  never pairs across a bin edge.
+
+Because parts below `VBD_IGNORE_BELOW` are removed **before** pairing in this mode
+as well, a pair can never be assigned to an ignored `VBD` range, and `min` can
+never drop below the lowest bin edge.
+
+Consequences for the report shape:
+
+- Grouping is still reported per `(sensor design, bin label)`, with all groups
+  present (empty ones included) so runs stay comparable.
+- There is **at most one leftover per sensor design**, not one per bin, because
+  pairing happens once per design. A leftover is reported in the bin of its own
+  `VBD`, and marked as unpaired.
+
+### Choosing a mode
+
+```shell
+# default: bin first, then pair inside each (design, VBD bin)
+hybridmatch --location mainz
+hybridmatch --location mainz --mode-alias Only_Sensor_VBD_bin_before_pairing   # identical
+
+# pair first across the whole design population, then bin the pairs (strict `min`)
+hybridmatch --location mainz --mode-alias Only_Sensor_VBD_pair_before_binning
+
+# same, but bin each pair by the average of its two VBDs
+hybridmatch --location mainz --mode-alias Only_Sensor_VBD_pair_before_binning \
+  --pair-binning-submode average
+```
+
+`--pair-binning-submode` only applies to
+`Only_Sensor_VBD_pair_before_binning`. Combining it with a bin-before mode is a
+usage error (except for the default value `min`, which argparse cannot
+distinguish from "not passed").
+
 ## Pairing strategy: VBD-bin grouping
 
-Once a `VBD` score has been retrieved for each Hybrid, the script does not pair across the entire surviving pool at once. Instead, parts are split into VBD bins first, and pairing is run **independently within each bin** — and, by default, independently within each sensor design. This prevents a low-VBD Hybrid from being matched against a high-VBD one, which would inflate the total pairing distance and produce pairings that are not useful for module assembly.
+In the default mode, once a `VBD` score has been retrieved for each Hybrid, the
+script does not pair across the entire surviving pool at once. Instead, parts are
+split into VBD bins first, and pairing is run **independently within each bin** —
+and, by default, independently within each sensor design. This prevents a
+low-VBD Hybrid from being matched against a high-VBD one, which would inflate the
+total pairing distance and produce pairings that are not useful for module
+assembly.
 
-A group is therefore identified by the tuple `(sensor design, bin label)`, rendered in the output as `IHEP | 150-160V`. With `--allow-mixed-sensor-designs` the design part of the tuple is `None` and the group is just the bin label.
+A group is therefore identified by the tuple `(sensor design, bin label)`, rendered in the output as `IHEP | 150-160V`. With `--allow-mixed-sensor-designs` the design part of the tuple is `None` and the group is just the bin label. The same group structure is used for reporting in
+`Only_Sensor_VBD_pair_before_binning`, where the bins are filled after pairing.
 
 The binning is configurable at the top of the script via three constants (to be agreed on in project):
 
@@ -135,7 +240,15 @@ The design axis is configured separately, in `data.py`:
 
 Bin convention: `[lower_edge, next_lower_edge)`, i.e. lower edge inclusive and upper edge exclusive. So `VBD = 150.0` lands in `150-160V`, `VBD = 160.0` in `160-170V`, `VBD = 190.0` and above in `>190V`.
 
-The pairing algorithm itself (`get_optimal_pairs_with_leftover_1D_On2`) is unchanged, apart from now honouring its `at_column` argument for the sort instead of hardcoding column 2. The new steps are thin wrappers: `group_by_vbd_bin` bins the inputs (applying the design axis), and `pair_within_groups` calls the existing pairer once per group. Groups are iterated in `(design, label)` order — design first in `SENSOR_DESIGNS` order, then label order — so the output is stable run-to-run, and per-group results are aggregated for the summary report.
+The pairing algorithm itself (`get_optimal_pairs_with_leftover_1D_On2`) is unchanged, apart from now honouring its `at_column` argument for the sort instead of hardcoding column 2. The mode-dependent steps are thin wrappers around it:
+
+- `group_by_vbd_bin` bins the inputs (applying the design axis) and
+  `pair_within_groups` calls the pairer once per group — the bin-before path.
+- `pair_then_bin` calls the pairer once per design and assigns the resulting
+  pairs (and the leftover) to bins — the pair-before path. It returns the same
+  group-result structure, so reporting is shared.
+
+Groups are iterated in `(design, label)` order — design first in `SENSOR_DESIGNS` order, then label order — so the output is stable run-to-run, and per-group results are aggregated for the summary report.
 
 If the three VBD constants are retuned, they must satisfy `len(VBD_BIN_LABELS) == len(VBD_BIN_LOWER_EDGES)`, enforced by an `assert` at the top of the script. A second `assert` requires `VBD_IGNORE_BELOW >= VBD_BIN_LOWER_EDGES[0]`, so no value can slip between the ignore threshold and the lowest bin edge.
 
@@ -145,7 +258,7 @@ The record shape that travels through grouping and pairing is
 [part_id, part_SN, vbd_value, sensor_design_or_None]
 ```
 
-so the design stays attached to the part without a side table. `assign_vbd_bin` reads the `VBD` field positionally (`record[2]`) rather than unpacking the whole record, so a future algorithm can append more fields without breaking the binning. Records with only three elements are still accepted and treated as "design unknown".
+so the design stays attached to the part without a side table. Both `assign_vbd_bin` and the pair-binning rule read the `VBD` field positionally (`record[2]`) rather than unpacking the whole record, so a future algorithm can append more fields without breaking the binning. Records with only three elements are still accepted and treated as "design unknown".
 
 ## Using the `hybridmatch` script for module assembly
 
@@ -160,11 +273,52 @@ hybridmatch --location <your-site>
 
 The location is optional: `hybridmatch --hybrid-sns <SN[,SN…]|file>` pairs an explicit list instead, and `--location` together with `--hybrid-sns` narrows or widens that list (see [Choosing which Hybrids to pair](#choosing-which-hybrids-to-pair)).
 
-This shows the pairing algorithm results in the CLI, but also stores a report for further use as markdown document using the pattern `pairings_Only_Sensor_VBD_closest_{location}.md` — or `pairings_Only_Sensor_VBD_closest_sns{N}.md` when no location was given.
+The matching mode is optional as well: without `--mode-alias` the script bins by
+`VBD` first and pairs inside each bin, which is what the historical
+`Only_Sensor_VBD_closest` name did. See [Matching modes](#matching-modes) for the
+alternative, which pairs first and bins the pairs afterwards.
+
+This shows the pairing algorithm results in the CLI, but also stores a report for further use as markdown document using the pattern `pairings_<mode-alias>_{location}.md` — or `pairings_<mode-alias>_sns{N}.md` when no location was given. With the default mode alias that is `pairings_Only_Sensor_VBD_closest_{location}.md`.
 
 ## Optional arguments
 
-The `hybridmatch` script accepts several optional arguments to control which parts are considered and how the data is fetched.
+The `hybridmatch` script accepts several optional arguments to control which parts are considered, how they are grouped and paired, and how the data is fetched.
+
+### `--mode-alias`
+
+Which matching mode to run. Choices:
+
+| value | meaning |
+|---|---|
+| `Only_Sensor_VBD_closest` *(default)* | alias for `Only_Sensor_VBD_bin_before_pairing` |
+| `Only_Sensor_VBD_bin_before_pairing` | bin by `VBD`, then pair inside each `(design, bin)` |
+| `Only_Sensor_VBD_pair_before_binning` | pair across the whole design population, then bin the pairs |
+
+```shell
+hybridmatch --location mainz --mode-alias Only_Sensor_VBD_pair_before_binning
+```
+
+The value is part of the report filename, so runs in different modes never
+overwrite each other. The alias keeps the historical filename.
+
+### `--pair-binning-submode`
+
+How a **paired** pair is assigned to its final `VBD` bin. Only meaningful for
+`--mode-alias Only_Sensor_VBD_pair_before_binning`; passing a non-default value
+together with a bin-before mode is a usage error.
+
+| value | meaning |
+|---|---|
+| `min` *(default)* | strict: the minimum of the two paired Hybrids determines the final bin |
+| `average` | the average of the two paired Hybrids is required to be in the bin |
+
+```shell
+hybridmatch --location mainz --mode-alias Only_Sensor_VBD_pair_before_binning \
+  --pair-binning-submode average
+```
+
+See [`Only_Sensor_VBD_pair_before_binning`](#only_sensor_vbd_pair_before_binning)
+for the worked edge cases and for what each rule does and does not guarantee.
 
 ### `--hybrid-sns`
 
@@ -240,6 +394,7 @@ Notes:
 - The flag is a plain `store_true`, so it takes no value. `--allow-mixed-sensor-designs` alone enables it.
 - This does not change which parts are *kept*, only how they are grouped. It does change the treatment of Hybrids whose design cannot be determined (see `Guardrails`).
 - The report file gets a `_mixeddesigns` suffix, so a mixed run never overwrites the separated report.
+- It applies to both matching modes: with `--mode-alias Only_Sensor_VBD_pair_before_binning` it means "pair across both designs", not just "report them together".
 
 ### `--manual_ignore_hybrid_sns`
 
@@ -272,7 +427,7 @@ Accepted as:
 
 Manually-ignored parts are reported in the output with the reason `Manually ignored by user via --manual_ignore_hybrid_sns` and excluded from the pairing step. They do not consume any DB calls during scoring (the filter runs after `prepare_parts` and before the per-part data-source lookups).
 
-If a SN listed here does not exist in the candidate pool — not a valid unassembled Hybrid, not at the chosen `--location`, or not among the SNs passed via `--hybrid-sns` — it is silently skipped. This flag only ever removes parts; it cannot add one that the selectors did not provide. It is applied after `prepare_parts` and before any per-part DB work, so it behaves identically in all three selection modes.
+If a SN listed here does not exist in the candidate pool — not a valid unassembled Hybrid, not at the chosen `--location`, or not among the SNs passed via `--hybrid-sns` — it is silently skipped. This flag only ever removes parts; it cannot add one that the selectors did not provide. It is applied after `prepare_parts` and before any per-part DB work, so it behaves identically in all three selection modes and in both matching modes.
 
 ### `--dev`
 
@@ -299,19 +454,20 @@ Notes:
 
 The script prints the full pipeline to the CLI:
 
-1. **Settings** — the values of `--mode-alias`, `--location` (or a note that it is not used), `--hybrid-sns`, the effective `location_scope` (`and` / `or`), `--dev`, `--manual_ignore_hybrid_sns`, `--max-workers`, `--allow-mixed-sensor-designs`, `--strict-sns`, the active VBD-bin configuration (`VBD_IGNORE_BELOW` plus the list of bin labels), and an explicit line stating whether the sensor designs are mixed or enforced (with the list of designs).
+1. **Settings** — the values of `--mode-alias`, the resolved canonical mode, `--pair-binning-submode` (printed only for the pair-before mode), `--location` (or a note that it is not used), `--hybrid-sns`, the effective `location_scope` (`and` / `or`), `--dev`, `--manual_ignore_hybrid_sns`, `--max-workers`, `--allow-mixed-sensor-designs`, `--strict-sns`, the active VBD-bin configuration (`VBD_IGNORE_BELOW` plus the list of bin labels), and an explicit line stating whether the sensor designs are mixed or enforced (with the list of designs).
 2. **Step 1** — the candidate Hybrids: selected by location, from the explicit SN list, or the union of both. In SN mode the section states how many unique SNs were requested and lists every rejection with its reason; `All requested SNs were accepted.` is printed when there are none.
 3. **Step 2** — per-part decision: either in `Ignored parts` (with reason) or in `Kept parts for matching` (with the `VBD` score that will be used for pairing, and the resolved sensor design). A short `Kept parts per sensor design: {...}` line summarises how many parts each design contributed.
-4. **Step 3** — pairing algorithm, run per group. For each group in `(design, label)` order, the CLI prints:
+4. **Step 3** — pairing, run per group. The heading names the mode: `Running pairing algorithm (grouped by sensor design and VBD bin)` for the bin-before mode, `Pairing across the whole sensor-design population, then VBD binning of the pairs` for the pair-before mode. For each group in `(design, label)` order, the CLI prints:
 
     - the group title and the number of parts in it, e.g. `--- Group IHEP | 150-160V (7 parts) ---`;
+    - for the pair-before mode, the active bin rule (`min` or `average`) and how it is defined;
     - if the group has an odd count, the optimal leftover Hybrid (the one whose removal minimizes the total distance);
     - the total pairing distance for that group;
     - the optimal pairings for that group.
 
     After the per-group detail, an aggregated summary is printed: the per-group leftovers (across any odd-count groups), the aggregated total distance, and the aggregated list of optimal pairings.
 
-A markdown report is also written next to the script, using the pattern `pairings_<mode-alias>_<location>.md`. Without `--location` the location part becomes `sns<N>`, with `N` the number of unique SNs. The suffix chain grows with the options, in this order:
+A markdown report is also written next to the script, using the pattern `pairings_<mode-alias>_<location>.md`. The mode alias is used **as typed**, so `Only_Sensor_VBD_closest` keeps its historical filename. Without `--location` the location part becomes `sns<N>`, with `N` the number of unique SNs. The suffix chain grows with the options, in this order:
 
 | Option | Suffix |
 |---|---|
@@ -319,13 +475,18 @@ A markdown report is also written next to the script, using the pattern `pairing
 | `--hybrid-sns` | `_sns<N>` with `N` = number of unique SNs |
 | `--hybrid-sns` together with `--location` | `_<scope>`, i.e. `_and` or `_or` |
 
-So `hybridmatch --location mainz --hybrid-sns ./w46.txt --location-or-sns` writes `pairings_Only_Sensor_VBD_closest_mainz_sns12_or.md`, and a run without `--location` writes `pairings_Only_Sensor_VBD_closest_sns12.md`. The report contains the same information as the CLI in a structured form. The markdown includes:
+So `hybridmatch --location mainz --hybrid-sns ./w46.txt --location-or-sns` writes `pairings_Only_Sensor_VBD_closest_mainz_sns12_or.md`, and a run without `--location` writes `pairings_Only_Sensor_VBD_closest_sns12.md`. A run in the other mode writes `pairings_Only_Sensor_VBD_pair_before_binning_mainz.md`.
+
+The report contains the same information as the CLI in a structured form. The markdown includes:
 
 - the `Ignored parts` list (covering parts excluded by `VBD < VBD_IGNORE_BELOW`, by an undeterminable sensor design, and by the matching algorithm) and the `Kept parts for matching` list;
 - a `Kept parts per sensor design` breakdown;
 - a `Rejected SNs from --hybrid-sns` section when an SN list was used, or `All requested SNs were accepted.`;
-- one section per group, titled with the group name (e.g. `### Group \`IHEP | 150-160V\` (7 parts)`), with its own leftover (if any), total distance, and optimal pairings;
+- one section per group, titled with the group name (e.g. `### Group \`IHEP | 150-160V\` (7 parts)`), with the active bin rule (pair-before mode), its own leftover (if any), total distance, and optimal pairings;
 - an aggregated section summarising the totals and leftover across all groups;
+- for the pair-before mode, two extra counters in the aggregated section:
+    - `Pairs straddling an individual VBD bin edge` (`n_straddling_pairs`) — pairs whose two parts sit in different individual bins; possible in both sub-modes, so expect this to be non-zero;
+    - `Pairs whose assigned bin is occupied by neither part` (`n_unoccupied_bin_pairs`) — possible only with `average`; provably zero with `min`, so a non-zero value there indicates a bug rather than a legitimate outcome;
 - the empty-pool breakdown if no part survived.
 
 ## Guardrails
@@ -333,6 +494,9 @@ So `hybridmatch --location mainz --hybrid-sns ./w46.txt --location-or-sns` write
 - Every SN passed via `--hybrid-sns` is either paired or reported: unknown, failing the SN spec, at the wrong location (`and` mode only) or already assembled all produce a named reason in the CLI and the logbook. With `--strict-sns` the run then exits non-zero, after the logbook has been written.
 - If the candidate pool is empty after filtering, the pairing step is skipped and a clear explanation is printed (candidates seen, rejected `--hybrid-sns` entries, filtered out by `--manual_ignore_hybrid_sns`, filtered out by the matching algorithm, survivors). The markdown logbook is still produced, with every group present and empty so the structure stays comparable between runs.
 - If a Hybrid's sensor design cannot be determined from either the Sensor or the Wafer SN, it is reported in `Ignored parts` with the reason `Sensor design (IHEP/USTC) could not be determined from the Sensor/Wafer SN; …` and excluded — because non-mixed pairing needs the design to place the part in a group. With `--allow-mixed-sensor-designs` such a part is kept instead, since the design no longer gates pairing.
+- Parts below `VBD_IGNORE_BELOW` are removed **before** pairing in both modes, so a pair can never be assigned to an ignored `VBD` range. In the pair-before mode this also means `min` can never place a pair below the lowest bin edge.
+- In the pair-before mode there is at most one leftover per sensor design (not per bin), because pairing runs once per design. Leftovers are reported in the bin of their own `VBD` and marked as unpaired; they are never silently re-binned.
+- `--pair-binning-submode` is rejected together with a bin-before mode when set to a non-default value, rather than silently ignored. Explicitly passing `min` with a bin-before mode is accepted, since argparse cannot tell it apart from the default.
 - If a per-part lookup raises an unhandled exception, it is converted into an `Ignored parts` entry with reason `Unhandled exception during scoring: <ExceptionType>: <message>`, so a single bad row does not abort the whole run.
 
 *Last updated: {{ last_updated }}*

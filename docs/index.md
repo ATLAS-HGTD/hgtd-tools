@@ -46,7 +46,7 @@ The following overview lists the implemented features of `hgtd-tools` and links 
 
 ??? success "Additional tools / scripts / automation"
     - Serial Number reservation for module assembly, either by count or from a CSV of serial numbers [with CLI script `SN-reservation`](use_cases/SN_reservation.md)
-    - Hybrid matching for module assembly, by location or from an explicit list of serial numbers [with CLI script `hybridmatch`](use_cases/hybrid_matching.md)
+    - Hybrid matching for module assembly, by location or from an explicit list of serial numbers, with two binning strategies (bin before pairing, or pair before binning) [with CLI script `hybridmatch`](use_cases/hybrid_matching.md)
     - Bulk module assembly relation upload including consistency validation, accepting either one row per relation or one row per Module (with Module registration and serial number reservation) [with CLI script `bulk-module-assembly`](use_cases/bulk_module_assembly.md)
     - IV curve plotting [with CLI script `ivcurve-overlay`](use_cases/ivcurve_plotting.md)
     - Reporting
@@ -115,6 +115,22 @@ If you walked through the [install](getting_started/install.md) guide and you ac
     ```
 
     A file is one SN per line, `#` starts a comment. Every supplied SN is checked (exists as a Hybrid, valid SN spec, unassembled, and — in the default mode — actually at the site) and any rejection is reported with its reason rather than dropped silently; add `--strict-sns` to turn a rejection into a non-zero exit code, e.g. in CI.
+
+    There are two matching modes. The default bins the hybrids by breakdown voltage first and pairs inside each bin, so a pair never spans two bins. The alternative pairs across the whole set first and assigns the resulting pairs to a bin afterwards — strict by default, meaning the *lower* of the two voltages decides the bin:
+
+    ```shell
+    # default: bin first, then pair inside each VBD bin
+    hybridmatch --location <your-site>
+
+    # pair first, then bin the pairs (strict `min` rule by default)
+    hybridmatch --location <your-site> --mode-alias Only_Sensor_VBD_pair_before_binning
+
+    # same, but require the *average* of the pair to be in the bin
+    hybridmatch --location <your-site> --mode-alias Only_Sensor_VBD_pair_before_binning \
+      --pair-binning-submode average
+    ```
+
+    The historical name `Only_Sensor_VBD_closest` still works and is an alias for the default mode.
 
 ??? tip "Using the `bulk-module-assembly` script for multiple relation upload including validation"
 

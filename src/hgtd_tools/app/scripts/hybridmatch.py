@@ -8,18 +8,72 @@ import numpy as np
 
 from hgtd_tools import data, relation_validation, util
 
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Matching algorithm modes.
+#
+# Only_Sensor_VBD_bin_before_pairing   (alias: Only_Sensor_VBD_closest)
+#   bin the kept parts by VBD, then pair inside every bin. A pair is always
+#   intra-bin by construction.
+#
+# Only_Sensor_VBD_pair_before_binning
+#   pair across the whole VBD range of a sensor design first, then bin the
+#   resulting pairs. Sub-mode via --pair-binning-submode:
+#     "min"     (DEFAULT) -> pair is binned by the lower VBD of its two parts
+#                            (strict: the assigned bin is always the bin of the
+#                            lower part, so it is never a bin occupied by
+#                            neither part)
+#     "average"           -> pair is binned by the mean VBD of its two parts
+#   In both sub-modes a pair may straddle an individual bin edge, e.g.
+#   158 V + 163 V -> min: 150-160V, average: 160-170V.
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+MODE_BIN_BEFORE_PAIRING = "Only_Sensor_VBD_bin_before_pairing"
+MODE_PAIR_BEFORE_BINNING = "Only_Sensor_VBD_pair_before_binning"
+MODE_ALIASES = {"Only_Sensor_VBD_closest": MODE_BIN_BEFORE_PAIRING}
+MODE_CHOICES = [MODE_BIN_BEFORE_PAIRING, MODE_PAIR_BEFORE_BINNING, *MODE_ALIASES]
+
+PAIR_BINNING_SUBMODE_HELP = {
+    "min": "pair is binned by the lower VBD of its two parts (strict, default)",
+    "average": "pair is binned by the average VBD of its two parts",
+}
+DEFAULT_PAIR_BINNING_SUBMODE = "min"
+
+
+def canonical_mode(mode_alias):
+    """Map the legacy alias onto the canonical mode name."""
+    return MODE_ALIASES.get(mode_alias, mode_alias)
+
+
+def step3_title(mode_canonical):
+    """Heading text (without the leading step number) for the pairing step."""
+    if mode_canonical == MODE_PAIR_BEFORE_BINNING:
+        return "Pairing across the whole sensor-design population, then VBD binning of the pairs"
+    return "Running pairing algorithm (grouped by sensor design and VBD bin)"
+
+
 parser = ArgumentParser("Hybrid matcher (recommender system to pair Hybrids for HV- and LV-side)")
 parser.add_argument(
     "--mode-alias",
     dest="mode_alias",
-    help="Matching algorithm mode alias. (Default: %(default)s)",
+    help=(
+        "Matching algorithm mode alias. `Only_Sensor_VBD_closest` is kept as an "
+        "alias for `Only_Sensor_VBD_bin_before_pairing`. (Default: %(default)s)"
+    ),
     default="Only_Sensor_VBD_closest",
-    choices=[
-        "Only_Sensor_VBD_closest",
-        # "Only_Hybrid_IV_VBD_closest",
-        # "Sensor_VBD_closest_Fallback_Hybrid_IV_VBD_closest",
-        # "Sensor_VBD_closest_AND_Hybrid_IV_VBD_closest_2D_DeltaR",
-    ],
+    choices=MODE_CHOICES,
+)
+parser.add_argument(
+    "--pair-binning-submode",
+    dest="pair_binning_submode",
+    help=(
+        "Only for --mode-alias Only_Sensor_VBD_pair_before_binning: how a paired "
+        "pair is assigned to its final VBD bin. `min` (default) is the strict "
+        "sub-mode where the minimum of the two paired hybrids determines the "
+        "final bin, so a pair never lands in a bin that neither of its parts "
+        "occupies. `average` requires the average of the two paired hybrids to "
+        "be in the bin. (Default: %(default)s)"
+    ),
+    default=DEFAULT_PAIR_BINNING_SUBMODE,
+    choices=list(PAIR_BINNING_SUBMODE_HELP),
 )
 parser.add_argument(
     "--location",
@@ -131,9 +185,20 @@ if args.location_scope == "or" and not (args.location and args.hybrid_sns):
     )
 
 mode_alias = args.mode_alias
+mode_canonical = canonical_mode(mode_alias)
+pair_binning_submode = args.pair_binning_submode
 location = args.location
 max_workers = args.max_workers
 allow_mixed_sensor_designs = args.allow_mixed_sensor_designs
+
+if (
+    pair_binning_submode != DEFAULT_PAIR_BINNING_SUBMODE
+    and mode_canonical != MODE_PAIR_BEFORE_BINNING
+):
+    parser.error(
+        "--pair-binning-submode only applies to "
+        f"--mode-alias {MODE_PAIR_BEFORE_BINNING}; {mode_alias!r} bins before pairing"
+    )
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # VBD-bin configuration for the grouped pairing step.
@@ -348,21 +413,29 @@ def prepare_parts(location, dev, hybrid_sns=None, location_scope="and"):
 # Depending on mode, need different data sources.
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #
-## a. Only_Sensor_VBD_closest (default):
+## a. Only_Sensor_VBD_bin_before_pairing (default, alias Only_Sensor_VBD_closest):
 ### get Sensor child -> get Wafer parent -> get VBD(@SensorSN)
 ### if this fails at VBD stage because not uploaded -> try calculating manually from full iv
 ### if also fallback fails anywhere in the process -> ignore Hybrid
+### then: bin by VBD, pair inside every (design, bin)
 #
-## b. Only_Hybrid_IV_VBD_closest:
+## b. Only_Sensor_VBD_pair_before_binning:
+### same data source as (a), but pairing runs across the whole design
+### population first; the pairs are binned afterwards by
+###   --pair-binning-submode min      -> bin of the lower VBD of the pair (default)
+###   --pair-binning-submode average  -> bin of the mean VBD of the pair
+### a pair may straddle two individual bins in either sub-mode.
+#
+## c. Only_Hybrid_IV_VBD_closest:
 ### get Hybrid IVs(@HybridSN) -> calculate VBD
 ### if this fails anywhere in the process -> ignore Hybrid
 #
-## c. Sensor_VBD_closest_Fallback_Hybrid_IV_VBD_closest:
+## d. Sensor_VBD_closest_Fallback_Hybrid_IV_VBD_closest:
 ### get Sensor child -> get Wafer parent -> get VBD(@SensorSN)
 ### if this fails anywhere in the process -> do Only_Hybrid_IV_VBD_closest
 ### if also fallback fails anywhere in the process -> ignore Hybrid
 #
-## d. Sensor_VBD_closest_AND_Hybrid_IV_VBD_closest_2D_DeltaR:
+## e. Sensor_VBD_closest_AND_Hybrid_IV_VBD_closest_2D_DeltaR:
 ### Only_Sensor_VBD_closest AND Only_Hybrid_IV_VBD_closest -> calculate 2D pairing
 ### if this fails anywhere in the process -> ignore Hybrid
 #
@@ -437,14 +510,17 @@ def get_decision_scores_only_Sensor_VBD_closest_safe(p):
 def prepare_data_sources(mode_alias, parts, max_workers=4):
     ignored_parts = []
     kept_parts_and_scoring = []
-    if mode_alias == "Only_Sensor_VBD_closest":
+    algorithm = canonical_mode(mode_alias)
+    if algorithm in (MODE_BIN_BEFORE_PAIRING, MODE_PAIR_BEFORE_BINNING):
+        # Both modes share the Sensor/Wafer VBD data source; they differ only
+        # in whether binning happens before or after pairing.
         kept_parts_and_scoring, ignored_parts = util.parallel_partition(
             parts,
             get_decision_scores_only_Sensor_VBD_closest_safe,
             max_workers=max_workers,
         )
     else:
-        raise NotImplementedError
+        raise NotImplementedError(f"data source not implemented for mode {algorithm!r}")
 
     return ignored_parts, kept_parts_and_scoring
 
@@ -496,13 +572,18 @@ def get_optimal_pairs_with_leftover_1D_On2(parts_scores, at_column=2):
     return best_pairs, best_total, [leftover]
 
 
-def run_pairing(parts, algorithm):
-    if algorithm == "Only_Sensor_VBD_closest":
+def run_pairing(parts, algorithm, submode=DEFAULT_PAIR_BINNING_SUBMODE):
+    algorithm = canonical_mode(algorithm)
+    if algorithm == MODE_BIN_BEFORE_PAIRING:
         if not parts:
             return [], 0.0, []
         return get_optimal_pairs_with_leftover_1D_On2(parts)
-    else:
-        raise NotImplementedError
+    if algorithm == MODE_PAIR_BEFORE_BINNING:
+        raise ValueError(
+            "Only_Sensor_VBD_pair_before_binning pairs before binning; "
+            "use pair_then_bin() instead of run_pairing()"
+        )
+    raise NotImplementedError(f"pairing step not implemented for mode {algorithm!r}")
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -515,26 +596,59 @@ def run_pairing(parts, algorithm):
 # Bin convention: [lower_edge_i, lower_edge_{i+1}), except the last bin
 # which is open-ended (>= last edge).
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-def assign_vbd_bin(part_record):
-    # record is [part_id, part_SN, vbd_value, design]; never unpack the whole
-    # thing positionally, the design field is optional for older callers.
+def _coerce_vbd(part_record):
+    """Return (vbd_as_float, None) or (None, reason)."""
     vbd_value = part_record[2]
     try:
-        vbd = float(vbd_value)
+        return float(vbd_value), None
     except (TypeError, ValueError):
-        return ("ignore", f"VBD value is not a valid number: {vbd_value!r}")
+        return None, f"VBD value is not a valid number: {vbd_value!r}"
 
+
+def vbd_bin_label(vbd):
+    """Bin label for a VBD value, or None if it falls below VBD_IGNORE_BELOW.
+
+    Bin convention: [lower_edge_i, lower_edge_{i+1}), last bin open-ended.
+    """
+    vbd = float(vbd)
     if vbd < VBD_IGNORE_BELOW:
-        return ("ignore", f"VBD ({vbd} V) is below {VBD_IGNORE_BELOW} V; excluded from pairing")
-
+        return None
     edges = np.asarray(VBD_BIN_LOWER_EDGES, dtype=float)
     idx = int(np.searchsorted(edges, vbd, side="right")) - 1
     if idx < 0:
+        return None
+    return VBD_BIN_LABELS[min(idx, len(VBD_BIN_LABELS) - 1)]
+
+
+def assign_vbd_bin(part_record):
+    # record is [part_id, part_SN, vbd_value, design]; never unpack the whole
+    # thing positionally, the design field is optional for older callers.
+    vbd, reason = _coerce_vbd(part_record)
+    if vbd is None:
+        return ("ignore", reason)
+    if vbd < VBD_IGNORE_BELOW:
+        return ("ignore", f"VBD ({vbd} V) is below {VBD_IGNORE_BELOW} V; excluded from pairing")
+    label = vbd_bin_label(vbd)
+    if label is None:
         return (
             "ignore",
-            f"VBD ({vbd} V) is below the lowest bin edge {edges[0]} V; excluded from pairing",
+            f"VBD ({vbd} V) is below the lowest bin edge {VBD_BIN_LOWER_EDGES[0]} V; "
+            "excluded from pairing",
         )
-    return ("group", VBD_BIN_LABELS[min(idx, len(VBD_BIN_LABELS) - 1)])
+    return ("group", label)
+
+
+def _pair_determining_vbd(rec_a, rec_b, submode=DEFAULT_PAIR_BINNING_SUBMODE):
+    """The VBD value that decides the final bin of a pair.
+
+    "min"     -> the lower VBD (strict): the assigned bin is always the bin of
+                 the lower part, so it is never a bin occupied by neither part.
+    "average" -> the mean VBD of the two parts.
+    """
+    vbd_a, vbd_b = float(rec_a[2]), float(rec_b[2])
+    if submode == "min":
+        return min(vbd_a, vbd_b)
+    return 0.5 * (vbd_a + vbd_b)
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -608,6 +722,116 @@ def group_by_vbd_bin(kept_parts_and_scoring, allow_mixed_sensor_designs=False):
     )
 
 
+def pair_then_bin(
+    kept_parts_and_scoring,
+    allow_mixed_sensor_designs=False,
+    submode=DEFAULT_PAIR_BINNING_SUBMODE,
+):
+    """Pair first, bin afterwards (mode `Only_Sensor_VBD_pair_before_binning`).
+
+    Pairing runs across the whole VBD range of a sensor design, exactly as
+    `Only_Sensor_VBD_bin_before_pairing` pairs inside a single bin. The pairs
+    are then assigned to a bin by
+      * submode "min"     -> lower VBD of the two parts (strict, default)
+      * submode "average" -> mean VBD of the two parts
+    Parts below VBD_IGNORE_BELOW (and non-numeric VBDs / unknown designs) are
+    removed before pairing, so a pair can never be binned into "ignore".
+
+    A pair may straddle an individual bin edge in both sub-modes, e.g.
+    158 V + 163 V -> "min": 150-160V, "average": 160-170V. Under "min" the
+    assigned bin is always occupied by the lower part, so the count of pairs
+    whose assigned bin is occupied by neither part is provably zero; under
+    "average" it can be non-zero.
+
+    Returns (group_results, ignored, kept_in_groups, info); group_results has
+    the same shape as pair_within_groups() so the reporting code is shared.
+    """
+    if submode not in PAIR_BINNING_SUBMODE_HELP:
+        raise ValueError(f"unknown pair-binning sub-mode {submode!r}")
+
+    ignored = []
+    by_design = {}
+    for rec in kept_parts_and_scoring:
+        design = rec[3] if len(rec) > 3 else None
+        if design is None and not allow_mixed_sensor_designs:
+            ignored.append([rec[0], rec[1], DESIGN_UNKNOWN_REASON])
+            continue
+        vbd, reason = _coerce_vbd(rec)
+        if vbd is None:
+            ignored.append([rec[0], rec[1], reason])
+            continue
+        if vbd < VBD_IGNORE_BELOW:
+            ignored.append(
+                [
+                    rec[0],
+                    rec[1],
+                    f"VBD ({vbd} V) is below {VBD_IGNORE_BELOW} V; excluded from pairing",
+                ]
+            )
+            continue
+        by_design.setdefault(None if allow_mixed_sensor_designs else design, []).append(rec)
+
+    pairs_by_group = {}
+    leftovers_by_group = {}
+    kept_in_groups = []
+    n_straddling_pairs = 0
+    n_unoccupied_bin_pairs = 0
+
+    for design, records in by_design.items():
+        pairs, _total, leftover = get_optimal_pairs_with_leftover_1D_On2(records)
+        for rec_a, rec_b in pairs:
+            determining = _pair_determining_vbd(rec_a, rec_b, submode)
+            label = vbd_bin_label(determining)
+            if label is None:  # defensive; the pre-filter above rules this out
+                for rec in (rec_a, rec_b):
+                    ignored.append(
+                        [
+                            rec[0],
+                            rec[1],
+                            f"Pair VBD ({determining} V) is below {VBD_IGNORE_BELOW} V; "
+                            "excluded from pairing",
+                        ]
+                    )
+                continue
+            label_a = vbd_bin_label(float(rec_a[2]))
+            label_b = vbd_bin_label(float(rec_b[2]))
+            if label_a != label_b:
+                n_straddling_pairs += 1
+            if label not in (label_a, label_b):
+                n_unoccupied_bin_pairs += 1
+            pairs_by_group.setdefault((design, label), []).append((rec_a, rec_b))
+            kept_in_groups.extend([rec_a, rec_b])
+        for lo in leftover:
+            # A leftover cannot be paired; report it in the bin of its own VBD.
+            label = vbd_bin_label(float(lo[2])) or VBD_BIN_LABELS[0]
+            leftovers_by_group.setdefault((design, label), []).append(lo)
+            kept_in_groups.append(lo)
+
+    group_results = []
+    for design, label in _group_keys(allow_mixed_sensor_designs):
+        key = (design, label)
+        pairs = pairs_by_group.get(key, [])
+        leftover = leftovers_by_group.get(key, [])
+        group_results.append(
+            {
+                "design": design,
+                "label": label,
+                "title": group_title(design, label),
+                "n": 2 * len(pairs) + len(leftover),
+                "pairs": pairs,
+                "total": sum(abs(float(b[2]) - float(a[2])) for a, b in pairs),
+                "leftover": leftover,
+                "pair_rule": submode,
+            }
+        )
+
+    info = {
+        "n_straddling_pairs": n_straddling_pairs,
+        "n_unoccupied_bin_pairs": n_unoccupied_bin_pairs,
+    }
+    return group_results, ignored, kept_in_groups, info
+
+
 def empty_group_results(allow_mixed_sensor_designs=False, labels=None):
     return [
         {
@@ -618,6 +842,7 @@ def empty_group_results(allow_mixed_sensor_designs=False, labels=None):
             "pairs": [],
             "total": 0.0,
             "leftover": [],
+            "pair_rule": None,
         }
         for design, label in _group_keys(allow_mixed_sensor_designs, labels)
     ]
@@ -637,6 +862,7 @@ def pair_within_groups(grouped_by_bin, algorithm):
                 "pairs": pairs,
                 "total": total,
                 "leftover": leftover,
+                "pair_rule": None,
             }
         )
     return group_results
@@ -653,7 +879,10 @@ def hybridmatch(
     hybrid_sns=None,
     location_scope="and",
     strict_sns=False,
+    pair_binning_submode=DEFAULT_PAIR_BINNING_SUBMODE,
 ):
+    mode_canonical = canonical_mode(mode_alias)
+
     if printouts:
         print(
             "\n"
@@ -676,6 +905,9 @@ def hybridmatch(
         print("%" * 80 + "\n")
         print(">>> Settings:")
         print(f"- {mode_alias=}")
+        print(f"- {mode_canonical=}")
+        if mode_canonical == MODE_PAIR_BEFORE_BINNING:
+            print(f"- {pair_binning_submode=} ({PAIR_BINNING_SUBMODE_HELP[pair_binning_submode]})")
         print(f"- {location=}")
         print(f"- {hybrid_sns=}")
         print(f"- {location_scope=}")
@@ -736,13 +968,23 @@ def hybridmatch(
 
     ignored_parts = manual_ignored_parts + ignored_parts
 
-    # Bin BEFORE reporting: a part leaves the kept list at the same moment it
-    # enters the ignored list, so the two reports stay disjoint. The design
-    # axis is applied here, i.e. every bin is created once per design.
-    grouped_by_bin, ignored_vbd, kept_in_bins = group_by_vbd_bin(
-        kept_parts_and_scoring,
-        allow_mixed_sensor_designs=allow_mixed_sensor_designs,
-    )
+    # Either bin-then-pair (a part leaves the kept list the moment it enters a
+    # bin) or pair-then-bin (a pair leaves the kept list the moment it is
+    # binned). Both reports stay disjoint either way.
+    grouped_by_bin = None
+    group_results = None
+    pair_info = {"n_straddling_pairs": 0, "n_unoccupied_bin_pairs": 0}
+    if mode_canonical == MODE_PAIR_BEFORE_BINNING:
+        group_results, ignored_vbd, kept_in_bins, pair_info = pair_then_bin(
+            kept_parts_and_scoring,
+            allow_mixed_sensor_designs=allow_mixed_sensor_designs,
+            submode=pair_binning_submode,
+        )
+    else:
+        grouped_by_bin, ignored_vbd, kept_in_bins = group_by_vbd_bin(
+            kept_parts_and_scoring,
+            allow_mixed_sensor_designs=allow_mixed_sensor_designs,
+        )
     ignored_parts = ignored_parts + ignored_vbd
     kept_parts_and_scoring = kept_in_bins
 
@@ -763,6 +1005,14 @@ def hybridmatch(
         "location_scope": location_scope,
         "n_sns_rejected": len(rejected_sns),
         "rejected_sns": rejected_sns,
+        "mode_alias": mode_alias,
+        "mode_canonical": mode_canonical,
+        "pair_binning_submode": (
+            pair_binning_submode if mode_canonical == MODE_PAIR_BEFORE_BINNING else None
+        ),
+        "n_straddling_pairs": pair_info["n_straddling_pairs"],
+        "n_unoccupied_bin_pairs": pair_info["n_unoccupied_bin_pairs"],
+        "n_pairs": 0,
     }
 
     if printouts:
@@ -774,7 +1024,7 @@ def hybridmatch(
             print(kp)
         print(f"\nKept parts per sensor design: {n_by_design}")
         print("\n" + "%" * 80)
-        print("\n>>> 3. Running pairing algorithm (grouped by sensor design and VBD bin)...\n")
+        print(f"\n>>> 3. {step3_title(mode_canonical)}...\n")
 
     if not kept_parts_and_scoring:
         if printouts:
@@ -795,7 +1045,9 @@ def hybridmatch(
             stats,
         )
 
-    group_results = pair_within_groups(grouped_by_bin, algorithm=mode_alias)
+    if group_results is None:
+        group_results = pair_within_groups(grouped_by_bin, algorithm=mode_canonical)
+    stats["n_pairs"] = sum(len(gr["pairs"]) for gr in group_results)
 
     all_pairs = [p for gr in group_results for p in gr["pairs"]]
     total = sum(gr["total"] for gr in group_results)
@@ -804,6 +1056,8 @@ def hybridmatch(
     if printouts:
         for gr in group_results:
             print(f"\n--- Group {gr['title']} ({gr['n']} parts) ---")
+            if gr.get("pair_rule"):
+                print(f"  Bin rule: {PAIR_BINNING_SUBMODE_HELP[gr['pair_rule']]}")
             if gr["leftover"]:
                 print(
                     f"  Odd count in group, optimal leftover to minimize total distance: {gr['leftover']}"
@@ -838,11 +1092,19 @@ def main():
         hybrid_sns=hybrid_sns,
         location_scope=location_scope,
         strict_sns=args.strict_sns,
+        pair_binning_submode=pair_binning_submode,
     )
     dt = datetime.now(UTC)
 
     md_content = f"# Hybridmatch logbook\n\nDate / time in UTC: {dt}\n\n## Settings\n\n"
     md_content += f"- `mode_alias` = `{mode_alias}`\n"
+    md_content += f"- `mode` (canonical) = `{stats['mode_canonical']}`\n"
+    if stats["pair_binning_submode"]:
+        md_content += (
+            f"- `pair_binning_submode` = `{stats['pair_binning_submode']}` "
+            f"({PAIR_BINNING_SUBMODE_HELP[stats['pair_binning_submode']]})"
+            f"{' *(default)*' if stats['pair_binning_submode'] == DEFAULT_PAIR_BINNING_SUBMODE else ''}\n"
+        )
     md_content += f"- `location` = `{location}`\n" if location else "- `location` = *(not used)*\n"
     md_content += f"- `hybrid_sns` = `{hybrid_sns}`\n"
     md_content += f"- `location_scope` = `{location_scope}`\n"
@@ -920,7 +1182,7 @@ def main():
             md_content += f"- `{design}`: {count}\n"
         md_content += "\n"
 
-    md_content += "## Step 3: Running pairing algorithm (grouped by sensor design and VBD bin)\n\n"
+    md_content += f"## Step 3: {step3_title(stats['mode_canonical'])}\n\n"
 
     if not kept_parts_and_scoring:
         n_total_seen = len(ignored_parts) + len(kept_parts_and_scoring)
@@ -936,6 +1198,8 @@ def main():
     else:
         for gr in group_results:
             md_content += f"### Group `{gr['title']}` ({gr['n']} parts)\n\n"
+            if gr.get("pair_rule"):
+                md_content += f"Bin rule: {PAIR_BINNING_SUBMODE_HELP[gr['pair_rule']]}\n\n"
             if gr["leftover"]:
                 md_content += (
                     "Odd number of parts in this group, optimal leftover to minimize "
@@ -965,6 +1229,17 @@ def main():
                 md_content += "- `[" + "  |  ".join(str(x) for x in lo) + "]`\n"
             md_content += "\n"
         md_content += f"Aggregated total distance: `{total}`\n\n"
+        if stats["mode_canonical"] == MODE_PAIR_BEFORE_BINNING:
+            md_content += (
+                f"Pairs straddling an individual VBD bin edge (possible in both "
+                f"sub-modes): `{stats['n_straddling_pairs']}` of "
+                f"`{stats['n_pairs']}` pairs\n\n"
+            )
+            md_content += (
+                f"Pairs whose assigned bin is occupied by neither part (possible "
+                f"only with `average`): `{stats['n_unoccupied_bin_pairs']}` of "
+                f"`{stats['n_pairs']}` pairs\n\n"
+            )
 
     suffix = "_mixeddesigns" if allow_mixed_sensor_designs else ""
     if hybrid_sns:
